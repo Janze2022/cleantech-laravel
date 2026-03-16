@@ -8,17 +8,27 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::createIfNotExists('service_providers', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->string('password');
-            $table->string('phone')->nullable();
-            $table->string('profile_image')->nullable();
-            $table->string('status')->default('pending');
-            $table->rememberToken();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('service_providers')) {
+
+            Schema::create('service_providers', function (Blueprint $table) {
+
+                $table->id();
+
+                $table->string('name');
+                $table->string('email')->unique();
+                $table->string('password');
+
+                $table->string('phone')->nullable();
+                $table->string('profile_image')->nullable();
+
+                $table->string('status')->default('pending');
+
+                $table->rememberToken();
+                $table->timestamps();
+
+            });
+
+        }
     }
 
     public function down(): void
