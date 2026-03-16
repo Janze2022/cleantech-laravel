@@ -1,0 +1,409 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+class ProviderBookingController extends Controller
+{
+    private function providerId(): int
+    {
+        $providerId = (int) session('provider_id');
+
+        if (!$providerId) {
+            abort(403, 'Provider session missing.');
+        }
+
+        return $providerId;
+    }
+
+    private function bookingAreasSubquery()
+    {
+        return DB::table('booking_service_options as bso')
+            ->join('service_options as so2', 'so2.id', '=', 'bso.service_option_id')
+            ->selectRaw("
+                bso.booking_id,
+                GROUP_CONCAT(so2.label ORDER BY so2.label SEPARATOR ', ') as areas_label
+            ")
+            ->groupBy('bso.booking_id');
+    }
+
+    /**
+     * ACTIVE BOOKINGS (provider can still update status)
+     * Status: confirmed, in_progress, paid
+     */
+    public function index()
+    {
+        $providerId = $this->providerId();
+        $areasSub = $this->bookingAreasSubquery();
+
+        $bookings = DB::table('bookings as b')
+            ->join('customers as c', 'c.id', '=', 'b.customer_id')
+            ->join('services as s', 's.id', '=', 'b.service_id')
+            ->join('service_options as o', 'o.id', '=', 'b.service_option_id')
+            ->leftJoinSub($areasSub, 'areas', function ($join) {
+                $join->on('areas.booking_id', '=', 'b.id');
+            })
+            ->where('b.provider_id', $providerId)
+            ->whereIn('b.status', ['confirmed', 'in_progress', 'paid'])
+            ->orderByDesc('b.created_at')
+            ->select(
+                'b.reference_code',
+                'b.booking_date',
+                'b.requested_start_time',
+                'b.time_start',
+                'b.time_end',
+                'b.status',
+                'b.price',
+                'b.address',
+                'b.contact_phone',
+                DB::raw("COALESCE(NULLIF(TRIM(c.name),''), NULLIF(TRIM(c.email),''), 'Customer') as name"),
+                DB::raw("COALESCE(NULLIF(TRIM(c.phone),''), NULLIF(TRIM(b.contact_phone),'')) as phone"),
+                'c.email',
+                's.name as service',
+                DB::raw("COALESCE(areas.areas_label, o.label) as option"),
+                'b.created_at'
+            )
+            ->get();
+
+        return view('provider.bookings', compact('bookings'));
+    }
+
+    /**
+     * PAST BOOKINGS (history)
+     * Status: paid, completed, cancelled
+     */
+    public function history(Request $request)
+    {
+        $providerId = $this->providerId();
+        $areasSub = $this->bookingAreasSubquery();
+
+        $q      = trim((string) $request->query('q', ''));
+        $status = (string) $request->query('status', 'all');
+        $from   = (string) $request->query('from', '');
+        $to     = (string) $request->query('to', '');
+
+        $query = DB::table('bookings as b')
+            ->join('customers as c', 'c.id', '=', 'b.customer_id')
+            ->join('services as s', 's.id', '=', 'b.service_id')
+            ->join('service_options as o', 'o.id', '=', 'b.service_option_id')
+            ->leftJoinSub($areasSub, 'areas', function ($join) {
+                $join->on('areas.booking_id', '=', 'b.id');
+            })
+            ->where('b.provider_id', $providerId)
+            ->whereIn('b.status', ['paid', 'completed', 'cancelled'])
+            ->select(
+                'b.reference_code',
+                'b.booking_date',
+                'b.requested_start_time',
+                'b.time_start',
+                'b.time_end',
+                'b.status',
+                'b.price',
+                'b.address',
+                'b.contact_phone',
+                DB::raw("COALESCE(NULLIF(TRIM(c.name),''), NULLIF(TRIM(c.email),''), 'Customer') as name"),
+                DB::raw("COALESCE(NULLIF(TRIM(c.phone),''), NULLIF(TRIM(b.contact_phone),'')) as phone"),
+                'c.email',
+                's.name as service',
+                DB::raw("COALESCE(areas.areas_label, o.label) as option"),
+                'b.created_at'
+            );
+
+        if ($from) {
+            $query->whereDate('b.booking_date', '>=', $from);
+        }
+
+        if ($to) {
+            $query->whereDate('b.booking_date', '<=', $to);
+        }
+
+        if ($status !== 'all' && in_array($status, ['paid', 'completed', 'cancelled'], true)) {
+            $query->where('b.status', $status);
+        }
+
+        if ($q !== '') {
+            $query->where(function ($w) use ($q) {
+                $w->where('b.reference_code', 'like', "%{$q}%")
+                    ->orWhere('s.name', 'like', "%{$q}%")
+                    ->orWhere('o.label', 'like', "%{$q}%")
+                    ->orWhere('c.name', 'like', "%{$q}%")
+                    ->orWhere('c.email', 'like', "%{$q}%")
+                    ->orWhere('c.phone', 'like', "%{$q}%")
+                    ->orWhere('b.address', 'like', "%{$q}%");
+            });
+        }
+
+        $bookings = $query
+            ->orderByDesc('b.booking_date')
+            ->orderByDesc('b.created_at')
+            ->get();
+
+        return view('provider.bookings_history', compact('bookings', 'q', 'status', 'from', 'to'));
+    }
+
+    public function show(string $reference_code)
+    {
+        $providerId = $this->providerId();
+        $areasSub = $this->bookingAreasSubquery();
+
+        $booking = DB::table('bookings as b')
+            ->join('customers as c', 'c.id', '=', 'b.customer_id')
+            ->join('services as s', 's.id', '=', 'b.service_id')
+            ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
+            ->leftJoinSub($areasSub, 'areas', function ($join) {
+                $join->on('areas.booking_id', '=', 'b.id');
+            })
+            ->where('b.provider_id', $providerId)
+            ->where('b.reference_code', $reference_code)
+            ->select(
+                'b.*',
+                DB::raw("COALESCE(NULLIF(TRIM(c.name),''), NULLIF(TRIM(c.email),''), 'Customer') as customer_name"),
+                'c.email as customer_email',
+                DB::raw("COALESCE(NULLIF(TRIM(c.phone),''), NULLIF(TRIM(b.contact_phone),'')) as customer_phone"),
+                's.name as service_name',
+                DB::raw("COALESCE(areas.areas_label, o.label, '') as option_label")
+            )
+            ->first();
+
+        abort_if(!$booking, 404);
+
+        return view('provider.bookings.show', compact('booking'));
+    }
+
+    public function updateStatus(Request $request, string $reference)
+    {
+        $providerId = $this->providerId();
+
+        $data = $request->validate([
+            'status' => 'required|string|in:confirmed,in_progress,paid,completed,cancelled',
+        ]);
+
+        $booking = DB::table('bookings')
+            ->where('provider_id', $providerId)
+            ->where('reference_code', $reference)
+            ->select('id', 'status', 'customer_id', 'reference_code')
+            ->first();
+
+        abort_if(!$booking, 404);
+
+        $allowed = [
+            'confirmed'   => ['in_progress', 'cancelled'],
+            'in_progress' => ['paid', 'cancelled'],
+            'paid'        => ['completed'],
+            'completed'   => [],
+            'cancelled'   => [],
+        ];
+
+        $current = strtolower((string) $booking->status);
+        $next    = strtolower((string) $data['status']);
+
+        if ($next === $current) {
+            return back()->with('success', 'Status unchanged.');
+        }
+
+        if (!in_array($next, $allowed[$current] ?? [], true)) {
+            return back()->withErrors([
+                'status' => "Invalid status change: {$current} → {$next}",
+            ]);
+        }
+
+        DB::transaction(function () use ($booking, $next) {
+            $update = ['status' => $next];
+
+            if (Schema::hasColumn('bookings', 'updated_at')) {
+                $update['updated_at'] = now();
+            }
+
+            DB::table('bookings')
+                ->where('id', $booking->id)
+                ->update($update);
+
+            $statusLabel = match ($next) {
+                'confirmed'   => 'Confirmed',
+                'in_progress' => 'In Progress',
+                'paid'        => 'Paid',
+                'completed'   => 'Completed',
+                'cancelled'   => 'Cancelled',
+                default       => ucfirst(str_replace('_', ' ', $next)),
+            };
+
+            $message = match ($next) {
+                'in_progress' => 'Your booking is now in progress.',
+                'paid'        => 'Your booking has been marked as paid.',
+                'completed'   => 'Your service has been completed. Please leave a review.',
+                'cancelled'   => 'Your booking has been marked as cancelled by the provider.',
+                'confirmed'   => 'Your booking has been confirmed.',
+                default       => 'Your booking status has been updated to ' . $statusLabel . '.',
+            };
+
+            $type = Schema::hasColumn('notifications', 'type')
+                ? ($next === 'completed' ? 'review' : 'booking_status')
+                : null;
+
+            $hasUpdatedAt = Schema::hasColumn('notifications', 'updated_at');
+            $hasCreatedAt = Schema::hasColumn('notifications', 'created_at');
+
+            $uniqueKeys = [
+                'user_id'        => $booking->customer_id,
+                'reference_code' => $booking->reference_code,
+            ];
+
+            if ($type !== null) {
+                $uniqueKeys['type'] = $type;
+            }
+
+            $values = [
+                'message' => $message,
+                'is_read' => 0,
+            ];
+
+            if ($type !== null) {
+                $values['type'] = $type;
+            }
+
+            if ($hasCreatedAt) {
+                $values['created_at'] = now();
+            }
+
+            if ($hasUpdatedAt) {
+                $values['updated_at'] = now();
+            }
+
+            DB::table('notifications')->updateOrInsert($uniqueKeys, $values);
+        });
+
+        return back()->with('success', 'Booking status updated to ' . strtoupper($next) . '.');
+    }
+
+    public function analytics(Request $request)
+    {
+        $providerId = $this->providerId();
+
+        $days = (int) $request->query('days', 14);
+        if ($days < 7) $days = 7;
+        if ($days > 60) $days = 60;
+
+        $months = (int) $request->query('months', 12);
+        if ($months < 3) $months = 3;
+        if ($months > 24) $months = 24;
+
+        $selectedDate = trim((string) $request->query('date', ''));
+        $fromDate     = trim((string) $request->query('from_date', ''));
+        $toDate       = trim((string) $request->query('to_date', ''));
+
+        $earningStatuses = ['paid', 'completed'];
+
+        $earningsBase = DB::table('bookings as b')
+            ->where('b.provider_id', $providerId)
+            ->whereIn('b.status', $earningStatuses);
+
+        if ($selectedDate !== '') {
+            $earningsBase->whereDate('b.booking_date', $selectedDate);
+        } else {
+            if ($fromDate !== '') {
+                $earningsBase->whereDate('b.booking_date', '>=', $fromDate);
+            }
+
+            if ($toDate !== '') {
+                $earningsBase->whereDate('b.booking_date', '<=', $toDate);
+            }
+        }
+
+        $daily = (clone $earningsBase)
+            ->whereDate('b.booking_date', '>=', now()->subDays($days - 1)->toDateString())
+            ->groupBy('b.booking_date')
+            ->orderBy('b.booking_date', 'asc')
+            ->selectRaw('b.booking_date as label, SUM(b.price) as amount')
+            ->get();
+
+        $monthly = (clone $earningsBase)
+            ->whereDate('b.booking_date', '>=', now()->subMonths($months - 1)->startOfMonth()->toDateString())
+            ->groupByRaw('YEAR(b.booking_date), MONTH(b.booking_date)')
+            ->orderByRaw('YEAR(b.booking_date) ASC, MONTH(b.booking_date) ASC')
+            ->selectRaw("
+                YEAR(b.booking_date) as yr,
+                MONTH(b.booking_date) as mon,
+                DATE_FORMAT(MIN(b.booking_date), '%b %Y') as label,
+                SUM(b.price) as amount
+            ")
+            ->get();
+
+        $annualTotal = (float) (
+            DB::table('bookings')
+                ->where('provider_id', $providerId)
+                ->whereIn('status', $earningStatuses)
+                ->whereYear('booking_date', now()->year)
+                ->sum('price') ?? 0
+        );
+
+        $statusBreakdown = DB::table('bookings')
+            ->where('provider_id', $providerId)
+            ->when($selectedDate !== '', function ($q) use ($selectedDate) {
+                $q->whereDate('booking_date', $selectedDate);
+            })
+            ->when($selectedDate === '' && $fromDate !== '', function ($q) use ($fromDate) {
+                $q->whereDate('booking_date', '>=', $fromDate);
+            })
+            ->when($selectedDate === '' && $toDate !== '', function ($q) use ($toDate) {
+                $q->whereDate('booking_date', '<=', $toDate);
+            })
+            ->when($selectedDate === '' && $fromDate === '' && $toDate === '', function ($q) {
+                $q->whereDate('booking_date', '>=', now()->subMonths(6)->toDateString());
+            })
+            ->groupBy('status')
+            ->selectRaw('status, COUNT(*) as cnt')
+            ->get();
+
+        $dateEarnings = (clone $earningsBase)
+            ->groupBy('b.booking_date')
+            ->orderBy('b.booking_date', 'desc')
+            ->selectRaw('b.booking_date as date, SUM(b.price) as amount, COUNT(*) as bookings_count')
+            ->get();
+
+        $topDate = (clone $earningsBase)
+            ->groupBy('b.booking_date')
+            ->orderByRaw('SUM(b.price) DESC')
+            ->selectRaw('b.booking_date as date, SUM(b.price) as amount, COUNT(*) as bookings_count')
+            ->first();
+
+        $topServices = DB::table('bookings as b')
+            ->join('services as s', 's.id', '=', 'b.service_id')
+            ->where('b.provider_id', $providerId)
+            ->when($selectedDate !== '', function ($q) use ($selectedDate) {
+                $q->whereDate('b.booking_date', $selectedDate);
+            })
+            ->when($selectedDate === '' && $fromDate !== '', function ($q) use ($fromDate) {
+                $q->whereDate('b.booking_date', '>=', $fromDate);
+            })
+            ->when($selectedDate === '' && $toDate !== '', function ($q) use ($toDate) {
+                $q->whereDate('b.booking_date', '<=', $toDate);
+            })
+            ->groupBy('s.id', 's.name')
+            ->orderByDesc(DB::raw('COUNT(b.id)'))
+            ->selectRaw("
+                s.name as service_name,
+                COUNT(b.id) as bookings_count,
+                SUM(CASE WHEN b.status IN ('paid','completed') THEN b.price ELSE 0 END) as earnings
+            ")
+            ->limit(8)
+            ->get();
+
+        return view('provider.analytics', compact(
+            'daily',
+            'monthly',
+            'annualTotal',
+            'statusBreakdown',
+            'days',
+            'months',
+            'selectedDate',
+            'fromDate',
+            'toDate',
+            'dateEarnings',
+            'topDate',
+            'topServices'
+        ));
+    }
+}

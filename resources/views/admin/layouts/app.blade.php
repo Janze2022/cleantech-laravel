@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>@yield('title', 'Admin Panel')</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {{-- Bootstrap --}}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    {{-- Icons --}}
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+
+    {{-- Chart.js --}}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            background: #020617;
+            color: #e5e7eb;
+            overflow-x: hidden;
+        }
+
+        /* ================================
+           SIDEBAR
+        ================================ */
+        .admin-sidebar {
+            width: 260px;
+            min-height: 100vh;
+            background: #020617;
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding: 1.5rem;
+            border-right: 1px solid rgba(255,255,255,.06);
+            z-index: 1050;
+            transition: left .3s ease;
+        }
+
+        .admin-sidebar h5 {
+            color: #38bdf8;
+            margin-bottom: 2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .admin-sidebar a {
+            display: block;
+            padding: .75rem 1rem;
+            margin-bottom: .4rem;
+            border-radius: 12px;
+            color: #cbd5f5;
+            text-decoration: none;
+            font-size: .9rem;
+        }
+
+        .admin-sidebar a:hover,
+        .admin-sidebar a.active {
+            background: #0f172a;
+            color: #38bdf8;
+        }
+
+        /* ================================
+           TOP BAR
+        ================================ */
+        .admin-topbar {
+            height: 64px;
+            background: #020617;
+            border-bottom: 1px solid rgba(255,255,255,.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            position: fixed;
+            left: 260px;
+            right: 0;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+        }
+
+        .brand i {
+            color: #38bdf8;
+        }
+
+        .admin-dropdown .dropdown-menu {
+            background: #020617;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 12px;
+        }
+
+        .admin-dropdown .dropdown-item {
+            color: #cbd5f5;
+            font-size: .9rem;
+        }
+
+        .admin-dropdown .dropdown-item:hover {
+            background: #0f172a;
+            color: #38bdf8;
+        }
+
+        .admin-dropdown .logout {
+            color: #ef4444;
+        }
+
+        /* ================================
+           CONTENT
+        ================================ */
+        .admin-content {
+            margin-left: 260px;
+            padding: 2rem;
+            padding-top: 96px;
+            min-height: 100vh;
+        }
+
+        /* ================================
+           DARK CARDS
+        ================================ */
+        .admin-card {
+            background: linear-gradient(
+                180deg,
+                rgba(15,23,42,.95),
+                rgba(2,6,23,.95)
+            );
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255,255,255,.06);
+            box-shadow:
+                0 10px 30px rgba(0,0,0,.6),
+                inset 0 1px 0 rgba(255,255,255,.03);
+        }
+
+        .admin-card h6 {
+            font-size: .75rem;
+            font-weight: 600;
+            color: #94a3b8;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            margin-bottom: .25rem;
+        }
+
+        .metric {
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: #e5e7eb;
+        }
+
+        .metric.primary {
+            color: #38bdf8;
+        }
+
+        /* ================================
+           METRICS GRID
+        ================================ */
+        .admin-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        /* ================================
+           MOBILE
+        ================================ */
+        @media (max-width: 991px) {
+
+            .admin-sidebar {
+                left: -260px;
+            }
+
+            .admin-sidebar.show {
+                left: 0;
+            }
+
+            .admin-topbar {
+                left: 0;
+                padding: 0 1rem;
+            }
+
+            .admin-content {
+                margin-left: 0;
+                padding: 1.25rem;
+                padding-top: 88px;
+            }
+
+            .brand span {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+{{-- SIDEBAR --}}
+<div class="admin-sidebar">
+    <h5><i class="fa-solid fa-shield-halved"></i> Admin Panel</h5>
+
+    <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+        <i class="fa fa-chart-line me-2"></i> Dashboard
+    </a>
+    <a href="{{ route('admin.customers') }}" class="{{ request()->routeIs('admin.customers') ? 'active' : '' }}">
+        <i class="fa fa-users me-2"></i> User Accounts
+    </a>
+    <a href="{{ route('admin.providers') }}" class="{{ request()->routeIs('admin.providers') ? 'active' : '' }}">
+        <i class="fa fa-user-tie me-2"></i> Providers
+    </a>
+    <a href="{{ route('admin.bookings') }}" class="{{ request()->routeIs('admin.bookings') ? 'active' : '' }}">
+        <i class="fa fa-calendar-check me-2"></i> Bookings
+    </a>
+    <a href="{{ route('admin.reports') }}" class="{{ request()->routeIs('admin.reports') ? 'active' : '' }}">
+        <i class="fa fa-chart-pie me-2"></i> Reports
+    </a>
+</div>
+
+{{-- TOP BAR --}}
+<div class="admin-topbar">
+    <div class="d-flex align-items-center">
+        <button class="btn btn-sm btn-outline-light d-lg-none me-2" onclick="toggleAdminSidebar()">
+            <i class="fa fa-bars"></i>
+        </button>
+
+        <div class="brand">
+            <i class="fa-solid fa-droplet"></i>
+            <span>CleanTech Admin</span>
+        </div>
+    </div>
+
+    <div class="dropdown admin-dropdown">
+        <a class="text-decoration-none text-light dropdown-toggle" href="#" data-bs-toggle="dropdown">
+            {{ session('admin_name', 'Admin') }}
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end mt-2">
+            <li><a class="dropdown-item" href="{{ route('admin.profile') }}">Profile</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form method="POST" action="{{ route('admin.logout') }}">
+                    @csrf
+                    <button class="dropdown-item logout">Logout</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</div>
+
+{{-- CONTENT --}}
+<div class="admin-content">
+    @yield('content')
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+function toggleAdminSidebar() {
+    document.querySelector('.admin-sidebar').classList.toggle('show');
+}
+</script>
+
+</body>
+</html>
