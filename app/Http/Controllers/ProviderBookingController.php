@@ -9,6 +9,17 @@ use Illuminate\Support\Facades\Schema;
 
 class ProviderBookingController extends Controller
 {
+    private function columnOrDefault(string $table, string $column, string $alias, ?string $as = null, string $default = 'NULL')
+    {
+        $as ??= $column;
+
+        if (Schema::hasColumn($table, $column)) {
+            return DB::raw("{$alias}.{$column} as {$as}");
+        }
+
+        return DB::raw("{$default} as {$as}");
+    }
+
     private function providerId(): int
     {
         $providerId = (int) session('provider_id');
@@ -35,6 +46,106 @@ class ProviderBookingController extends Controller
                 GROUP_CONCAT(so2.label ORDER BY so2.label SEPARATOR ', ') as areas_label
             ")
             ->groupBy('bso.booking_id');
+    }
+
+    private function customerNameSql(string $alias = 'c'): string
+    {
+        $parts = [];
+
+        if (Schema::hasColumn('customers', 'name')) {
+            $parts[] = "NULLIF(TRIM({$alias}.name), '')";
+        }
+
+        if (Schema::hasColumn('customers', 'first_name') && Schema::hasColumn('customers', 'last_name')) {
+            $parts[] = "NULLIF(TRIM(CONCAT(IFNULL({$alias}.first_name, ''), ' ', IFNULL({$alias}.last_name, ''))), '')";
+        } else {
+            if (Schema::hasColumn('customers', 'first_name')) {
+                $parts[] = "NULLIF(TRIM({$alias}.first_name), '')";
+            }
+
+            if (Schema::hasColumn('customers', 'last_name')) {
+                $parts[] = "NULLIF(TRIM({$alias}.last_name), '')";
+            }
+        }
+
+        if (Schema::hasColumn('customers', 'email')) {
+            $parts[] = "NULLIF(TRIM({$alias}.email), '')";
+        }
+
+        if (empty($parts)) {
+            return "'Customer'";
+        }
+
+        return 'COALESCE(' . implode(', ', $parts) . ", 'Customer')";
+    }
+
+    private function customerPhoneSql(string $customerAlias = 'c', string $bookingAlias = 'b'): string
+    {
+        $parts = [];
+
+        if (Schema::hasColumn('customers', 'phone')) {
+            $parts[] = "NULLIF(TRIM({$customerAlias}.phone), '')";
+        }
+
+        if (Schema::hasColumn('bookings', 'contact_phone')) {
+            $parts[] = "NULLIF(TRIM({$bookingAlias}.contact_phone), '')";
+        }
+
+        if (empty($parts)) {
+            return 'NULL';
+        }
+
+        return 'COALESCE(' . implode(', ', $parts) . ')';
+    }
+
+    private function customerEmailSql(string $alias = 'c'): string
+    {
+        return Schema::hasColumn('customers', 'email')
+            ? "{$alias}.email"
+            : 'NULL';
+    }
+
+    private function applyBookingSearch($query, string $q, bool $hasDirectOptionJoin): void
+    {
+        $query->where(function ($w) use ($q, $hasDirectOptionJoin) {
+            $w->where('b.reference_code', 'like', "%{$q}%");
+
+            if (Schema::hasColumn('services', 'name')) {
+                $w->orWhere('s.name', 'like', "%{$q}%");
+            }
+
+            if ($hasDirectOptionJoin && Schema::hasColumn('service_options', 'label')) {
+                $w->orWhere('o.label', 'like', "%{$q}%");
+            }
+
+            if (Schema::hasColumn('customers', 'name')) {
+                $w->orWhere('c.name', 'like', "%{$q}%");
+            }
+
+            if (Schema::hasColumn('customers', 'first_name')) {
+                $w->orWhere('c.first_name', 'like', "%{$q}%");
+            }
+
+            if (Schema::hasColumn('customers', 'last_name')) {
+                $w->orWhere('c.last_name', 'like', "%{$q}%");
+            }
+
+            if (Schema::hasColumn('customers', 'email')) {
+                $w->orWhere('c.email', 'like', "%{$q}%");
+            }
+
+            if (Schema::hasColumn('customers', 'phone')) {
+                $w->orWhere('c.phone', 'like', "%{$q}%");
+            }
+
+            if (Schema::hasColumn('bookings', 'contact_phone')) {
+                $w->orWhere('b.contact_phone', 'like', "%{$q}%");
+            }
+
+            if (Schema::hasColumn('bookings', 'address')) {
+                $w->orWhere('b.address', 'like', "%{$q}%");
+            }
+        });
     }
 
     private function displayText($value, string $fallback = '-'): string
@@ -118,11 +229,16 @@ class ProviderBookingController extends Controller
     {
         $providerId = $this->providerId();
         $areasSub = $this->bookingAreasSubquery();
+        $hasDirectOptionJoin = Schema::hasTable('service_options')
+            && Schema::hasColumn('service_options', 'id')
+            && Schema::hasColumn('bookings', 'service_option_id');
+        $optionSql = $hasDirectOptionJoin && Schema::hasColumn('service_options', 'label')
+            ? 'o.label'
+            : 'NULL';
 
         $bookings = DB::table('bookings as b')
-            ->join('customers as c', 'c.id', '=', 'b.customer_id')
-            ->join('services as s', 's.id', '=', 'b.service_id')
-            ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
+            ->leftJoin('customers as c', 'c.id', '=', 'b.customer_id')
+            ->leftJoin('services as s', 's.id', '=', 'b.service_id')
             ->leftJoinSub($areasSub, 'areas', function ($join) {
                 $join->on('areas.booking_id', '=', 'b.id');
             })
@@ -131,22 +247,27 @@ class ProviderBookingController extends Controller
             ->orderByDesc('b.created_at')
             ->select(
                 'b.reference_code',
-                'b.booking_date',
-                'b.requested_start_time',
-                'b.time_start',
-                'b.time_end',
+                $this->columnOrDefault('bookings', 'booking_date', 'b'),
+                $this->columnOrDefault('bookings', 'requested_start_time', 'b'),
+                $this->columnOrDefault('bookings', 'time_start', 'b'),
+                $this->columnOrDefault('bookings', 'time_end', 'b'),
                 'b.status',
-                'b.price',
-                'b.address',
-                'b.contact_phone',
-                DB::raw("COALESCE(NULLIF(TRIM(c.name),''), NULLIF(TRIM(c.email),''), 'Customer') as name"),
-                DB::raw("COALESCE(NULLIF(TRIM(c.phone),''), NULLIF(TRIM(b.contact_phone),'')) as phone"),
-                'c.email',
-                's.name as service',
-                DB::raw("COALESCE(areas.areas_label, o.label) as option"),
-                'b.created_at'
-            )
-            ->get();
+                $this->columnOrDefault('bookings', 'price', 'b', null, '0'),
+                $this->columnOrDefault('bookings', 'address', 'b'),
+                $this->columnOrDefault('bookings', 'contact_phone', 'b'),
+                DB::raw($this->customerNameSql('c') . ' as name'),
+                DB::raw($this->customerPhoneSql('c', 'b') . ' as phone'),
+                DB::raw($this->customerEmailSql('c') . ' as email'),
+                DB::raw("COALESCE(s.name, 'Service') as service"),
+                DB::raw("COALESCE(areas.areas_label, {$optionSql}) as option"),
+                $this->columnOrDefault('bookings', 'created_at', 'b')
+            );
+
+        if ($hasDirectOptionJoin) {
+            $bookings->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
+        }
+
+        $bookings = $bookings->get();
 
         $bookings = $this->decorateBookings($bookings);
 
@@ -161,6 +282,12 @@ class ProviderBookingController extends Controller
     {
         $providerId = $this->providerId();
         $areasSub = $this->bookingAreasSubquery();
+        $hasDirectOptionJoin = Schema::hasTable('service_options')
+            && Schema::hasColumn('service_options', 'id')
+            && Schema::hasColumn('bookings', 'service_option_id');
+        $optionSql = $hasDirectOptionJoin && Schema::hasColumn('service_options', 'label')
+            ? 'o.label'
+            : 'NULL';
 
         $q      = trim((string) $request->query('q', ''));
         $status = (string) $request->query('status', 'all');
@@ -168,9 +295,8 @@ class ProviderBookingController extends Controller
         $to     = (string) $request->query('to', '');
 
         $query = DB::table('bookings as b')
-            ->join('customers as c', 'c.id', '=', 'b.customer_id')
-            ->join('services as s', 's.id', '=', 'b.service_id')
-            ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
+            ->leftJoin('customers as c', 'c.id', '=', 'b.customer_id')
+            ->leftJoin('services as s', 's.id', '=', 'b.service_id')
             ->leftJoinSub($areasSub, 'areas', function ($join) {
                 $join->on('areas.booking_id', '=', 'b.id');
             })
@@ -178,21 +304,25 @@ class ProviderBookingController extends Controller
             ->whereIn('b.status', ['paid', 'completed', 'cancelled'])
             ->select(
                 'b.reference_code',
-                'b.booking_date',
-                'b.requested_start_time',
-                'b.time_start',
-                'b.time_end',
+                $this->columnOrDefault('bookings', 'booking_date', 'b'),
+                $this->columnOrDefault('bookings', 'requested_start_time', 'b'),
+                $this->columnOrDefault('bookings', 'time_start', 'b'),
+                $this->columnOrDefault('bookings', 'time_end', 'b'),
                 'b.status',
-                'b.price',
-                'b.address',
-                'b.contact_phone',
-                DB::raw("COALESCE(NULLIF(TRIM(c.name),''), NULLIF(TRIM(c.email),''), 'Customer') as name"),
-                DB::raw("COALESCE(NULLIF(TRIM(c.phone),''), NULLIF(TRIM(b.contact_phone),'')) as phone"),
-                'c.email',
-                's.name as service',
-                DB::raw("COALESCE(areas.areas_label, o.label) as option"),
-                'b.created_at'
+                $this->columnOrDefault('bookings', 'price', 'b', null, '0'),
+                $this->columnOrDefault('bookings', 'address', 'b'),
+                $this->columnOrDefault('bookings', 'contact_phone', 'b'),
+                DB::raw($this->customerNameSql('c') . ' as name'),
+                DB::raw($this->customerPhoneSql('c', 'b') . ' as phone'),
+                DB::raw($this->customerEmailSql('c') . ' as email'),
+                DB::raw("COALESCE(s.name, 'Service') as service"),
+                DB::raw("COALESCE(areas.areas_label, {$optionSql}) as option"),
+                $this->columnOrDefault('bookings', 'created_at', 'b')
             );
+
+        if ($hasDirectOptionJoin) {
+            $query->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
+        }
 
         if ($from) {
             $query->whereDate('b.booking_date', '>=', $from);
@@ -209,15 +339,7 @@ class ProviderBookingController extends Controller
         }
 
         if ($q !== '') {
-            $query->where(function ($w) use ($q) {
-                $w->where('b.reference_code', 'like', "%{$q}%")
-                    ->orWhere('s.name', 'like', "%{$q}%")
-                    ->orWhere('o.label', 'like', "%{$q}%")
-                    ->orWhere('c.name', 'like', "%{$q}%")
-                    ->orWhere('c.email', 'like', "%{$q}%")
-                    ->orWhere('c.phone', 'like', "%{$q}%")
-                    ->orWhere('b.address', 'like', "%{$q}%");
-            });
+            $this->applyBookingSearch($query, $q, $hasDirectOptionJoin);
         }
 
         $bookings = $query
@@ -234,11 +356,16 @@ class ProviderBookingController extends Controller
     {
         $providerId = $this->providerId();
         $areasSub = $this->bookingAreasSubquery();
+        $hasDirectOptionJoin = Schema::hasTable('service_options')
+            && Schema::hasColumn('service_options', 'id')
+            && Schema::hasColumn('bookings', 'service_option_id');
+        $optionSql = $hasDirectOptionJoin && Schema::hasColumn('service_options', 'label')
+            ? 'o.label'
+            : "''";
 
         $booking = DB::table('bookings as b')
-            ->join('customers as c', 'c.id', '=', 'b.customer_id')
-            ->join('services as s', 's.id', '=', 'b.service_id')
-            ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
+            ->leftJoin('customers as c', 'c.id', '=', 'b.customer_id')
+            ->leftJoin('services as s', 's.id', '=', 'b.service_id')
             ->leftJoinSub($areasSub, 'areas', function ($join) {
                 $join->on('areas.booking_id', '=', 'b.id');
             })
@@ -246,13 +373,18 @@ class ProviderBookingController extends Controller
             ->where('b.reference_code', $reference_code)
             ->select(
                 'b.*',
-                DB::raw("COALESCE(NULLIF(TRIM(c.name),''), NULLIF(TRIM(c.email),''), 'Customer') as customer_name"),
-                'c.email as customer_email',
-                DB::raw("COALESCE(NULLIF(TRIM(c.phone),''), NULLIF(TRIM(b.contact_phone),'')) as customer_phone"),
-                's.name as service_name',
-                DB::raw("COALESCE(areas.areas_label, o.label, '') as option_label")
-            )
-            ->first();
+                DB::raw($this->customerNameSql('c') . ' as customer_name'),
+                DB::raw($this->customerEmailSql('c') . ' as customer_email'),
+                DB::raw($this->customerPhoneSql('c', 'b') . ' as customer_phone'),
+                DB::raw("COALESCE(s.name, 'Service') as service_name"),
+                DB::raw("COALESCE(areas.areas_label, {$optionSql}, '') as option_label")
+            );
+
+        if ($hasDirectOptionJoin) {
+            $booking->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
+        }
+
+        $booking = $booking->first();
 
         abort_if(!$booking, 404);
 
