@@ -327,18 +327,13 @@ class ProviderBookingController extends Controller
 
         $monthly = (clone $earningsBase)
             ->whereDate('b.booking_date', '>=', now()->subMonths($months - 1)->startOfMonth()->toDateString())
-            ->groupByRaw('YEAR(b.booking_date), MONTH(b.booking_date)')
-            ->orderByRaw('YEAR(b.booking_date) ASC, MONTH(b.booking_date) ASC')
             ->selectRaw("
-                YEAR(b.booking_date) as yr,
-                MONTH(b.booking_date) as mon,
-                CONCAT(
-                    ELT(MONTH(b.booking_date), 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'),
-                    ' ',
-                    YEAR(b.booking_date)
-                ) as label,
+                DATE_FORMAT(b.booking_date, '%Y-%m-01') as month_key,
+                DATE_FORMAT(MIN(b.booking_date), '%b %Y') as label,
                 SUM(b.price) as amount
             ")
+            ->groupBy('month_key')
+            ->orderBy('month_key', 'asc')
             ->get();
 
         $annualTotal = (float) (

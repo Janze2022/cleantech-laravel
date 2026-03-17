@@ -321,7 +321,7 @@
                 $timeText = $dt ? $dt->diffForHumans() : '';
               @endphp
 
-              <a href="{{ route('provider.notifications.open', $n->id) }}"
+              <a href="{{ route('provider.notifications.open', ['id' => $n->id], false) }}"
                  class="notif-row {{ $isUnread ? 'unread' : '' }}">
                 <div class="notif-msg">{{ $n->message }}</div>
 
@@ -339,7 +339,7 @@
           </div>
 
           <div class="notif-footer">
-            <form method="POST" action="{{ route('provider.notifications.readAll') }}">
+            <form method="POST" action="{{ route('provider.notifications.readAll', [], false) }}">
               @csrf
               <button type="submit" class="btn-mini" {{ $providerUnreadCount ? '' : 'disabled' }}>
                 Mark all read
@@ -347,7 +347,7 @@
             </form>
 
             <form method="POST"
-                  action="{{ route('provider.notifications.clear') }}"
+                  action="{{ route('provider.notifications.clear', [], false) }}"
                   onsubmit="return confirm('Delete all notifications?');">
               @csrf
               <button type="submit" class="btn-mini btn-mini-danger" {{ $providerNotifications->count() ? '' : 'disabled' }}>

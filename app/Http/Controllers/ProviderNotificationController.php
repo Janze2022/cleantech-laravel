@@ -2,12 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class ProviderNotificationController extends Controller
 {
+    private function redirectRelative(string $routeName, array $parameters = []): RedirectResponse
+    {
+        $response = new RedirectResponse(route($routeName, $parameters, false));
+
+        if (app()->bound('session.store')) {
+            $response->setSession(app('session.store'));
+        }
+
+        return $response;
+    }
+
     private function providerId(): int
     {
         $providerId = (int) session('provider_id');
@@ -27,7 +39,7 @@ class ProviderNotificationController extends Controller
             !Schema::hasTable('provider_notifications') ||
             !Schema::hasColumns('provider_notifications', ['provider_id', 'is_read'])
         ) {
-            return redirect()->route('provider.dashboard');
+            return $this->redirectRelative('provider.dashboard');
         }
 
         $notif = DB::table('provider_notifications')
@@ -36,7 +48,7 @@ class ProviderNotificationController extends Controller
             ->first();
 
         if (!$notif) {
-            return redirect()->route('provider.dashboard')
+            return $this->redirectRelative('provider.dashboard')
                 ->with('error', 'Notification not found.');
         }
 
@@ -50,7 +62,22 @@ class ProviderNotificationController extends Controller
             ->where('id', $id)
             ->update($update);
 
-        return redirect()->route('provider.bookings')
+        $reference = trim((string) ($notif->reference_code ?? ''));
+
+        if ($reference !== '' && Schema::hasTable('bookings')) {
+            $bookingExists = DB::table('bookings')
+                ->where('provider_id', $providerId)
+                ->where('reference_code', $reference)
+                ->exists();
+
+            if ($bookingExists) {
+                return $this->redirectRelative('provider.bookings.show', [
+                    'reference_code' => $reference,
+                ]);
+            }
+        }
+
+        return $this->redirectRelative('provider.bookings')
             ->with('success', 'Notification opened.');
     }
 

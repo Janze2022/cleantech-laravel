@@ -362,11 +362,17 @@
     $notifications = collect();
     $unreadCount = 0;
 
-    if (session()->has('user_id')) {
+    if (session()->has('user_id') && \Illuminate\Support\Facades\Schema::hasTable('customers')) {
         $currentCustomer = DB::table('customers')
             ->where('id', session('user_id'))
             ->first();
+    }
 
+    if (
+        session()->has('user_id') &&
+        \Illuminate\Support\Facades\Schema::hasTable('notifications') &&
+        \Illuminate\Support\Facades\Schema::hasColumns('notifications', ['user_id', 'is_read'])
+    ) {
         $notifications = DB::table('notifications')
             ->where('user_id', session('user_id'))
             ->latest('id')
@@ -376,10 +382,13 @@
         $unreadCount = $notifications->where('is_read', 0)->count();
     }
 
-    $customerDisplayName =
-        $currentCustomer->name
-        ?? trim(($currentCustomer->first_name ?? '') . ' ' . ($currentCustomer->last_name ?? ''))
-        ?: (session('customer_name') ?? 'Customer');
+    $customerFullName = trim(implode(' ', array_filter([
+        data_get($currentCustomer, 'first_name'),
+        data_get($currentCustomer, 'last_name'),
+    ])));
+
+    $customerDisplayName = data_get($currentCustomer, 'name')
+        ?: ($customerFullName !== '' ? $customerFullName : (session('customer_name') ?? 'Customer'));
 @endphp
 
 {{-- SIDEBAR --}}
@@ -482,7 +491,7 @@
 
                         <a class="notif-row notif-row-item"
                            data-read="{{ $isUnread ? '0' : '1' }}"
-                           href="{{ route('customer.notifications.open', $n->id) }}">
+                           href="{{ route('customer.notifications.open', ['id' => $n->id], false) }}">
                             <div class="notif-avatar" aria-hidden="true">
                                 {{ $initial }}
                             </div>
@@ -513,14 +522,14 @@
                 </div>
 
                 <div class="notif-footer">
-                    <form method="POST" action="{{ route('customer.notifications.readAll') }}">
+                    <form method="POST" action="{{ route('customer.notifications.readAll', [], false) }}">
                         @csrf
                         <button type="submit" class="btn-mini btn-mini-accent" {{ $unreadCount ? '' : 'disabled' }}>
                             Mark all read
                         </button>
                     </form>
 
-                    <form method="POST" action="{{ route('customer.notifications.clear') }}"
+                    <form method="POST" action="{{ route('customer.notifications.clear', [], false) }}"
                           onsubmit="return confirm('Delete all notifications?');">
                         @csrf
                         <button type="submit" class="btn-mini btn-mini-danger" {{ $notifications->count() ? '' : 'disabled' }}>

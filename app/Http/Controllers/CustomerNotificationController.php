@@ -2,20 +2,43 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CustomerNotificationController extends Controller
 {
+    private function redirectRelative(string $routeName, array $parameters = []): RedirectResponse
+    {
+        $response = new RedirectResponse(route($routeName, $parameters, false));
+
+        if (app()->bound('session.store')) {
+            $response->setSession(app('session.store'));
+        }
+
+        return $response;
+    }
+
+    private function notificationsAvailable(): bool
+    {
+        return Schema::hasTable('notifications')
+            && Schema::hasColumns('notifications', ['user_id', 'is_read']);
+    }
+
     /**
      * Open a notification
      */
     public function open($id)
     {
-        $customerId = session('user_id');
+        $customerId = (int) session('user_id');
 
         if (!$customerId) {
-            return redirect()->route('customer.login');
+            return $this->redirectRelative('customer.login');
+        }
+
+        if (!$this->notificationsAvailable()) {
+            return $this->redirectRelative('customer.dashboard');
         }
 
         $notif = DB::table('notifications')
@@ -24,39 +47,43 @@ class CustomerNotificationController extends Controller
             ->first();
 
         if (!$notif) {
-            return redirect()->route('customer.dashboard')
+            return $this->redirectRelative('customer.dashboard')
                 ->with('error', 'Notification not found.');
         }
 
-        // Mark notification as read
+        $update = ['is_read' => 1];
+
+        if (Schema::hasColumn('notifications', 'updated_at')) {
+            $update['updated_at'] = now();
+        }
+
         DB::table('notifications')
             ->where('id', $id)
-            ->update([
-                'is_read' => 1,
-                'updated_at' => now()
-            ]);
+            ->update($update);
 
-        /**
-         * Redirect depending on notification type
-         */
+        $type = strtolower((string) ($notif->type ?? ''));
+        $reference = trim((string) ($notif->reference_code ?? ''));
 
-        // Review notification
-        if (($notif->type ?? null) === 'review') {
-            return redirect()->route('customer.reviews', [
-                'ref' => $notif->reference_code
-            ]);
+        if ($type === 'review') {
+            $params = $reference !== '' ? ['ref' => $reference] : [];
+
+            return $this->redirectRelative('customer.reviews', $params);
         }
 
-        // Booking notification → open booking details
-        if (!empty($notif->reference_code)) {
-            return redirect()->route('customer.bookings.show', [
-                'reference' => $notif->reference_code
-            ]);
+        if ($reference !== '' && Schema::hasTable('bookings')) {
+            $bookingExists = DB::table('bookings')
+                ->where('customer_id', $customerId)
+                ->where('reference_code', $reference)
+                ->exists();
+
+            if ($bookingExists) {
+                return $this->redirectRelative('customer.bookings.show', [
+                    'reference' => $reference,
+                ]);
+            }
         }
 
-        // Fallback
-        return redirect()->route('customer.bookings')
-            ->with('success', 'Booking status updated.');
+        return $this->redirectRelative('customer.bookings');
     }
 
     /**
@@ -64,19 +91,26 @@ class CustomerNotificationController extends Controller
      */
     public function readAll(Request $request)
     {
-        $customerId = session('user_id');
+        if (!$this->notificationsAvailable()) {
+            return back();
+        }
+
+        $customerId = (int) session('user_id');
 
         if (!$customerId) {
             return back();
         }
 
+        $update = ['is_read' => 1];
+
+        if (Schema::hasColumn('notifications', 'updated_at')) {
+            $update['updated_at'] = now();
+        }
+
         DB::table('notifications')
             ->where('user_id', $customerId)
             ->where('is_read', 0)
-            ->update([
-                'is_read' => 1,
-                'updated_at' => now()
-            ]);
+            ->update($update);
 
         return back();
     }
@@ -86,7 +120,11 @@ class CustomerNotificationController extends Controller
      */
     public function clear(Request $request)
     {
-        $customerId = session('user_id');
+        if (!Schema::hasTable('notifications') || !Schema::hasColumn('notifications', 'user_id')) {
+            return back();
+        }
+
+        $customerId = (int) session('user_id');
 
         if (!$customerId) {
             return back();
