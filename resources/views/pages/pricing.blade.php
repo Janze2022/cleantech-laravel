@@ -194,7 +194,7 @@ body {
                     </ul>
 
                     <div class="price-note">
-                        Base price is <strong>₱2,500</strong>. No additional deep-cleaning pricing entries were shown in your current database screenshot.
+                        Base price is <strong>₱2,500</strong>. 
                     </div>
                 </div>
             </div>

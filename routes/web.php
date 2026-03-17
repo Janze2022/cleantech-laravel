@@ -61,15 +61,31 @@ Route::get('/', fn () => view('pages.home'))->name('home');
 
 /*
 |--------------------------------------------------------------------------
-| PUBLIC PROVIDER IMAGE ROUTE
+| PUBLIC STATIC PAGES
 |--------------------------------------------------------------------------
-| IMPORTANT:
-| This must stay OUTSIDE customer/provider auth groups
+*/
+Route::get('/services', fn () => view('pages.services'))->name('services');
+Route::get('/how-it-works', fn () => view('pages.how-it-works'))->name('how.it.works');
+Route::get('/pricing', fn () => view('pages.pricing'))->name('pricing');
+Route::get('/blog', fn () => view('pages.blog'))->name('blog');
+Route::get('/contact', fn () => view('pages.contact'))->name('contact');
+Route::get('/faq', fn () => view('pages.faq'))->name('faq');
+Route::get('/about', fn () => view('pages.about'))->name('about');
+
+/*
+|--------------------------------------------------------------------------
+| PUBLIC PROVIDER FILE ROUTES
+|--------------------------------------------------------------------------
+| Keep these OUTSIDE auth middleware groups so images/documents can open
 |--------------------------------------------------------------------------
 */
 Route::get('/provider-image/{filename}', [ProviderProfileController::class, 'publicImage'])
     ->where('filename', '.*')
     ->name('provider.image.public');
+
+Route::get('/provider-document/{filename}', [ProviderProfileController::class, 'publicDocument'])
+    ->where('filename', '.*')
+    ->name('provider.document.public');
 
 /*
 |--------------------------------------------------------------------------
@@ -104,14 +120,21 @@ Route::prefix('admin')
         Route::post('/logout', [AdminAuthController::class, 'logout'])
             ->name('logout');
 
+        // =====================
         // CUSTOMERS
+        // =====================
         Route::get('/customers', [AdminCustomerController::class, 'index'])
             ->name('customers');
+
+        Route::get('/customers/{id}', [AdminCustomerController::class, 'show'])
+            ->name('customers.show');
 
         Route::delete('/customers/{id}', [AdminCustomerController::class, 'destroy'])
             ->name('customers.delete');
 
+        // =====================
         // PROVIDERS
+        // =====================
         Route::get('/providers', [AdminProviderController::class, 'index'])
             ->name('providers');
 
@@ -127,7 +150,12 @@ Route::prefix('admin')
         Route::post('/providers/{id}/unapprove', [AdminProviderController::class, 'unapprove'])
             ->name('providers.unapprove');
 
+        Route::delete('/providers/{id}', [AdminProviderController::class, 'destroy'])
+            ->name('providers.delete');
+
+        // =====================
         // BOOKINGS
+        // =====================
         Route::get('/bookings', [AdminBookingController::class, 'index'])
             ->name('bookings');
 
@@ -142,7 +170,10 @@ Route::prefix('admin')
 
         Route::post('/bookings/{id}/status', [AdminBookingController::class, 'updateStatus'])
             ->name('bookings.status');
-        //PROFILE
+
+        // =====================
+        // PROFILE
+        // =====================
         Route::get('/profile', [ProfileController::class, 'index'])
             ->name('profile');
 
@@ -151,7 +182,10 @@ Route::prefix('admin')
 
         Route::post('/profile/password', [ProfileController::class, 'updatePassword'])
             ->name('profile.password');
+
+        // =====================
         // REPORTS
+        // =====================
         Route::get('/reports', [AdminReportController::class, 'index'])
             ->name('reports');
 
@@ -203,7 +237,7 @@ Route::prefix('customer')
         Route::post('/forgot-password', [CustomerForgotPasswordController::class, 'sendOtp'])
             ->name('forgot.submit');
 
-        // FORGOT PASSWORD OTP VERIFY
+        // VERIFY OTP
         Route::get('/forgot-password/verify', [CustomerForgotPasswordController::class, 'showVerifyOtp'])
             ->name('forgot.verify');
 
@@ -221,19 +255,6 @@ Route::prefix('customer')
         Route::get('/forgot-password/success', [CustomerForgotPasswordController::class, 'success'])
             ->name('forgot.success');
     });
-
-/*
-|--------------------------------------------------------------------------
-| PUBLIC PAGES
-|--------------------------------------------------------------------------
-*/
-Route::get('/services', fn () => view('pages.services'))->name('services');
-Route::get('/how-it-works', fn () => view('pages.how-it-works'))->name('how.it.works');
-Route::get('/pricing', fn () => view('pages.pricing'))->name('pricing');
-Route::get('/blog', fn () => view('pages.blog'))->name('blog');
-Route::get('/contact', fn () => view('pages.contact'))->name('contact');
-Route::get('/faq', fn () => view('pages.faq'))->name('faq');
-Route::get('/about', fn () => view('pages.about'))->name('about');
 
 /*
 |--------------------------------------------------------------------------
@@ -271,7 +292,7 @@ Route::prefix('customer')
         Route::get('/bookings', [CustomerBookingController::class, 'index'])
             ->name('bookings');
 
-        // BOOKINGS DETAILS
+        // BOOKING DETAILS
         Route::get('/bookings/{reference}', [CustomerBookingController::class, 'show'])
             ->name('bookings.show');
 
@@ -320,28 +341,28 @@ Route::prefix('provider')
     ->middleware('provider.guest')
     ->group(function () {
 
-        // Pre-register: Terms
+        // TERMS
         Route::get('/pre-register/terms', [ProviderPreRegisterController::class, 'terms'])
             ->name('pre_register.terms');
 
         Route::post('/pre-register/terms', [ProviderPreRegisterController::class, 'acceptTerms'])
             ->name('pre_register.terms.submit');
 
-        // Pre-register
+        // PRE-REGISTER
         Route::get('/pre-register', [ProviderPreRegisterController::class, 'show'])
             ->name('pre_register');
 
         Route::post('/pre-register', [ProviderPreRegisterController::class, 'store'])
             ->name('pre_register.submit');
 
-        // Register
+        // REGISTER
         Route::get('/register', [ProviderRegisterController::class, 'show'])
             ->name('register');
 
         Route::post('/register', [ProviderRegisterController::class, 'store'])
             ->name('register.submit');
 
-        // OTP Verify
+        // VERIFY
         Route::get('/verify', [ProviderOtpController::class, 'show'])
             ->name('verify');
 
@@ -351,35 +372,35 @@ Route::prefix('provider')
         Route::post('/verify/resend', [ProviderOtpController::class, 'resend'])
             ->name('otp.resend');
 
-        // Login
+        // LOGIN
         Route::get('/login', [ProviderLoginController::class, 'show'])
             ->name('login');
 
         Route::post('/login', [ProviderLoginController::class, 'login'])
             ->name('login.submit');
 
-        // Forgot password
+        // FORGOT PASSWORD
         Route::get('/forgot-password', [ProviderForgotPasswordController::class, 'show'])
             ->name('forgot');
 
         Route::post('/forgot-password', [ProviderForgotPasswordController::class, 'sendOtp'])
             ->name('forgot.submit');
 
-        // OTP Verify
+        // VERIFY OTP
         Route::get('/forgot-password/verify', [ProviderForgotPasswordController::class, 'verifyForm'])
             ->name('reset.verify');
 
         Route::post('/forgot-password/verify', [ProviderForgotPasswordController::class, 'verifyOtp'])
             ->name('reset.verify.submit');
 
-        // Reset password form
+        // RESET PASSWORD
         Route::get('/forgot-password/reset', [ProviderForgotPasswordController::class, 'resetForm'])
             ->name('reset.password');
 
         Route::post('/forgot-password/reset', [ProviderForgotPasswordController::class, 'reset'])
             ->name('reset.password.submit');
 
-        // Success
+        // SUCCESS
         Route::get('/forgot-password/success', [ProviderForgotPasswordController::class, 'success'])
             ->name('reset.success');
     });
@@ -426,7 +447,7 @@ Route::prefix('provider')
         Route::get('/bookings/{reference_code}', [ProviderBookingController::class, 'show'])
             ->name('bookings.show');
 
-        // Notifications
+        // NOTIFICATIONS
         Route::post('/notifications/read-all', [ProviderNotificationController::class, 'readAll'])
             ->name('notifications.readAll');
 
@@ -436,7 +457,7 @@ Route::prefix('provider')
         Route::get('/notifications/{id}/open', [ProviderNotificationController::class, 'open'])
             ->name('notifications.open');
 
-        // Analytics + Earnings + Ratings
+        // ANALYTICS / EARNINGS / RATINGS
         Route::get('/analytics', [ProviderBookingController::class, 'analytics'])
             ->name('analytics');
 
@@ -457,9 +478,10 @@ Route::prefix('provider')
             ->name('password.update');
 
         Route::get('/profile-image/{filename}', [ProviderProfileController::class, 'image'])
+            ->where('filename', '.*')
             ->name('profile.image');
 
         // LOGOUT
         Route::post('/logout', [ProviderLogoutController::class, 'logout'])
             ->name('logout');
-    }); 
+    });
