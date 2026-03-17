@@ -99,7 +99,7 @@
         display: grid;
         grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.9fr);
         gap: 1.25rem;
-        align-items: stretch;
+        align-items: start;
     }
 
     .hero-copy {
@@ -295,14 +295,15 @@
     .overview-text {
         margin-top: 0.55rem;
         color: var(--dash-muted);
-        font-size: 0.95rem;
-        line-height: 1.55;
+        font-size: 0.88rem;
+        line-height: 1.45;
     }
 
     .dashboard-main {
         display: grid;
         grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.95fr);
         gap: 1rem;
+        align-items: start;
     }
 
     .panel-card {
@@ -327,8 +328,8 @@
     .panel-subtitle {
         margin: 0.35rem 0 0;
         color: var(--dash-muted);
-        font-size: 0.92rem;
-        line-height: 1.6;
+        font-size: 0.86rem;
+        line-height: 1.5;
     }
 
     .panel-tag {
@@ -352,7 +353,7 @@
     }
 
     .insight-item {
-        padding: 1rem;
+        padding: 0.95rem;
         border-radius: 18px;
         border: 1px solid rgba(148, 163, 184, 0.12);
         background: rgba(255, 255, 255, 0.03);
@@ -375,21 +376,21 @@
     .insight-caption {
         margin-top: 0.35rem;
         color: var(--dash-muted);
-        font-size: 0.85rem;
-        line-height: 1.55;
+        font-size: 0.78rem;
+        line-height: 1.4;
     }
 
     .next-steps {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.8rem;
     }
 
     .step-link {
         display: flex;
         align-items: flex-start;
-        gap: 0.85rem;
-        padding: 1rem;
+        gap: 0.75rem;
+        padding: 0.9rem;
         border-radius: 18px;
         text-decoration: none;
         color: inherit;
@@ -421,14 +422,14 @@
 
     .step-title {
         font-weight: 800;
-        font-size: 0.98rem;
+        font-size: 0.94rem;
     }
 
     .step-copy {
-        margin-top: 0.3rem;
+        margin-top: 0.2rem;
         color: var(--dash-muted);
-        font-size: 0.88rem;
-        line-height: 1.55;
+        font-size: 0.78rem;
+        line-height: 1.35;
     }
 
     .recent-card {
@@ -499,6 +500,14 @@
         line-height: 1.55;
     }
 
+    .recent-option {
+        margin-top: 0.28rem;
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 0.82rem;
+        font-weight: 700;
+        line-height: 1.45;
+    }
+
     .recent-price {
         color: var(--dash-text);
         font-size: 1rem;
@@ -529,6 +538,12 @@
         border-color: rgba(34, 197, 94, 0.22);
         background: rgba(34, 197, 94, 0.1);
         color: #86efac;
+    }
+
+    .recent-pill.reference {
+        border-color: rgba(56, 189, 248, 0.18);
+        background: rgba(56, 189, 248, 0.08);
+        color: rgba(255, 255, 255, 0.92);
     }
 
     .empty-state {
@@ -584,6 +599,10 @@
         .insight-grid {
             grid-template-columns: 1fr;
         }
+
+        .next-steps {
+            grid-template-columns: 1fr;
+        }
     }
 
     @media (max-width: 767.98px) {
@@ -628,27 +647,26 @@
                         <span>{{ $greeting }}</span>
                     </div>
 
-                    <h1 class="hero-title">{{ $name }}, your home care plans are all in one place.</h1>
+                    <h1 class="hero-title">Welcome back, {{ $name }}.</h1>
 
                     <p class="hero-subtitle">
-                        Keep track of your bookings, review what you have spent, and jump back into
-                        the services you need without digging through technical details.
+                        See what is active, check your totals, and book again when you need to.
                     </p>
 
                     <div class="hero-actions">
                         <a class="hero-button" href="{{ route('customer.services') }}">
                             <i class="bi bi-search"></i>
-                            <span>Book a Service</span>
+                            <span>Book Service</span>
                         </a>
 
                         <a class="hero-button-secondary" href="{{ route('customer.bookings') }}">
                             <i class="bi bi-calendar2-check"></i>
-                            <span>View My Bookings</span>
+                            <span>My Bookings</span>
                         </a>
 
                         <a class="hero-button-secondary" href="{{ route('customer.bookings.history') }}">
                             <i class="bi bi-clock-history"></i>
-                            <span>Open Booking History</span>
+                            <span>History</span>
                         </a>
                     </div>
                 </div>
@@ -658,8 +676,7 @@
                         <div class="hero-summary-label">Today</div>
                         <div class="hero-summary-date">{{ $now->format('l, F j, Y') }}</div>
                         <div class="hero-summary-note">
-                            {{ $bookingsToday }} booking{{ $bookingsToday === 1 ? '' : 's' }} on your schedule today and
-                            {{ $activeBookings }} currently active booking{{ $activeBookings === 1 ? '' : 's' }} to keep an eye on.
+                            {{ $bookingsToday }} today and {{ $activeBookings }} active right now.
                         </div>
                     </div>
 
@@ -693,7 +710,7 @@
                 </div>
                 <div class="overview-value">{{ $activeBookings }}</div>
                 <div class="overview-text">
-                    {{ $activeBookings > 0 ? 'You still have services in progress or waiting to be completed.' : 'You are all caught up right now with no active service in progress.' }}
+                    {{ $activeBookings > 0 ? 'In progress now.' : 'Nothing in progress.' }}
                 </div>
             </article>
 
@@ -706,7 +723,7 @@
                 </div>
                 <div class="overview-value">{{ $totalBookings }}</div>
                 <div class="overview-text">
-                    Your full booking history across every service you have requested so far.
+                    Booked so far.
                 </div>
             </article>
 
@@ -719,7 +736,7 @@
                 </div>
                 <div class="overview-value">{{ $formatMoney($totalSpent) }}</div>
                 <div class="overview-text">
-                    A simple running total of paid and completed services.
+                    Paid and completed.
                 </div>
             </article>
         </section>
@@ -728,10 +745,8 @@
             <article class="panel-card">
                 <div class="panel-header">
                     <div>
-                        <h2 class="panel-title">Your spending snapshot</h2>
-                        <p class="panel-subtitle">
-                            A quick view of what you have booked and spent recently, without making the page feel like a report.
-                        </p>
+                        <h2 class="panel-title">Spending snapshot</h2>
+                        <p class="panel-subtitle">A quick look at your recent totals.</p>
                     </div>
 
                     <div class="panel-tag">
@@ -744,25 +759,25 @@
                     <div class="insight-item">
                         <div class="insight-label">Spent today</div>
                         <div class="insight-value">{{ $formatMoney($spentToday) }}</div>
-                        <div class="insight-caption">What went toward services scheduled for today.</div>
+                        <div class="insight-caption">Today</div>
                     </div>
 
                     <div class="insight-item">
                         <div class="insight-label">Spent this month</div>
                         <div class="insight-value">{{ $formatMoney($spentMonth) }}</div>
-                        <div class="insight-caption">Your running total for {{ $now->format('F') }}.</div>
+                        <div class="insight-caption">{{ $now->format('F') }}</div>
                     </div>
 
                     <div class="insight-item">
                         <div class="insight-label">Spent this year</div>
                         <div class="insight-value">{{ $formatMoney($spentYear) }}</div>
-                        <div class="insight-caption">A year-to-date look at household cleaning services.</div>
+                        <div class="insight-caption">{{ $now->format('Y') }}</div>
                     </div>
 
                     <div class="insight-item">
                         <div class="insight-label">Completed today</div>
                         <div class="insight-value">{{ $completedToday }}</div>
-                        <div class="insight-caption">Services that have already been wrapped up today.</div>
+                        <div class="insight-caption">Done today</div>
                     </div>
                 </div>
             </article>
@@ -770,10 +785,8 @@
             <aside class="panel-card">
                 <div class="panel-header">
                     <div>
-                        <h2 class="panel-title">What would you like to do next?</h2>
-                        <p class="panel-subtitle">
-                            The fastest way back into the parts of the panel customers usually need most.
-                        </p>
+                        <h2 class="panel-title">Quick links</h2>
+                        <p class="panel-subtitle">Fast access to the pages you will use most.</p>
                     </div>
                 </div>
 
@@ -784,7 +797,7 @@
                         </div>
                         <div>
                             <div class="step-title">Browse services</div>
-                            <div class="step-copy">Find available providers and book the service you need.</div>
+                            <div class="step-copy">Book now</div>
                         </div>
                     </a>
 
@@ -794,7 +807,7 @@
                         </div>
                         <div>
                             <div class="step-title">Check active bookings</div>
-                            <div class="step-copy">See upcoming schedules, assigned providers, and live booking details.</div>
+                            <div class="step-copy">In progress</div>
                         </div>
                     </a>
 
@@ -804,7 +817,7 @@
                         </div>
                         <div>
                             <div class="step-title">Review past bookings</div>
-                            <div class="step-copy">Look back at completed jobs, payment totals, and older booking records.</div>
+                            <div class="step-copy">Completed jobs</div>
                         </div>
                     </a>
 
@@ -814,7 +827,7 @@
                         </div>
                         <div>
                             <div class="step-title">Update your profile</div>
-                            <div class="step-copy">Keep your contact details and profile photo ready for future bookings.</div>
+                            <div class="step-copy">Account settings</div>
                         </div>
                     </a>
                 </div>
@@ -824,15 +837,13 @@
         <section class="recent-card">
             <div class="recent-head">
                 <div>
-                    <h2 class="panel-title">Recent completed bookings</h2>
-                    <p class="panel-subtitle">
-                        A simple recap of the services you have already finished.
-                    </p>
+                    <h2 class="panel-title">Completed bookings</h2>
+                    <p class="panel-subtitle">Your latest finished jobs.</p>
                 </div>
 
                 <a class="recent-link" href="{{ route('customer.bookings.history', ['status' => 'completed']) }}">
                     <i class="bi bi-arrow-right"></i>
-                    <span>View completed history</span>
+                    <span>See history</span>
                 </a>
             </div>
 
@@ -849,6 +860,14 @@
                                 ?? $dataGet($booking, 'provider')
                                 ?? $dataGet($booking, 'provider.name')
                                 ?? 'Provider';
+
+                            $option = trim((string) (
+                                $dataGet($booking, 'option_name')
+                                ?? $dataGet($booking, 'option')
+                                ?? ''
+                            ));
+
+                            $reference = (string) ($dataGet($booking, 'reference_code') ?? '');
 
                             $dateValue = $dataGet($booking, 'completed_at')
                                 ?? $dataGet($booking, 'booking_date')
@@ -873,6 +892,9 @@
                             <div class="recent-top">
                                 <div>
                                     <h3 class="recent-service">{{ $service }}</h3>
+                                    @if($option !== '')
+                                        <div class="recent-option">{{ $option }}</div>
+                                    @endif
                                     <div class="recent-provider">{{ $provider }}</div>
                                 </div>
 
@@ -880,6 +902,13 @@
                             </div>
 
                             <div class="recent-meta">
+                                @if($reference !== '')
+                                    <div class="recent-pill reference">
+                                        <i class="bi bi-hash"></i>
+                                        <span>{{ $reference }}</span>
+                                    </div>
+                                @endif
+
                                 <div class="recent-pill">
                                     <i class="bi bi-calendar3"></i>
                                     <span>{{ $dateLabel }}</span>
@@ -900,7 +929,7 @@
                     </div>
                     <div class="empty-state-title">No completed bookings yet</div>
                     <div class="empty-state-copy">
-                        Once you finish a booking, it will appear here so you can quickly look back at the service and provider.
+                        Finished bookings will show up here once you complete your first service.
                     </div>
                     <a class="hero-button" href="{{ route('customer.services') }}">
                         <i class="bi bi-search"></i>

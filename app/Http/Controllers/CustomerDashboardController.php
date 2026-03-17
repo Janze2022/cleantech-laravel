@@ -59,10 +59,32 @@ class CustomerDashboardController extends Controller
             'spent_year'   => (clone $paidCompleted)->whereYear('booking_date', Carbon::now($tz)->year)->sum('price'),
         ];
 
-        $recentCompleted = (clone $paidCompleted)
-            ->orderByDesc('booking_date')
-            ->orderByDesc('time_start')
+        $areasSub = $this->bookingAreasSubquery();
+
+        $recentCompleted = DB::table('bookings as b')
+            ->join('services as s', 's.id', '=', 'b.service_id')
+            ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
+            ->join('service_providers as p', 'p.id', '=', 'b.provider_id')
+            ->leftJoinSub($areasSub, 'areas', function ($join) {
+                $join->on('areas.booking_id', '=', 'b.id');
+            })
+            ->where('b.customer_id', $customerId)
+            ->whereIn('b.status', ['paid', 'completed'])
+            ->orderByDesc('b.booking_date')
+            ->orderByDesc('b.time_start')
             ->limit(5)
+            ->select(
+                'b.reference_code',
+                'b.booking_date',
+                'b.time_start',
+                'b.time_end',
+                'b.price',
+                'b.status',
+                'b.created_at',
+                's.name as service_name',
+                DB::raw("COALESCE(areas.areas_label, o.label) as option_name"),
+                DB::raw("TRIM(CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, ''))) as provider_name")
+            )
             ->get();
 
         return view('customer.dashboard', [
@@ -123,5 +145,19 @@ class CustomerDashboardController extends Controller
             ->paginate(10);
 
         return view('customer.bookings_history', compact('bookings'));
+    }
+
+    private function bookingAreasSubquery()
+    {
+        if (!Schema::hasTable('booking_service_options') || !Schema::hasTable('service_options')) {
+            return DB::table('bookings as b_fallback')
+                ->selectRaw('NULL as booking_id, NULL as areas_label')
+                ->whereRaw('1 = 0');
+        }
+
+        return DB::table('booking_service_options as bso')
+            ->join('service_options as so2', 'so2.id', '=', 'bso.service_option_id')
+            ->selectRaw("bso.booking_id, GROUP_CONCAT(so2.label ORDER BY so2.label SEPARATOR ', ') as areas_label")
+            ->groupBy('bso.booking_id');
     }
 }
