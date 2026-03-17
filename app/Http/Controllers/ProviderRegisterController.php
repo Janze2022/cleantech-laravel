@@ -126,7 +126,13 @@ class ProviderRegisterController extends Controller
                 Storage::disk('public')->delete($idPath);
             }
 
-            throw $e;
+            report($e);
+
+            return back()
+                ->withErrors([
+                    'id_image' => 'ID upload failed. Please verify your cloud storage settings and try again.',
+                ])
+                ->withInput();
         }
     }
 }

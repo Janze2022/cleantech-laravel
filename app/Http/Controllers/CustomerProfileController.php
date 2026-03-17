@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -85,37 +86,48 @@ class CustomerProfileController extends Controller
             ]);
         }
 
-        $oldStoragePath = $this->normalizeProfileImagePath($customer->profile_image ?? null);
-        $legacyPath = public_path('uploads/customers/' . basename((string) ($customer->profile_image ?? '')));
+        try {
+            $oldStoragePath = $this->normalizeProfileImagePath($customer->profile_image ?? null);
+            $legacyPath = public_path('uploads/customers/' . basename((string) ($customer->profile_image ?? '')));
 
-        if ($oldStoragePath && Storage::disk('public')->exists($oldStoragePath)) {
-            Storage::disk('public')->delete($oldStoragePath);
-        }
+            if ($oldStoragePath && Storage::disk('public')->exists($oldStoragePath)) {
+                Storage::disk('public')->delete($oldStoragePath);
+            }
 
-        if (is_file($legacyPath)) {
-            @unlink($legacyPath);
-        }
+            if (is_file($legacyPath)) {
+                @unlink($legacyPath);
+            }
 
-        $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
-        $filename = 'customer_' . $customerId . '_' . Str::uuid() . '.' . $extension;
-        $storedPath = $file->storeAs('customers', $filename, 'public');
+            $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+            $filename = 'customer_' . $customerId . '_' . Str::uuid() . '.' . $extension;
+            $storedPath = $file->storeAs('customers', $filename, 'public');
 
-        if (!$storedPath) {
+            if (!$storedPath) {
+                return back()->withErrors([
+                    'profile_image' => 'Image upload failed while saving to storage.',
+                ]);
+            }
+
+            $storedPath = str_replace('\\', '/', $storedPath);
+
+            DB::table('customers')
+                ->where('id', $customerId)
+                ->update([
+                    'profile_image' => $storedPath,
+                    'updated_at' => now(),
+                ]);
+
+            return back()->with('success', 'Profile picture updated successfully.');
+        } catch (\Throwable $exception) {
+            Log::error('Customer profile image upload failed', [
+                'customer_id' => $customerId,
+                'message' => $exception->getMessage(),
+            ]);
+
             return back()->withErrors([
-                'profile_image' => 'Image upload failed while saving to storage.',
+                'profile_image' => 'Image upload failed. Please verify your cloud storage settings and try again.',
             ]);
         }
-
-        $storedPath = str_replace('\\', '/', $storedPath);
-
-        DB::table('customers')
-            ->where('id', $customerId)
-            ->update([
-                'profile_image' => $storedPath,
-                'updated_at' => now(),
-            ]);
-
-        return back()->with('success', 'Profile picture updated successfully.');
     }
 
     public function publicImage($filename)
