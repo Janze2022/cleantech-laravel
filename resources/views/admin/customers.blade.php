@@ -289,6 +289,7 @@
 
             <form method="POST" id="editUserForm">
                 @csrf
+                @method('PUT')
                 <input type="hidden" name="role" id="edit_role">
 
                 <div class="row g-3">
@@ -350,7 +351,8 @@ document.addEventListener('click', function(e){
     document.getElementById('edit_role_label').value =
         role.charAt(0).toUpperCase() + role.slice(1);
 
-    document.getElementById('editUserForm').action = `/admin/customers/${id}/update`;
+    const updateRouteTemplate = @json(route('admin.customers.update', ['id' => '__ID__']));
+    document.getElementById('editUserForm').action = updateRouteTemplate.replace('__ID__', id);
 
     const modalEl = document.getElementById('editUserModal');
     const show = () => {

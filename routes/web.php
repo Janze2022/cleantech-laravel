@@ -130,6 +130,9 @@ Route::prefix('admin')
         Route::get('/customers/{id}', [AdminCustomerController::class, 'show'])
             ->name('customers.show');
 
+        Route::put('/customers/{id}', [AdminCustomerController::class, 'update'])
+            ->name('customers.update');
+
         Route::delete('/customers/{id}', [AdminCustomerController::class, 'destroy'])
             ->name('customers.delete');
 

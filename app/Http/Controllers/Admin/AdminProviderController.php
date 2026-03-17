@@ -81,9 +81,9 @@ class AdminProviderController extends Controller
 
         abort_if(!$provider || !$provider->id_image, 404, 'Document not found.');
 
-        $path = ltrim($provider->id_image, '/');
+        $path = $this->normalizePublicPath($provider->id_image);
 
-        if (Storage::disk('public')->exists($path)) {
+        if ($path && Storage::disk('public')->exists($path)) {
             $disk = Storage::disk('public');
         } else {
             abort(404, 'Document not found.');
@@ -116,13 +116,49 @@ class AdminProviderController extends Controller
             ]);
 
         if (Schema::hasTable('admin_logs')) {
-            DB::table('admin_logs')->insert([
-                'admin_id'     => session('admin_id'),
-                'action'       => "Provider status set to {$status}",
-                'target_table' => 'service_providers',
-                'target_id'    => $id,
-                'created_at'   => now(),
-            ]);
+            $data = [
+                'action' => "Provider status set to {$status}",
+                'created_at' => now(),
+            ];
+
+            if (Schema::hasColumn('admin_logs', 'updated_at')) {
+                $data['updated_at'] = now();
+            }
+
+            if (Schema::hasColumn('admin_logs', 'admin_id') && session()->has('admin_id')) {
+                $data['admin_id'] = session('admin_id');
+            }
+
+            if (Schema::hasColumn('admin_logs', 'target_table')) {
+                $data['target_table'] = 'service_providers';
+            }
+
+            if (Schema::hasColumn('admin_logs', 'target_id')) {
+                $data['target_id'] = $id;
+            }
+
+            DB::table('admin_logs')->insert($data);
         }
+    }
+
+    private function normalizePublicPath(?string $value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        $value = str_replace('\\', '/', trim($value));
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            $value = parse_url($value, PHP_URL_PATH) ?: $value;
+        }
+
+        $value = ltrim($value, '/');
+
+        if (str_starts_with($value, 'storage/')) {
+            $value = substr($value, 8);
+        }
+
+        return $value;
     }
 }

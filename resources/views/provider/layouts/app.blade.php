@@ -269,7 +269,11 @@
   $providerNotifications = collect();
   $providerUnreadCount = 0;
 
-  if (session()->has('provider_id')) {
+  if (
+      session()->has('provider_id') &&
+      \Illuminate\Support\Facades\Schema::hasTable('provider_notifications') &&
+      \Illuminate\Support\Facades\Schema::hasColumns('provider_notifications', ['provider_id', 'is_read'])
+  ) {
       $providerNotifications = DB::table('provider_notifications')
           ->where('provider_id', session('provider_id'))
           ->latest('id')
@@ -403,6 +407,11 @@
     <a href="{{ route('provider.analytics') }}"
        class="{{ request()->routeIs('provider.analytics') ? 'active' : '' }}">
         Analytics
+    </a>
+
+    <a href="{{ route('provider.earnings') }}"
+       class="{{ request()->routeIs('provider.earnings') ? 'active' : '' }}">
+        Earnings
     </a>
 
     <a href="{{ route('provider.ratings') }}"
