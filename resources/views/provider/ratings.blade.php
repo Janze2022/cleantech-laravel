@@ -5,218 +5,293 @@
 @section('content')
 
 @php
-    $avg = (float)($ratingSummary->avg ?? 0);
-    $count = (int)($ratingSummary->count ?? 0);
+    use Carbon\Carbon;
 
+    $avg = (float) ($ratingSummary->avg ?? 0);
+    $count = (int) ($ratingSummary->count ?? 0);
     $fmtAvg = $count > 0 ? number_format($avg, 1) : '0.0';
 
-    $percent = function($n) use ($count){
-        if ($count <= 0) return 0;
-        return (int) round(($n / $count) * 100);
-    };
+    $breakdown = collect($breakdown ?? []);
+    $reviews = collect($reviews ?? []);
+    $fiveStarCount = (int) optional($breakdown->firstWhere('star', 5))->cnt;
+    $fiveStarShare = $count > 0 ? (int) round(($fiveStarCount / $count) * 100) : 0;
 
-    $stars = function($n){
-        $n = (int)$n;
-        $out = '';
-        for($i=1;$i<=5;$i++){
-            $out .= $i <= $n ? '★' : '☆';
+    $percent = function ($value) use ($count) {
+        if ($count <= 0) {
+            return 0;
         }
-        return $out;
+
+        return (int) round(((int) $value / $count) * 100);
     };
 
-    $avatar = function($name){
-        $name = trim((string)$name);
-        $parts = preg_split('/\s+/', $name);
-        $a = strtoupper(substr($parts[0] ?? 'C', 0, 1));
-        $b = strtoupper(substr($parts[1] ?? '', 0, 1));
-        return $a . ($b ?: '');
+    $ratingWord = function ($value) {
+        return match ((int) round($value)) {
+            5 => 'Excellent',
+            4 => 'Very good',
+            3 => 'Good',
+            2 => 'Needs work',
+            1 => 'Poor',
+            default => 'No ratings yet',
+        };
     };
 @endphp
 
 <style>
 :root{
-    --bg:#020617;
-    --card:#0b1220;
-    --card2:#0f172a;
-    --border:rgba(255,255,255,.08);
-    --text:rgba(255,255,255,.92);
-    --muted:rgba(255,255,255,.55);
-    --accent:#38bdf8;
-    --success:#22c55e;
-    --warn:#facc15;
-    --danger:#ef4444;
-    --r:18px;
-    --shadow:0 28px 70px rgba(0,0,0,.55);
+    --rt-bg:#020617;
+    --rt-card:#071225;
+    --rt-card-soft:#0b1830;
+    --rt-border:rgba(255,255,255,.08);
+    --rt-text:rgba(255,255,255,.95);
+    --rt-muted:rgba(255,255,255,.58);
+    --rt-accent:#38bdf8;
+    --rt-success:#22c55e;
+    --rt-warn:#fbbf24;
 }
 
-.wrap{
-    padding: 14px 0 22px;
+.ratings-page{
+    max-width: 1080px;
+    margin: 0 auto;
+    color: var(--rt-text);
 }
 
-.shell{
-    background: radial-gradient(900px 320px at 20% 0%, rgba(56,189,248,.10), transparent 62%),
-                radial-gradient(900px 320px at 85% 10%, rgba(34,197,94,.08), transparent 58%),
-                linear-gradient(180deg, rgba(2,11,31,.92), rgba(2,6,23,.96));
-    border: 1px solid var(--border);
-    border-radius: 26px;
-    box-shadow: var(--shadow);
-    overflow:hidden;
+.ratings-stack{
+    display:flex;
+    flex-direction:column;
+    gap:1rem;
 }
 
-.top{
-    padding: 14px 14px;
-    border-bottom: 1px solid rgba(255,255,255,.06);
-    background: rgba(255,255,255,.015);
+.ratings-shell,
+.ratings-card,
+.review-card,
+.ratings-empty{
+    background: linear-gradient(180deg, rgba(7,18,37,.96), rgba(2,6,23,.98));
+    border:1px solid var(--rt-border);
+    border-radius:22px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.28);
+}
+
+.ratings-shell{
+    padding:1.2rem;
+}
+
+.ratings-head{
     display:flex;
     align-items:flex-start;
     justify-content:space-between;
-    gap: 12px;
+    gap:1rem;
     flex-wrap:wrap;
 }
 
-.h1{
+.ratings-title{
     margin:0;
-    color: rgba(255,255,255,.96);
-    font-weight: 950;
-    letter-spacing:.01em;
-    font-size: 1.15rem;
-}
-.sub{
-    margin:.25rem 0 0;
-    color: var(--muted);
-    font-weight: 700;
-    font-size: .86rem;
+    font-size:1.2rem;
+    font-weight:900;
+    letter-spacing:-.02em;
 }
 
-.pill{
+.ratings-subtitle{
+    margin:.35rem 0 0;
+    color:var(--rt-muted);
+    font-size:.9rem;
+    line-height:1.55;
+}
+
+.ratings-chip{
     display:inline-flex;
     align-items:center;
     gap:.45rem;
-    padding:.44rem .7rem;
-    border-radius: 999px;
-    border:1px solid rgba(255,255,255,.10);
-    background: rgba(2,6,23,.35);
-    color: rgba(255,255,255,.90);
-    font-weight: 900;
-    font-size: .82rem;
+    padding:.55rem .85rem;
+    border-radius:999px;
+    background: rgba(56,189,248,.1);
+    border:1px solid rgba(56,189,248,.2);
+    color:rgba(255,255,255,.94);
+    font-size:.84rem;
+    font-weight:800;
+    white-space:nowrap;
 }
 
-.content{
-    padding: 14px;
-}
-
-.grid{
+.summary-grid{
     display:grid;
-    grid-template-columns: 1.1fr .9fr;
-    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap:.75rem;
+    margin-top:1rem;
 }
 
-.card{
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    background: rgba(255,255,255,.02);
-    padding: 14px;
+.summary-card{
+    padding:1rem;
+    border-radius:18px;
+    background: rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
 }
 
-.k{
-    color: var(--muted);
-    font-weight: 900;
-    font-size: .76rem;
-    letter-spacing:.10em;
-    text-transform: uppercase;
-}
-.v{
-    margin-top:.35rem;
-    color: rgba(255,255,255,.92);
-    font-weight: 900;
-}
-
-.big{
-    font-size: 2rem;
-    font-weight: 950;
-    letter-spacing:.01em;
-    line-height: 1.1;
-}
-.starline{
-    color: rgba(245, 204, 21, .95);
-    font-weight: 950;
+.summary-label{
+    color:var(--rt-muted);
+    font-size:.76rem;
+    font-weight:700;
     letter-spacing:.08em;
-    font-size: 1rem;
+    text-transform:uppercase;
 }
 
-.breakRow{
-    display:flex;
+.summary-value{
+    margin-top:.45rem;
+    font-size:1.8rem;
+    font-weight:900;
+    line-height:1;
+}
+
+.summary-note{
+    margin-top:.35rem;
+    color:var(--rt-muted);
+    font-size:.82rem;
+    line-height:1.45;
+}
+
+.summary-stars{
+    display:inline-flex;
     align-items:center;
-    gap: 10px;
-    padding: 10px 10px;
-    border-radius: 14px;
-    background: rgba(2,6,23,.25);
-    border: 1px solid rgba(255,255,255,.06);
-    margin-top: 10px;
+    gap:.16rem;
+    margin-top:.55rem;
 }
 
-.bar{
-    flex: 1;
-    height: 10px;
-    border-radius: 999px;
+.star{
+    width:18px;
+    height:18px;
+    display:block;
+    fill:#334155;
+}
+
+.star.on{ fill:#fbbf24; }
+
+.ratings-grid{
+    display:grid;
+    grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+    gap:1rem;
+    align-items:start;
+}
+
+.ratings-card{
+    padding:1rem;
+}
+
+.card-title{
+    margin:0;
+    font-size:1rem;
+    font-weight:900;
+}
+
+.card-subtitle{
+    margin:.35rem 0 0;
+    color:var(--rt-muted);
+    font-size:.84rem;
+    line-height:1.45;
+}
+
+.breakdown-list{
+    display:flex;
+    flex-direction:column;
+    gap:.75rem;
+    margin-top:1rem;
+}
+
+.breakdown-row{
+    display:grid;
+    grid-template-columns: 68px 1fr 46px;
+    gap:.65rem;
+    align-items:center;
+}
+
+.breakdown-label,
+.breakdown-count{
+    font-size:.82rem;
+    font-weight:800;
+    color:rgba(255,255,255,.9);
+}
+
+.breakdown-count{
+    text-align:right;
+    color:var(--rt-muted);
+}
+
+.breakdown-bar{
+    height:10px;
+    border-radius:999px;
     background: rgba(255,255,255,.06);
     overflow:hidden;
 }
-.bar > span{
+
+.breakdown-bar span{
     display:block;
-    height: 100%;
-    width: 0%;
-    background: rgba(56,189,248,.75);
+    height:100%;
+    border-radius:999px;
+    background: linear-gradient(90deg, rgba(56,189,248,.9), rgba(14,165,233,.75));
 }
 
-.small{
-    font-size: .85rem;
-    color: rgba(255,255,255,.85);
-    font-weight: 800;
+.quick-notes{
+    display:grid;
+    gap:.75rem;
+    margin-top:1rem;
 }
 
-.list{
-    margin-top: 12px;
+.note-box{
+    padding:.9rem 1rem;
+    border-radius:16px;
+    background: rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
+}
+
+.note-label{
+    color:var(--rt-muted);
+    font-size:.75rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+
+.note-value{
+    margin-top:.35rem;
+    font-size:.92rem;
+    font-weight:800;
+    line-height:1.5;
+}
+
+.reviews-list{
     display:flex;
     flex-direction:column;
-    gap: 10px;
+    gap:1rem;
 }
 
-.item{
-    border: 1px solid rgba(255,255,255,.08);
-    background: rgba(2,6,23,.22);
-    border-radius: 18px;
-    padding: 12px;
+.review-card{
+    padding:1rem;
 }
 
-.rowTop{
+.review-top{
+    display:grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap:.85rem;
+    align-items:start;
+}
+
+.reviewer{
     display:flex;
     align-items:center;
-    justify-content:space-between;
-    gap: 10px;
-}
-
-.left{
-    display:flex;
-    align-items:center;
-    gap: 10px;
-    min-width: 0;
+    gap:.85rem;
+    min-width:0;
 }
 
 .avatar{
-    width: 44px;
-    height: 44px;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,.12);
+    width:48px;
+    height:48px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.1);
     background: rgba(255,255,255,.04);
     overflow:hidden;
+    flex:0 0 48px;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-weight: 950;
-    color: rgba(255,255,255,.92);
-    flex: 0 0 44px;
 }
+
 .avatar img{
     width:100%;
     height:100%;
@@ -224,174 +299,316 @@
     display:block;
 }
 
-.name{
-    font-weight: 950;
-    color: rgba(255,255,255,.94);
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    max-width: 220px;
-}
-.meta{
-    margin-top: 2px;
-    color: var(--muted);
-    font-weight: 700;
-    font-size: .82rem;
+.reviewer-name{
+    font-size:.98rem;
+    font-weight:900;
+    line-height:1.3;
 }
 
-.ratingTag{
+.reviewer-meta{
+    margin-top:.2rem;
+    color:var(--rt-muted);
+    font-size:.82rem;
+    line-height:1.45;
+}
+
+.rating-badge{
     display:inline-flex;
     align-items:center;
-    gap: 8px;
-    padding:.38rem .65rem;
-    border-radius: 999px;
-    border:1px solid rgba(255,255,255,.10);
-    background: rgba(2,6,23,.35);
-    color: rgba(255,255,255,.92);
-    font-weight: 950;
-    font-size: .82rem;
+    gap:.55rem;
+    padding:.45rem .75rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.03);
     white-space:nowrap;
 }
-.ratingTag .stars{
-    color: rgba(245, 204, 21, .95);
-    letter-spacing:.08em;
+
+.rating-badge .stars{
+    display:inline-flex;
+    align-items:center;
+    gap:.14rem;
 }
 
-.comment{
-    margin-top: 10px;
-    color: rgba(255,255,255,.88);
-    font-weight: 700;
-    line-height: 1.45;
-    word-break: break-word;
+.rating-badge .star{
+    width:15px;
+    height:15px;
 }
 
-.muted{
-    color: var(--muted);
+.rating-badge strong{
+    font-size:.82rem;
+    font-weight:900;
 }
 
-@media (max-width: 992px){
-    .grid{ grid-template-columns: 1fr; }
-    .name{ max-width: 160px; }
+.booking-pills{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.55rem;
+    margin-top:.9rem;
 }
 
-@media (max-width: 576px){
-    .top{ align-items:stretch; }
-    .pill{ width:100%; justify-content:center; min-height:44px; }
-    .rowTop{ flex-direction:column; align-items:flex-start; }
-    .ratingTag{ align-self:flex-end; }
-    .name{ max-width: 240px; }
+.pill{
+    display:inline-flex;
+    align-items:center;
+    gap:.38rem;
+    padding:.42rem .7rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.03);
+    color:rgba(255,255,255,.88);
+    font-size:.8rem;
+    font-weight:700;
+}
+
+.pill.service{
+    border-color: rgba(56,189,248,.18);
+    background: rgba(56,189,248,.08);
+}
+
+.review-comment{
+    margin-top:.95rem;
+    padding:.95rem 1rem;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.06);
+    background: rgba(255,255,255,.03);
+    color:rgba(255,255,255,.88);
+    line-height:1.6;
+}
+
+.review-comment.empty{
+    color:var(--rt-muted);
+}
+
+.ratings-empty{
+    padding:1.5rem;
+    text-align:center;
+}
+
+.empty-icon{
+    width:56px;
+    height:56px;
+    margin:0 auto .85rem;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:18px;
+    background: rgba(56,189,248,.1);
+    color:var(--rt-accent);
+    font-size:1.35rem;
+}
+
+.empty-title{
+    font-size:1.02rem;
+    font-weight:900;
+}
+
+.empty-copy{
+    margin-top:.35rem;
+    color:var(--rt-muted);
+    font-size:.9rem;
+    line-height:1.6;
+}
+
+@media (max-width: 991.98px){
+    .summary-grid,
+    .ratings-grid{
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767.98px){
+    .summary-grid{
+        grid-template-columns: 1fr;
+    }
+
+    .review-top{
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 
-<div class="container wrap">
-    <div class="shell">
+<div class="ratings-page">
+    <div class="ratings-stack">
 
-        <div class="top">
-            <div>
-                <h5 class="h1">My Ratings & Feedback</h5>
-                <p class="sub">See who rated you, your current rating, and customer comments.</p>
+        <section class="ratings-shell">
+            <div class="ratings-head">
+                <div>
+                    <h1 class="ratings-title">Ratings and Reviews</h1>
+                    <p class="ratings-subtitle">See how customers rate your service and read their latest feedback.</p>
+                </div>
+
+                <div class="ratings-chip">
+                    <i class="bi bi-chat-square-quote"></i>
+                    <span>{{ $count }} review{{ $count === 1 ? '' : 's' }}</span>
+                </div>
             </div>
 
-            <span class="pill">{{ $count }} review{{ $count === 1 ? '' : 's' }}</span>
-        </div>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-label">Average rating</div>
+                    <div class="summary-value">{{ $fmtAvg }}</div>
+                    <div class="summary-stars" aria-hidden="true">
+                        @for($i = 1; $i <= 5; $i++)
+                            <svg class="star {{ $i <= (int) round($avg) ? 'on' : '' }}" viewBox="0 0 24 24">
+                                <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                            </svg>
+                        @endfor
+                    </div>
+                    <div class="summary-note">{{ $ratingWord($avg) }}</div>
+                </div>
 
-        <div class="content">
+                <div class="summary-card">
+                    <div class="summary-label">Total reviews</div>
+                    <div class="summary-value">{{ $count }}</div>
+                    <div class="summary-note">All submitted ratings from customers.</div>
+                </div>
 
-            <div class="grid">
+                <div class="summary-card">
+                    <div class="summary-label">5-star share</div>
+                    <div class="summary-value">{{ $fiveStarShare }}%</div>
+                    <div class="summary-note">{{ $fiveStarCount }} five-star review{{ $fiveStarCount === 1 ? '' : 's' }}.</div>
+                </div>
+            </div>
+        </section>
 
-                {{-- SUMMARY --}}
-                <div class="card">
-                    <div class="k">Current Rating</div>
-                    <div class="v big">{{ $fmtAvg }}</div>
-                    <div class="starline">{{ $stars((int) round($avg)) }}</div>
-                    <div class="muted small mt-1">{{ $count > 0 ? 'Based on '.$count.' review(s)' : 'No reviews yet' }}</div>
+        <section class="ratings-grid">
+            <article class="ratings-card">
+                <h2 class="card-title">Rating breakdown</h2>
+                <p class="card-subtitle">A quick look at how your scores are distributed.</p>
 
-                    <div class="mt-3">
-                        <div class="k">Rating Breakdown</div>
-
-                        @foreach($breakdown as $b)
-                            @php $p = $percent($b->cnt); @endphp
-                            <div class="breakRow">
-                                <div class="small" style="min-width:72px;">{{ $b->star }} star</div>
-                                <div class="bar"><span style="width: {{ $p }}%;"></span></div>
-                                <div class="small" style="min-width:60px; text-align:right;">{{ $b->cnt }}</div>
+                <div class="breakdown-list">
+                    @foreach($breakdown as $row)
+                        @php $rowPercent = $percent($row->cnt ?? 0); @endphp
+                        <div class="breakdown-row">
+                            <div class="breakdown-label">{{ $row->star }} star</div>
+                            <div class="breakdown-bar">
+                                <span style="width: {{ $rowPercent }}%;"></span>
                             </div>
-                        @endforeach
+                            <div class="breakdown-count">{{ (int) ($row->cnt ?? 0) }}</div>
+                        </div>
+                    @endforeach
+                </div>
+            </article>
+
+            <article class="ratings-card">
+                <h2 class="card-title">Quick notes</h2>
+                <p class="card-subtitle">Small signals that help you read your feedback faster.</p>
+
+                <div class="quick-notes">
+                    <div class="note-box">
+                        <div class="note-label">Current standing</div>
+                        <div class="note-value">{{ $count > 0 ? $ratingWord($avg) . ' at ' . $fmtAvg . ' / 5' : 'No customer ratings yet' }}</div>
+                    </div>
+
+                    <div class="note-box">
+                        <div class="note-label">Strongest area</div>
+                        <div class="note-value">{{ $fiveStarCount > 0 ? $fiveStarCount . ' customers left a five-star review.' : 'No five-star reviews yet.' }}</div>
+                    </div>
+
+                    <div class="note-box">
+                        <div class="note-label">What this page shows</div>
+                        <div class="note-value">Only submitted customer ratings with scores from 1 to 5 are included here.</div>
                     </div>
                 </div>
+            </article>
+        </section>
 
-                {{-- QUICK INFO --}}
-                <div class="card">
-                    <div class="k">Tips</div>
-                    <div class="v" style="font-size:.95rem; font-weight:800; line-height:1.5;">
-                        Keep your rating high by being on time, communicating clearly, and finishing the job professionally.
-                        Ratings update automatically as customers submit reviews.
-                    </div>
-                    <div class="mt-3 muted small">
-                        Only reviews with a rating (1–5) are included.
-                    </div>
+        @if($reviews->isEmpty())
+            <section class="ratings-empty">
+                <div class="empty-icon">
+                    <i class="bi bi-stars"></i>
                 </div>
-
-            </div>
-
-            {{-- LIST --}}
-            <div class="list">
-                @forelse($reviews as $r)
+                <div class="empty-title">No reviews yet</div>
+                <div class="empty-copy">Once customers submit feedback, their ratings and comments will show up here.</div>
+            </section>
+        @else
+            <section class="reviews-list">
+                @foreach($reviews as $review)
                     @php
-                        $nm = $r->customer_name ?? 'Customer';
-                        $dt = $r->created_at ? \Carbon\Carbon::parse($r->created_at)->format('M d, Y h:i A') : '';
-
-                        $customerImage = $r->customer_profile_image ?? '';
+                        $customerImage = $review->customer_profile_image ?? '';
                         $reviewerAvatar = asset('images/avatar-placeholder.svg');
 
                         if (!empty($customerImage)) {
                             $reviewerAvatar = route('customer.image.public', ['filename' => basename($customerImage)]) . '?v=' . time();
                         }
+
+                        $dateLabel = !empty($review->created_at)
+                            ? Carbon::parse($review->created_at)->format('M d, Y h:i A')
+                            : 'No date';
+
+                        $bookingDateLabel = !empty($review->booking_date)
+                            ? Carbon::parse($review->booking_date)->format('M d, Y')
+                            : null;
+
+                        $serviceName = trim((string) ($review->service_name ?? 'Service'));
+                        $optionName = trim((string) ($review->option_name ?? ''));
+                        $score = (int) ($review->rating ?? 0);
                     @endphp
 
-                    <div class="item">
-                        <div class="rowTop">
-                            <div class="left">
+                    <article class="review-card">
+                        <div class="review-top">
+                            <div class="reviewer">
                                 <div class="avatar">
                                     <img
                                         src="{{ $reviewerAvatar }}"
-                                        alt="Customer"
-                                onerror="this.onerror=null;this.src='{{ asset('images/avatar-placeholder.svg') }}';"
+                                        alt="Customer avatar"
+                                        onerror="this.onerror=null;this.src='{{ asset('images/avatar-placeholder.svg') }}';"
                                     >
                                 </div>
 
                                 <div style="min-width:0;">
-                                    <div class="name">{{ $nm }}</div>
-                                    <div class="meta">
-                                        <span class="muted">{{ $dt }}</span>
-                                        @if(!empty($r->reference_code))
-                                            <span class="muted"> • Ref: {{ $r->reference_code }}</span>
-                                        @endif
-                                    </div>
+                                    <div class="reviewer-name">{{ $review->customer_name ?? 'Customer' }}</div>
+                                    <div class="reviewer-meta">{{ $dateLabel }}</div>
                                 </div>
                             </div>
 
-                            <div class="ratingTag">
-                                <span class="stars">{{ $stars((int)($r->rating ?? 0)) }}</span>
-                                <span>{{ (int)($r->rating ?? 0) }}/5</span>
+                            <div class="rating-badge">
+                                <div class="stars" aria-hidden="true">
+                                    @for($i = 1; $i <= 5; $i++)
+                                        <svg class="star {{ $i <= $score ? 'on' : '' }}" viewBox="0 0 24 24">
+                                            <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                                        </svg>
+                                    @endfor
+                                </div>
+                                <strong>{{ $score }}/5</strong>
                             </div>
                         </div>
 
-                        @if(trim((string)($r->comment ?? '')) !== '')
-                            <div class="comment">{{ $r->comment }}</div>
-                        @else
-                            <div class="comment muted">No written feedback.</div>
-                        @endif
-                    </div>
-                @empty
-                    <div class="card">
-                        <div class="k">No Reviews Yet</div>
-                        <div class="v">You don’t have any ratings at the moment.</div>
-                    </div>
-                @endforelse
-            </div>
+                        <div class="booking-pills">
+                            <div class="pill service">
+                                <i class="bi bi-bucket"></i>
+                                <span>{{ $serviceName }}</span>
+                            </div>
 
-        </div>
+                            @if($optionName !== '')
+                                <div class="pill">
+                                    <i class="bi bi-grid"></i>
+                                    <span>{{ $optionName }}</span>
+                                </div>
+                            @endif
+
+                            @if(!empty($review->reference_code))
+                                <div class="pill">
+                                    <i class="bi bi-hash"></i>
+                                    <span>{{ $review->reference_code }}</span>
+                                </div>
+                            @endif
+
+                            @if($bookingDateLabel)
+                                <div class="pill">
+                                    <i class="bi bi-calendar3"></i>
+                                    <span>{{ $bookingDateLabel }}</span>
+                                </div>
+                            @endif
+                        </div>
+
+                        <div class="review-comment {{ trim((string) ($review->comment ?? '')) === '' ? 'empty' : '' }}">
+                            {{ trim((string) ($review->comment ?? '')) !== '' ? $review->comment : 'No written feedback was left for this review.' }}
+                        </div>
+                    </article>
+                @endforeach
+            </section>
+        @endif
+
     </div>
 </div>
 

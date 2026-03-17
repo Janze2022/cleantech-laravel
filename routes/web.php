@@ -474,8 +474,11 @@ Route::prefix('provider')
         Route::get('/profile', [ProviderProfileController::class, 'show'])
             ->name('profile');
 
-        Route::post('/profile', [ProviderProfileController::class, 'update'])
+        Route::match(['post', 'put'], '/profile', [ProviderProfileController::class, 'update'])
             ->name('profile.update');
+
+        Route::put('/profile/image', [ProviderProfileController::class, 'updateImage'])
+            ->name('profile.image.update');
 
         Route::post('/profile/password', [ProviderProfileController::class, 'changePassword'])
             ->name('password.update');

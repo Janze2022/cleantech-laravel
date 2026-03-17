@@ -4,484 +4,19 @@
 
 @section('content')
 
-<style>
-:root{
-    --bg:#020617;
-    --card:#020b1f;
-    --card2:#040b22;
-    --border:rgba(255,255,255,.08);
-    --border2:rgba(255,255,255,.12);
-    --text:rgba(255,255,255,.92);
-    --muted:rgba(255,255,255,.55);
-    --muted2:rgba(255,255,255,.42);
-    --accent:#38bdf8;
-    --success:#22c55e;
-    --warning:#fbbf24;
-
-    --r:18px;
-    --shadow:0 35px 85px rgba(0,0,0,.58);
-}
-
-/* Page */
-.profile-wrap{ padding: 2.25rem 0; }
-.shell{
-    background: linear-gradient(180deg, rgba(2,11,31,.95), rgba(2,6,23,.92));
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    box-shadow: var(--shadow);
-    overflow: hidden;
-}
-
-/* Top bar */
-.topbar{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap: 1rem;
-    padding: 1.2rem 1.2rem;
-    border-bottom: 1px solid rgba(255,255,255,.06);
-    background: radial-gradient(900px 220px at 20% 0%, rgba(56,189,248,.10), transparent 60%),
-                radial-gradient(800px 220px at 90% 0%, rgba(34,197,94,.08), transparent 55%),
-                rgba(255,255,255,.01);
-}
-.backlink{
-    display:inline-flex;
-    align-items:center;
-    gap:.55rem;
-    text-decoration:none;
-    color: var(--text);
-    font-weight: 900;
-    letter-spacing:.02em;
-    padding:.6rem .8rem;
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,.10);
-    background: rgba(255,255,255,.03);
-    transition: transform .08s ease, filter .12s ease, border-color .12s ease;
-}
-.backlink:hover{ transform: translateY(-1px); filter: brightness(1.05); border-color: rgba(56,189,248,.25); }
-
-.closebtn{
-    width: 40px; height: 40px;
-    border-radius: 999px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    text-decoration:none;
-    color: var(--text);
-    border: 1px solid rgba(255,255,255,.12);
-    background: rgba(255,255,255,.03);
-    transition: transform .08s ease, filter .12s ease;
-    font-size: 18px;
-}
-.closebtn:hover{ transform: translateY(-1px); filter: brightness(1.05); }
-
-/* Header */
-.header{
-    display:grid;
-    grid-template-columns: 140px 1fr;
-    gap: 1.2rem;
-    padding: 1.35rem 1.35rem 1.15rem;
-}
-.avatar{
-    width: 132px; height: 132px;
-    border-radius: 999px;
-    object-fit: cover;
-    border: 2px solid rgba(255,255,255,.14);
-    box-shadow: 0 20px 55px rgba(0,0,0,.45);
-    background: rgba(255,255,255,.04);
-}
-.name{
-    margin: 0;
-    font-weight: 950;
-    letter-spacing: .01em;
-    color: rgba(255,255,255,.95);
-    line-height: 1.1;
-    font-size: 1.45rem;
-}
-.location{
-    margin-top: .35rem;
-    color: var(--muted);
-    font-weight: 700;
-}
-
-/* Meta pills */
-.meta{
-    display:flex;
-    flex-wrap:wrap;
-    gap: .6rem;
-    margin-top: .85rem;
-}
-.pill{
-    display:inline-flex;
-    align-items:center;
-    gap:.55rem;
-    padding: .5rem .7rem;
-    border-radius: 999px;
-    background: rgba(255,255,255,.03);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-weight: 900;
-    font-size: .85rem;
-}
-.pill .sub{
-    color: var(--muted);
-    font-weight: 800;
-}
-
-/* Stars */
-.stars{ display:inline-flex; gap:.18rem; align-items:center; }
-.star{ width:18px; height:18px; fill:#334155; }
-.star.on{ fill: var(--warning); }
-
-/* CTA */
-.ctaRow{
-    display:flex;
-    align-items:center;
-    justify-content:flex-start;
-    gap:.75rem;
-    padding: 0 1.35rem 1.35rem;
-}
-.btnBook{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    text-decoration:none;
-    padding: .78rem 1.05rem;
-    border-radius: 14px;
-    font-weight: 950;
-    color: rgba(255,255,255,.94);
-    background: rgba(34,197,94,.16);
-    border: 1px solid rgba(34,197,94,.35);
-    transition: transform .08s ease, filter .12s ease;
-}
-.btnBook:hover{ transform: translateY(-1px); filter: brightness(1.05); }
-
-.btnGhost{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    text-decoration:none;
-    padding: .78rem 1rem;
-    border-radius: 14px;
-    font-weight: 900;
-    color: rgba(255,255,255,.9);
-    background: rgba(255,255,255,.03);
-    border: 1px solid rgba(255,255,255,.10);
-}
-
-/* Sections */
-.section{
-    padding: 1.25rem 1.35rem;
-    border-top: 1px solid rgba(255,255,255,.06);
-}
-.sectionTitle{
-    margin:0;
-    font-weight: 950;
-    color: rgba(255,255,255,.95);
-    letter-spacing:.01em;
-}
-.sectionSub{
-    margin-top: .35rem;
-    color: var(--muted);
-    font-weight: 700;
-    font-size: .92rem;
-}
-
-/* Info table */
-.infoGrid{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap: .85rem;
-    margin-top: 1rem;
-}
-.infoItem{
-    border: 1px solid var(--border);
-    border-radius: var(--r);
-    background: rgba(255,255,255,.02);
-    padding: .9rem;
-}
-.infoLabel{
-    color: var(--muted);
-    font-weight: 900;
-    font-size: .8rem;
-    letter-spacing:.08em;
-    text-transform: uppercase;
-}
-.infoValue{
-    margin-top: .35rem;
-    color: rgba(255,255,255,.92);
-    font-weight: 750;
-    word-break: break-word;
-}
-.infoValue a{
-    color: var(--accent);
-    text-decoration: none;
-}
-.infoValue a:hover{ text-decoration: underline; }
-
-/* Reviews summary */
-.summary{
-    display:grid;
-    grid-template-columns: 320px 1fr;
-    gap: 1rem;
-    margin-top: 1rem;
-}
-.summaryCard{
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    background: rgba(255,255,255,.02);
-    padding: 1rem;
-}
-.bigAvg{
-    font-weight: 950;
-    font-size: 2.25rem;
-    line-height: 1;
-    color: rgba(255,255,255,.95);
-}
-.smallNote{
-    margin-top: .35rem;
-    color: var(--muted);
-    font-weight: 750;
-}
-.dist{
-    display:grid;
-    gap: .55rem;
-    margin-top: .85rem;
-}
-.distRow{
-    display:grid;
-    grid-template-columns: 48px 1fr 42px;
-    gap: .6rem;
-    align-items:center;
-}
-.distLabel{
-    color: rgba(255,255,255,.75);
-    font-weight: 900;
-    font-size: .85rem;
-}
-.bar{
-    height: 10px;
-    border-radius: 999px;
-    background: rgba(255,255,255,.06);
-    border: 1px solid rgba(255,255,255,.08);
-    overflow:hidden;
-}
-.bar > span{
-    display:block;
-    height: 100%;
-    width: 0%;
-    background: rgba(251,191,36,.65);
-}
-.distCount{
-    color: var(--muted);
-    font-weight: 900;
-    text-align:right;
-    font-size: .85rem;
-}
-
-/* Filter bar */
-.filterBar{
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    background: rgba(255,255,255,.02);
-    padding: .85rem;
-    display:flex;
-    gap: .75rem;
-    align-items:center;
-    flex-wrap:wrap;
-}
-.control{
-    display:flex;
-    flex-direction:column;
-    gap: .35rem;
-    min-width: 190px;
-    flex: 1;
-}
-.control label{
-    font-size: .78rem;
-    color: var(--muted);
-    font-weight: 900;
-    letter-spacing:.06em;
-    text-transform: uppercase;
-}
-
-/* Fix select visibility */
-.selectDark, .searchDark{
-    width:100%;
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,.12);
-    background: rgba(2,6,23,.95);
-    color: rgba(255,255,255,.92);
-    padding: .65rem .8rem;
-    outline: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-}
-.selectDark{
-    background-image:
-        linear-gradient(45deg, transparent 50%, rgba(255,255,255,.70) 50%),
-        linear-gradient(135deg, rgba(255,255,255,.70) 50%, transparent 50%);
-    background-position:
-        calc(100% - 18px) calc(1.1em),
-        calc(100% - 13px) calc(1.1em);
-    background-size: 5px 5px, 5px 5px;
-    background-repeat: no-repeat;
-    padding-right: 2.2rem;
-}
-.selectDark option{
-    background: #020617;
-    color: rgba(255,255,255,.92);
-}
-.selectDark:focus, .searchDark:focus{
-    border-color: rgba(56,189,248,.35);
-    box-shadow: 0 0 0 3px rgba(56,189,248,.10);
-}
-.hint{
-    color: var(--muted2);
-    font-size: .86rem;
-    font-weight: 650;
-}
-
-/* Review list */
-.reviewList{
-    margin-top: 1rem;
-    display:grid;
-    gap: .85rem;
-}
-
-/* Review card */
-.reviewCard{
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    background: rgba(255,255,255,.02);
-    padding: .9rem;
-    transition: border-color .12s ease, transform .08s ease, filter .12s ease;
-}
-.reviewCard:hover{
-    border-color: rgba(56,189,248,.20);
-    transform: translateY(-1px);
-    filter: brightness(1.03);
-}
-
-.reviewTop{
-    display:grid;
-    grid-template-columns: 1fr auto;
-    gap: .75rem;
-    align-items:start;
-}
-.reviewerName{
-    font-weight: 950;
-    color: rgba(255,255,255,.95);
-}
-
-.reviewerRow{
-    display:flex;
-    gap:.75rem;
-    align-items:flex-start;
-    min-width:0;
-}
-.reviewerAvatar{
-    width:44px;
-    height:44px;
-    border-radius:999px;
-    object-fit:cover;
-    border:1px solid rgba(255,255,255,.14);
-    background: rgba(255,255,255,.04);
-    flex:0 0 44px;
-    box-shadow: 0 12px 30px rgba(0,0,0,.35);
-}
-.reviewerBlock{
-    flex:1;
-    min-width:0;
-}
-.reviewerName{
-    white-space: pre-line;
-    overflow:hidden;
-    text-overflow:ellipsis;
-}
-
-.reviewMeta{
-    display:flex;
-    align-items:center;
-    gap: .5rem;
-    margin-top: .25rem;
-    color: var(--muted);
-    font-weight: 750;
-    font-size: .84rem;
-    flex-wrap:wrap;
-}
-.badge{
-    display:inline-flex;
-    align-items:center;
-    gap:.35rem;
-    padding: .26rem .5rem;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,.12);
-    background: rgba(255,255,255,.03);
-    color: rgba(255,255,255,.86);
-    font-weight: 900;
-    font-size: .78rem;
-    white-space:nowrap;
-}
-
-.comment{
-    margin-top: .6rem;
-    color: rgba(255,255,255,.86);
-    font-weight: 650;
-    white-space: pre-line;
-    line-height: 1.5;
-    font-size: .95rem;
-}
-
-/* Empty */
-.empty{
-    margin-top: 1rem;
-    border: 1px dashed rgba(255,255,255,.18);
-    background: rgba(255,255,255,.02);
-    border-radius: 20px;
-    padding: 1rem;
-    color: var(--muted);
-    font-weight: 700;
-}
-
-/* Mobile */
-@media (max-width: 992px){
-    .summary{ grid-template-columns: 1fr; }
-    .control{ min-width: 160px; }
-}
-@media (max-width: 576px){
-    .profile-wrap{ padding: 1.1rem 0; }
-    .topbar{ padding: 1rem; }
-    .header{
-        grid-template-columns: 1fr;
-        padding: 1rem;
-        gap: .9rem;
-    }
-    .avatar{ width: 92px; height: 92px; }
-    .ctaRow{ padding: 0 1rem 1rem; flex-wrap:wrap; }
-    .section{ padding: 1rem; }
-    .infoGrid{ grid-template-columns: 1fr; }
-    .filterBar{ padding: .75rem; border-radius: 18px; }
-    .control{ min-width: 100%; }
-
-    .reviewTop{ grid-template-columns: 1fr; }
-    .reviewTop > .badge{ justify-self: flex-start; }
-}
-</style>
-
 @php
-    $avg   = (float) data_get($ratingSummary, 'avg', 0);
-    $count = (int) data_get($ratingSummary, 'count', 0);
+    use Carbon\Carbon;
 
-    $avgText    = $count > 0 ? number_format($avg, 1) : '0.0';
+    $avg = (float) data_get($ratingSummary, 'avg', 0);
+    $count = (int) data_get($ratingSummary, 'count', 0);
+    $avgText = $count > 0 ? number_format($avg, 1) : '0.0';
     $avgRounded = (int) round($avg);
 
-    $dist = [1=>0,2=>0,3=>0,4=>0,5=>0];
-    if($count > 0){
-        foreach($reviews as $r){
-            $rv = (int) data_get($r, 'rating', 0);
-            if($rv >= 1 && $rv <= 5) $dist[$rv]++;
+    $distribution = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+    foreach(($reviews ?? collect()) as $review){
+        $score = (int) data_get($review, 'rating', 0);
+        if ($score >= 1 && $score <= 5) {
+            $distribution[$score]++;
         }
     }
 
@@ -490,345 +25,781 @@
         : asset('images/avatar-placeholder.svg');
 @endphp
 
-<div class="container profile-wrap">
-    <div class="shell">
+<style>
+:root{
+    --pp-bg:#020617;
+    --pp-card:#071225;
+    --pp-card-soft:#0b1830;
+    --pp-border:rgba(255,255,255,.08);
+    --pp-text:rgba(255,255,255,.95);
+    --pp-muted:rgba(255,255,255,.58);
+    --pp-accent:#38bdf8;
+    --pp-success:#22c55e;
+    --pp-warn:#fbbf24;
+}
 
-        <div class="topbar">
-            <a href="{{ route('customer.services') }}" class="backlink">
-                <span style="opacity:.8;">←</span> Back
-            </a>
-            <a href="{{ route('customer.services') }}" class="closebtn" aria-label="Close">×</a>
-        </div>
+.provider-profile-page{
+    max-width: 1040px;
+    margin: 0 auto;
+    color: var(--pp-text);
+}
 
-        <div class="header">
-            <div>
+.provider-profile-stack{
+    display:flex;
+    flex-direction:column;
+    gap:1rem;
+}
+
+.profile-shell,
+.section-card,
+.review-card,
+.empty-card{
+    background: linear-gradient(180deg, rgba(7,18,37,.96), rgba(2,6,23,.98));
+    border:1px solid var(--pp-border);
+    border-radius:22px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.28);
+}
+
+.profile-shell{
+    padding:1.15rem;
+}
+
+.top-actions{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.75rem;
+    flex-wrap:wrap;
+}
+
+.back-link,
+.ghost-action,
+.book-action{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.45rem;
+    min-height:42px;
+    padding:.68rem .95rem;
+    border-radius:12px;
+    text-decoration:none;
+    font-weight:800;
+}
+
+.back-link,
+.ghost-action{
+    background: rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.1);
+    color: rgba(255,255,255,.92);
+}
+
+.book-action{
+    background: rgba(34,197,94,.14);
+    border:1px solid rgba(34,197,94,.28);
+    color: rgba(255,255,255,.95);
+}
+
+.profile-hero{
+    display:grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap:1rem;
+    align-items:center;
+    margin-top:1rem;
+}
+
+.provider-avatar{
+    width:112px;
+    height:112px;
+    border-radius:999px;
+    object-fit:cover;
+    border:2px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.04);
+    box-shadow: 0 16px 34px rgba(0,0,0,.3);
+}
+
+.provider-name{
+    margin:0;
+    font-size:1.45rem;
+    font-weight:900;
+    line-height:1.1;
+}
+
+.provider-location{
+    margin-top:.35rem;
+    color:var(--pp-muted);
+    font-size:.92rem;
+    font-weight:700;
+}
+
+.hero-pills{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.55rem;
+    margin-top:.85rem;
+}
+
+.pill{
+    display:inline-flex;
+    align-items:center;
+    gap:.38rem;
+    padding:.42rem .7rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.03);
+    color: rgba(255,255,255,.9);
+    font-size:.8rem;
+    font-weight:800;
+}
+
+.pill.rating{
+    border-color: rgba(251,191,36,.18);
+    background: rgba(251,191,36,.1);
+}
+
+.pill.verified{
+    border-color: rgba(34,197,94,.18);
+    background: rgba(34,197,94,.1);
+}
+
+.stars{
+    display:inline-flex;
+    align-items:center;
+    gap:.14rem;
+}
+
+.star{
+    width:16px;
+    height:16px;
+    fill:#334155;
+}
+
+.star.on{ fill: var(--pp-warn); }
+
+.contact-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.75rem;
+    margin-top:1rem;
+}
+
+.profile-grid{
+    display:grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, .92fr);
+    gap:1rem;
+    align-items:start;
+}
+
+.section-card{
+    padding:1rem;
+}
+
+.section-title{
+    margin:0;
+    font-size:1rem;
+    font-weight:900;
+}
+
+.section-subtitle{
+    margin:.35rem 0 0;
+    color:var(--pp-muted);
+    font-size:.84rem;
+    line-height:1.45;
+}
+
+.detail-grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap:.75rem;
+    margin-top:1rem;
+}
+
+.detail-card{
+    padding:.9rem 1rem;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.06);
+    background: rgba(255,255,255,.03);
+}
+
+.detail-card.full{
+    grid-column: 1 / -1;
+}
+
+.detail-label{
+    color:var(--pp-muted);
+    font-size:.75rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+
+.detail-value{
+    margin-top:.35rem;
+    font-size:.92rem;
+    font-weight:700;
+    line-height:1.55;
+    word-break:break-word;
+}
+
+.detail-value a{
+    color:var(--pp-accent);
+    text-decoration:none;
+}
+
+.rating-summary-grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap:.75rem;
+    margin-top:1rem;
+}
+
+.summary-box{
+    padding:.95rem 1rem;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.06);
+    background: rgba(255,255,255,.03);
+}
+
+.summary-box.wide{
+    grid-column: 1 / -1;
+}
+
+.summary-label{
+    color:var(--pp-muted);
+    font-size:.75rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+
+.summary-value{
+    margin-top:.35rem;
+    font-size:1.45rem;
+    font-weight:900;
+}
+
+.summary-note{
+    margin-top:.3rem;
+    color:var(--pp-muted);
+    font-size:.82rem;
+}
+
+.breakdown-list{
+    display:flex;
+    flex-direction:column;
+    gap:.7rem;
+    margin-top:.85rem;
+}
+
+.breakdown-row{
+    display:grid;
+    grid-template-columns: 60px 1fr 40px;
+    gap:.6rem;
+    align-items:center;
+}
+
+.breakdown-row span{
+    font-size:.82rem;
+    font-weight:800;
+}
+
+.breakdown-row .count{
+    text-align:right;
+    color:var(--pp-muted);
+}
+
+.bar{
+    height:10px;
+    border-radius:999px;
+    background: rgba(255,255,255,.06);
+    overflow:hidden;
+}
+
+.bar span{
+    display:block;
+    height:100%;
+    border-radius:999px;
+    background: linear-gradient(90deg, rgba(251,191,36,.9), rgba(245,158,11,.75));
+}
+
+.reviews-list{
+    display:flex;
+    flex-direction:column;
+    gap:.85rem;
+}
+
+.reviews-toolbar{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:.75rem;
+    flex-wrap:wrap;
+    margin-top:1rem;
+    padding:.9rem 1rem;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.06);
+    background: rgba(255,255,255,.03);
+}
+
+.toolbar-copy{
+    color:var(--pp-muted);
+    font-size:.84rem;
+    line-height:1.45;
+}
+
+.toolbar-copy strong{
+    color:rgba(255,255,255,.95);
+}
+
+.toolbar-control{
+    display:flex;
+    flex-direction:column;
+    gap:.35rem;
+    min-width:220px;
+}
+
+.toolbar-control label{
+    color:var(--pp-muted);
+    font-size:.74rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+
+.toolbar-select{
+    width:100%;
+    min-height:42px;
+    padding:.65rem .8rem;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.1);
+    background: rgba(2,6,23,.92);
+    color:rgba(255,255,255,.94);
+    outline:none;
+}
+
+.toolbar-select:focus{
+    border-color: rgba(56,189,248,.35);
+    box-shadow: 0 0 0 3px rgba(56,189,248,.1);
+}
+
+.review-card{
+    padding:1rem;
+}
+
+.review-top{
+    display:grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap:.75rem;
+    align-items:start;
+}
+
+.reviewer{
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    min-width:0;
+}
+
+.reviewer-avatar{
+    width:42px;
+    height:42px;
+    border-radius:999px;
+    object-fit:cover;
+    border:1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.04);
+    flex:0 0 42px;
+}
+
+.reviewer-name{
+    font-size:.94rem;
+    font-weight:900;
+    line-height:1.3;
+}
+
+.review-date{
+    margin-top:.2rem;
+    color:var(--pp-muted);
+    font-size:.8rem;
+}
+
+.score-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.42rem .7rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.03);
+    font-size:.8rem;
+    font-weight:800;
+}
+
+.review-comment{
+    margin-top:.85rem;
+    padding:.9rem 1rem;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.06);
+    background: rgba(255,255,255,.03);
+    color:rgba(255,255,255,.88);
+    line-height:1.6;
+}
+
+.review-comment.empty{
+    color:var(--pp-muted);
+}
+
+.empty-card{
+    padding:1.35rem;
+    text-align:center;
+}
+
+.empty-icon{
+    width:56px;
+    height:56px;
+    margin:0 auto .85rem;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:18px;
+    background: rgba(56,189,248,.1);
+    color:var(--pp-accent);
+    font-size:1.35rem;
+}
+
+.empty-title{
+    font-size:1rem;
+    font-weight:900;
+}
+
+.empty-copy{
+    margin-top:.35rem;
+    color:var(--pp-muted);
+    font-size:.9rem;
+    line-height:1.6;
+}
+
+@media (max-width: 991.98px){
+    .profile-grid{
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767.98px){
+    .profile-hero{
+        grid-template-columns: 1fr;
+        justify-items:start;
+    }
+
+    .detail-grid,
+    .rating-summary-grid{
+        grid-template-columns: 1fr;
+    }
+
+    .review-top{
+        grid-template-columns: 1fr;
+    }
+
+    .toolbar-control{
+        min-width:100%;
+    }
+}
+</style>
+
+<div class="provider-profile-page">
+    <div class="provider-profile-stack">
+
+        <section class="profile-shell">
+            <div class="top-actions">
+                <a href="{{ route('customer.services') }}" class="back-link">
+                    <i class="bi bi-arrow-left"></i>
+                    <span>Back to Services</span>
+                </a>
+
+                <a href="{{ route('customer.book.service', $provider->id) }}" class="book-action">
+                    <i class="bi bi-calendar2-check"></i>
+                    <span>Book This Provider</span>
+                </a>
+            </div>
+
+            <div class="profile-hero">
                 <img
                     src="{{ $providerAvatar }}"
-                    class="avatar"
+                    class="provider-avatar"
                     alt="Provider avatar"
                     onerror="this.onerror=null;this.src='{{ asset('images/avatar-placeholder.svg') }}';"
                 >
-            </div>
 
-            <div>
-                <h4 class="name">{{ $provider->first_name }} {{ $provider->last_name }}</h4>
-                <div class="location">{{ $provider->city }}, {{ $provider->province }}</div>
+                <div>
+                    <h1 class="provider-name">{{ trim(($provider->first_name ?? '') . ' ' . ($provider->last_name ?? '')) }}</h1>
+                    <div class="provider-location">{{ trim(($provider->city ?? '') . ', ' . ($provider->province ?? '')) }}</div>
 
-                <div class="meta">
-                    <div class="pill" title="Average rating">
-                        <span style="color:rgba(255,255,255,.95)">
-                            {{ $count > 0 ? $avgText : 'No ratings yet' }}
-                        </span>
-
-                        @if($count > 0)
-                            <span class="sub">• {{ $count }} review{{ $count===1?'':'s' }}</span>
-                        @endif
-                    </div>
-
-                    @if($count > 0)
-                        <div class="pill" title="Star rating">
-                            <span class="stars" aria-label="Average rating">
-                                @for($i=1;$i<=5;$i++)
-                                    <svg class="star {{ $i <= $avgRounded ? 'on' : '' }}" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-                                    </svg>
-                                @endfor
-                            </span>
+                    <div class="hero-pills">
+                        <div class="pill rating">
+                            <span>{{ $count > 0 ? $avgText : 'No ratings yet' }}</span>
+                            @if($count > 0)
+                                <span class="stars" aria-hidden="true">
+                                    @for($i = 1; $i <= 5; $i++)
+                                        <svg class="star {{ $i <= $avgRounded ? 'on' : '' }}" viewBox="0 0 24 24">
+                                            <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                                        </svg>
+                                    @endfor
+                                </span>
+                            @endif
                         </div>
-                    @endif
 
-                    <div class="pill" title="Provider status">
-                        <span style="color:rgba(255,255,255,.92)">Status</span>
-                        <span class="sub">• {{ ucfirst(strtolower($provider->status)) }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="ctaRow">
-            <a href="{{ route('customer.book.service', $provider->id) }}" class="btnBook">
-                Book this provider
-            </a>
-            <a href="mailto:{{ $provider->email }}" class="btnGhost">
-                Email
-            </a>
-        </div>
-
-        <div class="section">
-            <h5 class="sectionTitle">Provider Details</h5>
-            <div class="sectionSub">Contact and address information.</div>
-
-            <div class="infoGrid">
-                <div class="infoItem">
-                    <div class="infoLabel">Contact Number</div>
-                    <div class="infoValue">{{ $provider->phone }}</div>
-                </div>
-
-                <div class="infoItem">
-                    <div class="infoLabel">Email Address</div>
-                    <div class="infoValue">
-                        <a href="mailto:{{ $provider->email }}">{{ $provider->email }}</a>
-                    </div>
-                </div>
-
-                <div class="infoItem" style="grid-column: 1 / -1;">
-                    <div class="infoLabel">Full Address</div>
-                    <div class="infoValue">
-                        {{ $provider->address }},
-                        {{ $provider->barangay }},
-                        {{ $provider->city }},
-                        {{ $provider->province }},
-                        {{ $provider->region }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h5 class="sectionTitle">Customer Ratings & Feedback</h5>
-            <div class="sectionSub">Filter, sort, and browse customer reviews.</div>
-
-            @if($count <= 0)
-                <div class="empty">
-                    <div style="font-weight:950;color:rgba(255,255,255,.92)">No ratings yet</div>
-                </div>
-            @else
-
-                <div class="summary">
-                    <div class="summaryCard">
-                        <div class="bigAvg">{{ $avgText }}</div>
-                        <div class="stars" aria-label="Average rating">
-                            @for($i=1;$i<=5;$i++)
-                                <svg class="star {{ $i <= $avgRounded ? 'on' : '' }}" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-                                </svg>
-                            @endfor
+                        <div class="pill">
+                            <i class="bi bi-chat-quote"></i>
+                            <span>{{ $count }} review{{ $count === 1 ? '' : 's' }}</span>
                         </div>
-                        <div class="smallNote">{{ $count }} total review{{ $count===1?'':'s' }}</div>
 
-                        @php $total = max(1, $count); @endphp
+                        <div class="pill verified">
+                            <i class="bi bi-patch-check"></i>
+                            <span>{{ ucfirst(strtolower((string) ($provider->status ?? 'approved'))) }}</span>
+                        </div>
+                    </div>
 
-                        <div class="dist" aria-label="Rating distribution">
-                            @for($s=5;$s>=1;$s--)
-                                @php $pct = ($dist[$s] / $total) * 100; @endphp
-                                <div class="distRow">
-                                    <div class="distLabel">{{ $s }}★</div>
-                                    <div class="bar"><span style="width: {{ $pct }}%"></span></div>
-                                    <div class="distCount">{{ $dist[$s] }}</div>
+                    <div class="contact-actions">
+                        <a href="tel:{{ $provider->phone }}" class="ghost-action">
+                            <i class="bi bi-telephone"></i>
+                            <span>Call</span>
+                        </a>
+
+                        <a href="mailto:{{ $provider->email }}" class="ghost-action">
+                            <i class="bi bi-envelope"></i>
+                            <span>Email</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="profile-grid">
+            <article class="section-card">
+                <h2 class="section-title">Provider details</h2>
+                <p class="section-subtitle">Basic contact and location details for this provider.</p>
+
+                <div class="detail-grid">
+                    <div class="detail-card">
+                        <div class="detail-label">Contact Number</div>
+                        <div class="detail-value">{{ $provider->phone ?: 'Not available' }}</div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-label">Email Address</div>
+                        <div class="detail-value">
+                            @if(!empty($provider->email))
+                                <a href="mailto:{{ $provider->email }}">{{ $provider->email }}</a>
+                            @else
+                                Not available
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-label">City / Municipality</div>
+                        <div class="detail-value">{{ $provider->city ?: 'Not available' }}</div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-label">Province</div>
+                        <div class="detail-value">{{ $provider->province ?: 'Not available' }}</div>
+                    </div>
+
+                    <div class="detail-card full">
+                        <div class="detail-label">Full Address</div>
+                        <div class="detail-value">
+                            {{ trim(implode(', ', array_filter([
+                                $provider->address ?? null,
+                                $provider->barangay ?? null,
+                                $provider->city ?? null,
+                                $provider->province ?? null,
+                                $provider->region ?? null,
+                            ]))) ?: 'Not available' }}
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <aside class="section-card">
+                <h2 class="section-title">Rating summary</h2>
+                <p class="section-subtitle">A quick look at how customers have rated this provider.</p>
+
+                <div class="rating-summary-grid">
+                    <div class="summary-box">
+                        <div class="summary-label">Average rating</div>
+                        <div class="summary-value">{{ $avgText }}</div>
+                        <div class="summary-note">{{ $count > 0 ? 'Based on customer reviews.' : 'No ratings yet.' }}</div>
+                    </div>
+
+                    <div class="summary-box">
+                        <div class="summary-label">Total reviews</div>
+                        <div class="summary-value">{{ $count }}</div>
+                        <div class="summary-note">Submitted customer feedback.</div>
+                    </div>
+
+                    <div class="summary-box wide">
+                        <div class="summary-label">Score breakdown</div>
+
+                        <div class="breakdown-list">
+                            @for($star = 5; $star >= 1; $star--)
+                                @php
+                                    $scoreCount = (int) ($distribution[$star] ?? 0);
+                                    $scorePercent = $count > 0 ? round(($scoreCount / $count) * 100) : 0;
+                                @endphp
+
+                                <div class="breakdown-row">
+                                    <span>{{ $star }} star</span>
+                                    <div class="bar">
+                                        <span style="width: {{ $scorePercent }}%;"></span>
+                                    </div>
+                                    <span class="count">{{ $scoreCount }}</span>
                                 </div>
                             @endfor
                         </div>
                     </div>
+                </div>
+            </aside>
+        </section>
 
-                    <div class="filterBar" id="filterBar">
-                        <div class="control">
-                            <label for="ratingFilter">Rating</label>
-                            <select id="ratingFilter" class="selectDark">
-                                <option value="all">All ratings</option>
-                                <option value="5">5 ★</option>
-                                <option value="4">4 ★</option>
-                                <option value="3">3 ★</option>
-                                <option value="2">2 ★</option>
-                                <option value="1">1 ★</option>
-                            </select>
-                        </div>
+        <section class="section-card">
+            <h2 class="section-title">Customer feedback</h2>
+            <p class="section-subtitle">Recent reviews from customers who booked this provider.</p>
 
-                        <div class="control">
-                            <label for="sortFilter">Sort</label>
-                            <select id="sortFilter" class="selectDark">
-                                <option value="recent">Most recent</option>
-                                <option value="oldest">Oldest</option>
-                                <option value="relevance">Relevance</option>
-                                <option value="highest">Highest rating</option>
-                                <option value="lowest">Lowest rating</option>
-                            </select>
-                        </div>
+            @if(($reviews ?? collect())->isEmpty())
+                <div class="empty-card" style="margin-top:1rem;">
+                    <div class="empty-icon">
+                        <i class="bi bi-chat-left-dots"></i>
+                    </div>
+                    <div class="empty-title">No reviews yet</div>
+                    <div class="empty-copy">This provider has not received any written feedback yet.</div>
+                </div>
+            @else
+                <div class="reviews-toolbar">
+                    <div class="toolbar-copy">
+                        Showing <strong id="providerReviewCount">{{ count($reviews) }}</strong>
+                        review{{ count($reviews) === 1 ? '' : 's' }}.
+                    </div>
 
-                        <div class="control" style="min-width:240px; flex: 1.3;">
-                            <label for="searchFilter">Search</label>
-                            <input id="searchFilter" class="searchDark" type="text" placeholder="Search keywords (e.g., great, fast, clean)">
-                        </div>
-
-                        <div style="width:100%; display:flex; justify-content:space-between; gap:.75rem; align-items:center; margin-top:.25rem;">
-                            <div class="hint">
-                                Showing <span id="shownCount" style="color:rgba(255,255,255,.9); font-weight:900;">{{ $reviews->count() }}</span>
-                                of {{ $reviews->count() }} review{{ $reviews->count()===1?'':'s' }}.
-                            </div>
-                            <button type="button" id="resetFilters"
-                                    class="btnGhost"
-                                    style="padding:.6rem .85rem; border-radius: 14px;">
-                                Reset
-                            </button>
-                        </div>
+                    <div class="toolbar-control">
+                        <label for="providerReviewSort">Sort reviews</label>
+                        <select id="providerReviewSort" class="toolbar-select">
+                            <option value="relevance">Most relevant</option>
+                            <option value="recent">Newest first</option>
+                            <option value="oldest">Oldest first</option>
+                            <option value="highest">Highest rating</option>
+                            <option value="lowest">Lowest rating</option>
+                        </select>
                     </div>
                 </div>
 
-                <div class="reviewList" id="reviewList">
-                    @foreach($reviews as $rev)
+                <div class="reviews-list" style="margin-top:1rem;">
+                    @foreach($reviews as $review)
                         @php
-                            $rv = (int)($rev->rating ?? 0);
-                            $dt = isset($rev->created_at) ? \Carbon\Carbon::parse($rev->created_at) : null;
-                            $ts = $dt ? $dt->timestamp : 0;
-
-                            $comment = (string)($rev->comment ?? '');
-                            $name = $rev->customer_name ?? 'Customer';
-
-                            $customerImage = $rev->customer_profile_image ?? '';
-
                             $reviewerAvatar = asset('images/avatar-placeholder.svg');
 
-                            if (!empty($customerImage)) {
-                                $reviewerAvatar = route('customer.image.public', ['filename' => basename($customerImage)]) . '?v=' . time();
+                            if (!empty($review->customer_profile_image)) {
+                                $reviewerAvatar = route('customer.image.public', ['filename' => basename($review->customer_profile_image)]) . '?v=' . time();
                             }
+
+                            $reviewDate = !empty($review->created_at)
+                                ? Carbon::parse($review->created_at)->format('M d, Y')
+                                : 'No date';
+
+                            $reviewTimestamp = !empty($review->created_at)
+                                ? Carbon::parse($review->created_at)->timestamp
+                                : 0;
+
+                            $reviewScore = (int) ($review->rating ?? 0);
+                            $comment = trim((string) ($review->comment ?? ''));
                         @endphp
 
-                        <div class="reviewCard"
-                             data-rating="{{ $rv }}"
-                             data-ts="{{ $ts }}"
-                             data-name="{{ strtolower($name) }}"
-                             data-text="{{ strtolower($comment) }}">
-
-                            <div class="reviewTop">
-                                <div class="reviewerRow">
+                        <article
+                            class="review-card provider-review-card"
+                            data-rating="{{ $reviewScore }}"
+                            data-ts="{{ $reviewTimestamp }}"
+                            data-relevance="{{ ($reviewScore * 1000000) + $reviewTimestamp + strlen($comment) }}"
+                        >
+                            <div class="review-top">
+                                <div class="reviewer">
                                     <img
                                         src="{{ $reviewerAvatar }}"
                                         alt="Reviewer avatar"
-                                        class="reviewerAvatar"
+                                        class="reviewer-avatar"
                                         onerror="this.onerror=null;this.src='{{ asset('images/avatar-placeholder.svg') }}';"
                                     >
 
-                                    <div class="reviewerBlock">
-                                        <div class="reviewerName">{{ $name }}</div>
-
-                                        <div class="reviewMeta">
-                                            <span class="stars" aria-label="Rating {{ $rv }} out of 5">
-                                                @for($i=1;$i<=5;$i++)
-                                                    <svg class="star {{ $i <= $rv ? 'on' : '' }}" viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-                                                    </svg>
-                                                @endfor
-                                            </span>
-
-                                            <span class="badge">{{ $rv }}★</span>
-
-                                            @if($dt)
-                                                <span style="color:var(--muted); font-weight:800;">• {{ $dt->format('M d, Y') }}</span>
-                                            @endif
-                                        </div>
+                                    <div style="min-width:0;">
+                                        <div class="reviewer-name">{{ $review->customer_name ?? 'Customer' }}</div>
+                                        <div class="review-date">{{ $reviewDate }}</div>
                                     </div>
                                 </div>
 
-                                <div class="badge" title="Review timestamp">
-                                    {{ $dt ? $dt->diffForHumans() : '' }}
+                                <div class="score-pill">
+                                    <span class="stars" aria-hidden="true">
+                                        @for($i = 1; $i <= 5; $i++)
+                                            <svg class="star {{ $i <= $reviewScore ? 'on' : '' }}" viewBox="0 0 24 24">
+                                                <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                                            </svg>
+                                        @endfor
+                                    </span>
+                                    <span>{{ $reviewScore }}/5</span>
                                 </div>
                             </div>
 
-                            <div class="comment">
-                                @php $cleanComment = trim((string)($rev->comment ?? '')); @endphp
-                                {{ $cleanComment !== '' ? $cleanComment : 'No comment.' }}
+                            <div class="review-comment {{ $comment === '' ? 'empty' : '' }}">
+                                {{ $comment !== '' ? $comment : 'No written comment was left for this review.' }}
                             </div>
-                        </div>
+                        </article>
                     @endforeach
                 </div>
-
-                <div class="empty" id="noResults" style="display:none;">
-                    <div style="font-weight:950;color:rgba(255,255,255,.92)">No results</div>
-                    <div style="margin-top:.25rem;">Try changing the rating, sort, or search keywords.</div>
-                </div>
-
             @endif
-        </div>
+        </section>
 
     </div>
 </div>
 
-@if($count > 0)
+@if(($reviews ?? collect())->isNotEmpty())
 <script>
 (function(){
-    const list = document.getElementById('reviewList');
-    if(!list) return;
+    const list = document.querySelector('.reviews-list');
+    const sortControl = document.getElementById('providerReviewSort');
+    const countLabel = document.getElementById('providerReviewCount');
 
-    const ratingFilter = document.getElementById('ratingFilter');
-    const sortFilter   = document.getElementById('sortFilter');
-    const searchFilter = document.getElementById('searchFilter');
-    const resetBtn     = document.getElementById('resetFilters');
-    const shownCount   = document.getElementById('shownCount');
-    const noResults    = document.getElementById('noResults');
-
-    const items = Array.from(list.querySelectorAll('.reviewCard'));
-
-    function getVisibleItems(){
-        return items.filter(el => el.style.display !== 'none');
+    if (!list || !sortControl) {
+        return;
     }
 
-    function applyFilter(){
-        const ratingVal = ratingFilter ? ratingFilter.value : 'all';
-        const q = (searchFilter ? searchFilter.value : '').trim().toLowerCase();
+    const items = Array.from(list.querySelectorAll('.provider-review-card'));
+    if (countLabel) {
+        countLabel.textContent = items.length;
+    }
 
-        let shown = 0;
+    function sortItems(mode) {
+        const sorted = items.slice().sort(function(a, b) {
+            const ratingA = parseInt(a.getAttribute('data-rating') || '0', 10);
+            const ratingB = parseInt(b.getAttribute('data-rating') || '0', 10);
+            const tsA = parseInt(a.getAttribute('data-ts') || '0', 10);
+            const tsB = parseInt(b.getAttribute('data-ts') || '0', 10);
+            const relevanceA = parseInt(a.getAttribute('data-relevance') || '0', 10);
+            const relevanceB = parseInt(b.getAttribute('data-relevance') || '0', 10);
 
-        items.forEach(el => {
-            const r = el.getAttribute('data-rating') || '0';
-            const text = (el.getAttribute('data-text') || '');
-            const name = (el.getAttribute('data-name') || '');
-            const matchRating = (ratingVal === 'all') || (r === ratingVal);
-            const matchSearch = !q || text.includes(q) || name.includes(q);
+            if (mode === 'recent') return tsB - tsA;
+            if (mode === 'oldest') return tsA - tsB;
+            if (mode === 'highest') return (ratingB - ratingA) || (tsB - tsA);
+            if (mode === 'lowest') return (ratingA - ratingB) || (tsB - tsA);
 
-            const show = matchRating && matchSearch;
-            el.style.display = show ? '' : 'none';
-            if(show) shown++;
+            return relevanceB - relevanceA;
         });
 
-        if(shownCount) shownCount.textContent = shown;
-
-        if(noResults){
-            noResults.style.display = (shown === 0) ? '' : 'none';
-        }
-
-        applySort();
-    }
-
-    function relevanceScore(el){
-        const rating = parseInt(el.getAttribute('data-rating') || '0', 10);
-        const ts     = parseInt(el.getAttribute('data-ts') || '0', 10);
-        return (rating * 1000000000) + ts;
-    }
-
-    function applySort(){
-        const mode = sortFilter ? sortFilter.value : 'recent';
-        const visible = getVisibleItems();
-
-        visible.sort((a,b) => {
-            const ra = parseInt(a.getAttribute('data-rating') || '0', 10);
-            const rb = parseInt(b.getAttribute('data-rating') || '0', 10);
-            const ta = parseInt(a.getAttribute('data-ts') || '0', 10);
-            const tb = parseInt(b.getAttribute('data-ts') || '0', 10);
-
-            if(mode === 'recent')  return tb - ta;
-            if(mode === 'oldest')  return ta - tb;
-            if(mode === 'highest') return (rb - ra) || (tb - ta);
-            if(mode === 'lowest')  return (ra - rb) || (tb - ta);
-            if(mode === 'relevance') return relevanceScore(b) - relevanceScore(a);
-
-            return tb - ta;
+        sorted.forEach(function(item) {
+            list.appendChild(item);
         });
-
-        visible.forEach(el => list.appendChild(el));
     }
 
-    function reset(){
-        if(ratingFilter) ratingFilter.value = 'all';
-        if(sortFilter) sortFilter.value = 'recent';
-        if(searchFilter) searchFilter.value = '';
-        applyFilter();
-    }
+    sortControl.addEventListener('change', function() {
+        sortItems(sortControl.value);
+    });
 
-    if(ratingFilter) ratingFilter.addEventListener('change', applyFilter);
-    if(sortFilter) sortFilter.addEventListener('change', applySort);
-    if(searchFilter) searchFilter.addEventListener('input', applyFilter);
-    if(resetBtn) resetBtn.addEventListener('click', reset);
-
-    applyFilter();
+    sortItems(sortControl.value);
 })();
 </script>
 @endif

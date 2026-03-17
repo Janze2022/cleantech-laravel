@@ -1,376 +1,638 @@
 @extends('customer.layouts.app')
 
-@section('title','My Reviews')
+@section('title', 'My Reviews')
 
 @section('content')
 
+@php
+    use Carbon\Carbon;
+
+    $reviews = $reviews ?? collect();
+    $reviewedCount = $reviews->filter(fn ($review) => (int) ($review->rating ?? 0) > 0)->count();
+    $pendingCount = max($reviews->count() - $reviewedCount, 0);
+
+    $ratingLabel = function ($value) {
+        return match ((int) $value) {
+            5 => 'Excellent',
+            4 => 'Very good',
+            3 => 'Good',
+            2 => 'Needs work',
+            1 => 'Poor',
+            default => 'Select a rating',
+        };
+    };
+@endphp
+
 <style>
 :root{
-    --bg-card:#020b1f;
-    --bg-deep:#020617;
-    --border-soft:rgba(255,255,255,.08);
-    --text-muted:rgba(255,255,255,.55);
-    --text:rgba(255,255,255,.92);
-    --accent:#38bdf8;
-    --warning:#fbbf24;
-    --success:#22c55e;
-    --danger:#ef4444;
+    --rv-bg:#020617;
+    --rv-card:#071225;
+    --rv-card-soft:#0b1830;
+    --rv-border:rgba(255,255,255,.08);
+    --rv-text:rgba(255,255,255,.94);
+    --rv-muted:rgba(255,255,255,.58);
+    --rv-accent:#38bdf8;
+    --rv-success:#22c55e;
+    --rv-warn:#fbbf24;
 }
 
-/* Page header */
-.page-title{
+.reviews-page{
+    max-width: 1040px;
+    margin: 0 auto;
+    color: var(--rv-text);
+}
+
+.reviews-stack{
     display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
+    flex-direction:column;
     gap:1rem;
-    margin-bottom:1.25rem;
-}
-.page-title h4{
-    margin:0;
-    font-weight:800;
-    letter-spacing:.2px;
-    color:var(--text);
-}
-.page-sub{
-    color:var(--text-muted);
-    font-size:.9rem;
 }
 
-/* Alerts (dark) */
-.alert-dark-success{
-    background: rgba(34,197,94,.10);
-    border:1px solid rgba(34,197,94,.25);
-    color: rgba(255,255,255,.90);
-    border-radius:14px;
-    padding:.9rem 1rem;
-    margin-bottom:1rem;
+.reviews-hero,
+.reviews-card,
+.reviews-empty{
+    background: linear-gradient(180deg, rgba(7,18,37,.96), rgba(2,6,23,.98));
+    border:1px solid var(--rv-border);
+    border-radius:22px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.28);
 }
 
-/* Cards */
-.review-card{
-    background: linear-gradient(180deg, var(--bg-card), var(--bg-deep));
-    border:1px solid var(--border-soft);
-    border-radius:18px;
-    padding:1.15rem;
-    margin-bottom:1rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+.reviews-hero{
+    padding:1.25rem;
 }
-.review-top{
+
+.reviews-head{
     display:flex;
-    justify-content:space-between;
-    gap:1rem;
     align-items:flex-start;
+    justify-content:space-between;
+    gap:1rem;
     flex-wrap:wrap;
 }
-.provider-name{
-    font-weight:800;
-    color:var(--text);
-    font-size:1rem;
-    line-height:1.2;
-}
-.ref{
-    color:var(--text-muted);
-    font-size:.85rem;
-    margin-top:.25rem;
+
+.reviews-title{
+    margin:0;
+    font-size:1.2rem;
+    font-weight:900;
+    letter-spacing:-.02em;
 }
 
-/* Badges */
-.badge-pill{
-    padding:.35rem .6rem;
+.reviews-subtitle{
+    margin:.35rem 0 0;
+    color:var(--rv-muted);
+    font-size:.9rem;
+    line-height:1.55;
+}
+
+.reviews-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.55rem .85rem;
     border-radius:999px;
-    font-size:.75rem;
+    background: rgba(56,189,248,.1);
+    border:1px solid rgba(56,189,248,.2);
+    color:rgba(255,255,255,.94);
+    font-size:.85rem;
     font-weight:800;
-    letter-spacing:.02em;
-    border:1px solid transparent;
     white-space:nowrap;
 }
-.badge-reviewed{
-    background: rgba(34,197,94,.10);
-    border-color: rgba(34,197,94,.25);
-    color: rgba(255,255,255,.92);
-}
-.badge-pending{
-    background: rgba(251,191,36,.12);
-    border-color: rgba(251,191,36,.28);
-    color: rgba(255,255,255,.92);
-}
 
-/* Layout */
-.review-body{
-    margin-top: .95rem;
+.reviews-summary{
     display:grid;
-    grid-template-columns: 1fr;
-    gap:.85rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap:.75rem;
+    margin-top:1rem;
 }
 
-/* Rating row */
+.summary-box{
+    padding:.95rem 1rem;
+    border-radius:18px;
+    background: rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
+}
+
+.summary-label{
+    color:var(--rv-muted);
+    font-size:.76rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+
+.summary-value{
+    margin-top:.45rem;
+    font-size:1.45rem;
+    font-weight:900;
+    line-height:1;
+}
+
+.summary-note{
+    margin-top:.35rem;
+    color:var(--rv-muted);
+    font-size:.8rem;
+}
+
+.reviews-list{
+    display:flex;
+    flex-direction:column;
+    gap:1rem;
+}
+
+.reviews-card{
+    padding:1rem;
+}
+
+.card-top{
+    display:grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap:.85rem;
+    align-items:start;
+}
+
+.provider-name{
+    font-size:1rem;
+    font-weight:900;
+    line-height:1.3;
+}
+
+.service-line{
+    margin-top:.2rem;
+    color:rgba(255,255,255,.86);
+    font-size:.88rem;
+    font-weight:700;
+    line-height:1.45;
+}
+
+.service-line .muted{
+    color:var(--rv-muted);
+    font-weight:600;
+}
+
+.status-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:.4rem;
+    padding:.42rem .72rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.1);
+    font-size:.78rem;
+    font-weight:800;
+    white-space:nowrap;
+}
+
+.status-pill.reviewed{
+    background: rgba(34,197,94,.1);
+    border-color: rgba(34,197,94,.22);
+    color:#86efac;
+}
+
+.status-pill.pending{
+    background: rgba(251,191,36,.1);
+    border-color: rgba(251,191,36,.22);
+    color:#fde68a;
+}
+
+.booking-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.55rem;
+    margin-top:.9rem;
+}
+
+.meta-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:.38rem;
+    padding:.42rem .7rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.03);
+    color:rgba(255,255,255,.88);
+    font-size:.8rem;
+    font-weight:700;
+}
+
+.meta-pill.price{
+    border-color: rgba(56,189,248,.18);
+    background: rgba(56,189,248,.08);
+}
+
+.review-panel{
+    margin-top:1rem;
+    padding-top:.95rem;
+    border-top:1px solid rgba(255,255,255,.06);
+}
+
 .rating-row{
     display:flex;
     align-items:center;
     justify-content:space-between;
-    gap:1rem;
+    gap:.85rem;
     flex-wrap:wrap;
 }
-.rating-label{
-    color: var(--text-muted);
-    font-size:.85rem;
+
+.rating-copy{
+    color:var(--rv-muted);
+    font-size:.84rem;
     font-weight:700;
 }
 
-/* Stars */
 .stars{
     display:inline-flex;
-    gap:.25rem;
     align-items:center;
+    gap:.25rem;
 }
+
 .star-btn{
     appearance:none;
-    background:transparent;
     border:0;
-    padding:.2rem;
+    background:transparent;
+    padding:.18rem;
     border-radius:10px;
     cursor:pointer;
     line-height:0;
     transition: transform .08s ease, background .12s ease;
 }
+
+.star-btn:hover{
+    transform:translateY(-1px);
+    background:rgba(255,255,255,.04);
+}
+
 .star-btn:focus{
     outline:2px solid rgba(56,189,248,.35);
     outline-offset:2px;
 }
-.star-btn:hover{
-    transform: translateY(-1px);
-    background: rgba(255,255,255,.04);
-}
+
 .star-icon{
     width:22px;
     height:22px;
     display:block;
-    fill: #334155;             /* slate */
+    fill:#334155;
     transition: fill .12s ease;
 }
-.star-on .star-icon{ fill: #fbbf24; }  /* amber */
-.star-off .star-icon{ fill: #334155; }
-.star-static .star-icon{ cursor:default; }
 
-/* Helper text next to stars */
-.rating-hint{
-    color: var(--text-muted);
-    font-size:.85rem;
-    white-space:nowrap;
+.star-on .star-icon{ fill:#fbbf24; }
+.star-off .star-icon{ fill:#334155; }
+.star-static .star-icon{ width:18px; height:18px; }
+
+.rating-selected{
+    color:rgba(255,255,255,.9);
+    font-size:.82rem;
+    font-weight:800;
 }
 
-/* Textarea + button (dark) */
 .review-textarea{
     width:100%;
-    background: rgba(255,255,255,.03);
-    border: 1px solid var(--border-soft);
-    border-radius: 14px;
-    padding: .85rem .9rem;
-    color: rgba(255,255,255,.92);
-    min-height: 110px;
-    resize: vertical;
+    min-height:100px;
+    margin-top:.9rem;
+    padding:.85rem .9rem;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    color:rgba(255,255,255,.94);
+    resize:vertical;
 }
-.review-textarea::placeholder{ color: rgba(255,255,255,.35); }
+
+.review-textarea::placeholder{
+    color:rgba(255,255,255,.35);
+}
+
 .review-textarea:focus{
     outline:none;
     border-color: rgba(56,189,248,.35);
-    box-shadow: 0 0 0 3px rgba(56,189,248,.10);
+    box-shadow: 0 0 0 3px rgba(56,189,248,.1);
 }
 
-/* Buttons */
-.btn-dark-accent{
-    background: rgba(56,189,248,.16);
-    border:1px solid rgba(56,189,248,.35);
-    color: rgba(255,255,255,.92);
+.review-actions{
+    display:flex;
+    justify-content:flex-end;
+    margin-top:.8rem;
+}
+
+.btn-review{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.45rem;
+    min-height:42px;
+    padding:.68rem 1rem;
+    border-radius:12px;
+    border:1px solid rgba(56,189,248,.3);
+    background: rgba(56,189,248,.12);
+    color:rgba(255,255,255,.94);
     font-weight:800;
-    border-radius: 14px;
-    padding: .7rem 1rem;
-    transition: transform .08s ease, filter .12s ease;
 }
-.btn-dark-accent:hover{
-    filter: brightness(1.05);
-    transform: translateY(-1px);
-}
-.btn-dark-accent:active{ transform: translateY(0); }
 
-.review-meta{
-    color: var(--text-muted);
+.btn-review:hover{
+    background: rgba(56,189,248,.16);
+}
+
+.review-result{
+    display:grid;
+    gap:.8rem;
+}
+
+.review-score{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.85rem;
+    flex-wrap:wrap;
+}
+
+.review-score strong{
+    color:rgba(255,255,255,.95);
+}
+
+.comment-box{
+    padding:.95rem 1rem;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.06);
+    background: rgba(255,255,255,.03);
+    color:rgba(255,255,255,.88);
+    line-height:1.6;
+}
+
+.comment-box.empty{
+    color:var(--rv-muted);
+}
+
+.reviews-empty{
+    padding:1.5rem;
+    text-align:center;
+}
+
+.empty-icon{
+    width:56px;
+    height:56px;
+    margin:0 auto .85rem;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:18px;
+    background: rgba(56,189,248,.1);
+    color:var(--rv-accent);
+    font-size:1.35rem;
+}
+
+.empty-title{
+    font-size:1.02rem;
+    font-weight:900;
+}
+
+.empty-copy{
+    margin-top:.35rem;
+    color:var(--rv-muted);
     font-size:.9rem;
+    line-height:1.6;
 }
 
-/* Mobile tweaks */
-@media (max-width: 576px){
-    .review-card{ padding: 1rem; border-radius:16px; }
-    .provider-name{ font-size:.98rem; }
-    .star-icon{ width:20px; height:20px; }
-    .rating-row{ align-items:flex-start; }
-    .rating-hint{ width:100%; }
+@media (max-width: 767.98px){
+    .reviews-summary{
+        grid-template-columns: 1fr;
+    }
+
+    .card-top{
+        grid-template-columns: 1fr;
+    }
+
+    .review-actions .btn-review{
+        width:100%;
+    }
 }
 </style>
 
-<div class="page-title">
-    <div>
-        <h4>My Reviews</h4>
-        <div class="page-sub">Leave feedback for completed services.</div>
-    </div>
-</div>
+<div class="reviews-page">
+    <div class="reviews-stack">
 
-@if(session('success'))
-    <div class="alert-dark-success">{{ session('success') }}</div>
-@endif
-
-@if(($reviews ?? collect())->count() === 0)
-    <div class="review-card">
-        <div class="review-meta">No completed bookings available for review yet.</div>
-    </div>
-@else
-
-@foreach($reviews as $r)
-<div class="review-card" id="review-{{ $r->reference_code }}">
-
-    <div class="review-top">
-        <div>
-            <div class="provider-name">{{ $r->provider }}</div>
-            <div class="ref">Ref: {{ $r->reference_code }}</div>
-        </div>
-
-        <div>
-            @if($r->rating)
-                <span class="badge-pill badge-reviewed">Reviewed</span>
-            @else
-                <span class="badge-pill badge-pending">Pending Review</span>
-            @endif
-        </div>
-    </div>
-
-    <div class="review-body">
-
-        @if(!$r->rating)
-            <form method="POST" action="{{ route('customer.reviews.store') }}" class="review-form">
-                @csrf
-                <input type="hidden" name="booking_id" value="{{ $r->booking_id }}">
-                <input type="hidden" name="rating" value="" class="rating-input" required>
-
-                <div class="rating-row">
-                    <div class="rating-label">Rating</div>
-
-                    <div class="stars" role="radiogroup" aria-label="Star rating">
-                        @for($i=1;$i<=5;$i++)
-                            <button type="button"
-                                    class="star-btn star-off"
-                                    data-value="{{ $i }}"
-                                    aria-label="Rate {{ $i }} star{{ $i>1 ? 's' : '' }}">
-                                <svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-                                </svg>
-                            </button>
-                        @endfor
-                    </div>
-
-                    <div class="rating-hint">
-                        <span class="selected-text">Select a rating</span>
-                    </div>
+        <section class="reviews-hero">
+            <div class="reviews-head">
+                <div>
+                    <h1 class="reviews-title">My Reviews</h1>
+                    <p class="reviews-subtitle">Rate completed bookings and keep your feedback in one clean place.</p>
                 </div>
 
-                <textarea name="comment"
-                          class="review-textarea"
-                          placeholder="Write your review (optional)..."></textarea>
+                <div class="reviews-chip">
+                    <i class="bi bi-chat-square-heart"></i>
+                    <span>{{ $reviews->count() }} completed booking{{ $reviews->count() === 1 ? '' : 's' }}</span>
+                </div>
+            </div>
 
-                <button class="btn-dark-accent">Submit Review</button>
-            </form>
+            <div class="reviews-summary">
+                <div class="summary-box">
+                    <div class="summary-label">Ready to review</div>
+                    <div class="summary-value">{{ $pendingCount }}</div>
+                    <div class="summary-note">Still waiting for your rating.</div>
+                </div>
 
+                <div class="summary-box">
+                    <div class="summary-label">Already reviewed</div>
+                    <div class="summary-value">{{ $reviewedCount }}</div>
+                    <div class="summary-note">Ratings you have submitted.</div>
+                </div>
+
+                <div class="summary-box">
+                    <div class="summary-label">Total completed</div>
+                    <div class="summary-value">{{ $reviews->count() }}</div>
+                    <div class="summary-note">Finished bookings in your list.</div>
+                </div>
+            </div>
+        </section>
+
+        @if($reviews->isEmpty())
+            <section class="reviews-empty">
+                <div class="empty-icon">
+                    <i class="bi bi-stars"></i>
+                </div>
+                <div class="empty-title">No completed bookings yet</div>
+                <div class="empty-copy">Once you finish a booking, it will show up here so you can leave a review.</div>
+            </section>
         @else
-            {{-- Reviewed display --}}
-            <div class="rating-row">
-                <div class="rating-label">Your rating</div>
+            <section class="reviews-list">
+                @foreach($reviews as $r)
+                    @php
+                        $bookingDate = !empty($r->booking_date)
+                            ? Carbon::parse($r->booking_date)->format('M d, Y')
+                            : 'No date';
 
-                <div class="stars star-static" aria-label="Your rating: {{ (int)$r->rating }} out of 5">
-                    @for($i=1;$i<=5;$i++)
-                        <span class="{{ $i <= (int)$r->rating ? 'star-on' : 'star-off' }}">
-                            <svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-                            </svg>
-                        </span>
-                    @endfor
-                </div>
+                        $serviceName = $r->service_name ?? 'Service';
+                        $optionName = trim((string) ($r->option_name ?? ''));
+                        $amount = 'PHP ' . number_format((float) ($r->price ?? 0), 2);
+                        $currentRating = (int) ($r->rating ?? 0);
+                    @endphp
 
-                <div class="rating-hint">
-                    <strong style="color:rgba(255,255,255,.92)">{{ (int)$r->rating }}</strong>
-                    <span style="color:var(--text-muted)">/ 5</span>
-                </div>
-            </div>
+                    <article class="reviews-card" id="review-{{ $r->reference_code }}">
+                        <div class="card-top">
+                            <div>
+                                <div class="provider-name">{{ $r->provider }}</div>
+                                <div class="service-line">
+                                    {{ $serviceName }}
+                                    @if($optionName !== '')
+                                        <span class="muted">• {{ $optionName }}</span>
+                                    @endif
+                                </div>
+                            </div>
 
-            <div class="review-meta">
-                {{ $r->comment ? $r->comment : 'No comment.' }}
-            </div>
+                            <div class="status-pill {{ $currentRating > 0 ? 'reviewed' : 'pending' }}">
+                                <i class="bi {{ $currentRating > 0 ? 'bi-check2-circle' : 'bi-clock-history' }}"></i>
+                                <span>{{ $currentRating > 0 ? 'Reviewed' : 'Pending review' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="booking-meta">
+                            @if(!empty($r->reference_code))
+                                <div class="meta-pill">
+                                    <i class="bi bi-hash"></i>
+                                    <span>{{ $r->reference_code }}</span>
+                                </div>
+                            @endif
+
+                            <div class="meta-pill">
+                                <i class="bi bi-calendar3"></i>
+                                <span>{{ $bookingDate }}</span>
+                            </div>
+
+                            <div class="meta-pill price">
+                                <i class="bi bi-wallet2"></i>
+                                <span>{{ $amount }}</span>
+                            </div>
+                        </div>
+
+                        <div class="review-panel">
+                            @if($currentRating === 0)
+                                <form method="POST" action="{{ route('customer.reviews.store') }}" class="review-form">
+                                    @csrf
+                                    <input type="hidden" name="booking_id" value="{{ $r->booking_id }}">
+                                    <input type="hidden" name="rating" value="" class="rating-input" required>
+
+                                    <div class="rating-row">
+                                        <div class="rating-copy">How was this booking?</div>
+
+                                        <div class="stars" role="radiogroup" aria-label="Star rating">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                <button
+                                                    type="button"
+                                                    class="star-btn star-off"
+                                                    data-value="{{ $i }}"
+                                                    aria-label="Rate {{ $i }} star{{ $i > 1 ? 's' : '' }}"
+                                                >
+                                                    <svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                                                    </svg>
+                                                </button>
+                                            @endfor
+                                        </div>
+
+                                        <div class="rating-selected">
+                                            <span class="selected-text">{{ $ratingLabel(0) }}</span>
+                                        </div>
+                                    </div>
+
+                                    <textarea
+                                        name="comment"
+                                        class="review-textarea"
+                                        placeholder="Share a short comment if you want to."
+                                    ></textarea>
+
+                                    <div class="review-actions">
+                                        <button class="btn-review" type="submit">
+                                            <i class="bi bi-send"></i>
+                                            <span>Submit Review</span>
+                                        </button>
+                                    </div>
+                                </form>
+                            @else
+                                <div class="review-result">
+                                    <div class="review-score">
+                                        <div class="rating-copy">Your rating</div>
+
+                                        <div class="stars star-static" aria-label="Your rating: {{ $currentRating }} out of 5">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                <span class="{{ $i <= $currentRating ? 'star-on' : 'star-off' }}">
+                                                    <svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                                                    </svg>
+                                                </span>
+                                            @endfor
+                                        </div>
+
+                                        <div class="rating-selected">
+                                            <strong>{{ $currentRating }}/5</strong> {{ $ratingLabel($currentRating) }}
+                                        </div>
+                                    </div>
+
+                                    <div class="comment-box {{ trim((string) ($r->comment ?? '')) === '' ? 'empty' : '' }}">
+                                        {{ trim((string) ($r->comment ?? '')) !== '' ? $r->comment : 'No written comment was added for this review.' }}
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </article>
+                @endforeach
+            </section>
         @endif
 
     </div>
-
 </div>
-@endforeach
-
-@endif
 
 <script>
 (function(){
-    // For each review form: handle hover + click star rating
     document.querySelectorAll('.review-form').forEach(function(form){
         const stars = Array.from(form.querySelectorAll('.star-btn'));
         const input = form.querySelector('.rating-input');
         const label = form.querySelector('.selected-text');
+        const labels = {
+            0: 'Select a rating',
+            1: 'Poor',
+            2: 'Needs work',
+            3: 'Good',
+            4: 'Very good',
+            5: 'Excellent'
+        };
 
         function paint(value){
-            stars.forEach(btn => {
-                const v = parseInt(btn.getAttribute('data-value'), 10);
-                btn.classList.toggle('star-on', v <= value);
-                btn.classList.toggle('star-off', v > value);
+            stars.forEach(function(btn){
+                const current = parseInt(btn.getAttribute('data-value'), 10);
+                btn.classList.toggle('star-on', current <= value);
+                btn.classList.toggle('star-off', current > value);
             });
         }
 
-        // Hover preview (doesn't commit)
-        stars.forEach(btn => {
+        stars.forEach(function(btn){
             btn.addEventListener('mouseenter', function(){
-                const v = parseInt(btn.getAttribute('data-value'), 10);
-                paint(v);
-                if (label) label.textContent = v + ' / 5';
+                const value = parseInt(btn.getAttribute('data-value'), 10);
+                paint(value);
+                if (label) label.textContent = labels[value] || (value + ' / 5');
+            });
+
+            btn.addEventListener('click', function(){
+                const value = parseInt(btn.getAttribute('data-value'), 10);
+                input.value = value;
+                paint(value);
+                if (label) label.textContent = labels[value] || (value + ' / 5');
             });
         });
 
-        // Restore committed value on leaving the star row
         const starWrap = form.querySelector('.stars');
-        if (starWrap){
+        if (starWrap) {
             starWrap.addEventListener('mouseleave', function(){
                 const committed = parseInt(input.value || '0', 10);
                 paint(committed);
-                if (label) label.textContent = committed ? (committed + ' / 5') : 'Select a rating';
+                if (label) label.textContent = labels[committed] || (committed + ' / 5');
             });
         }
 
-        // Click to commit rating
-        stars.forEach(btn => {
-            btn.addEventListener('click', function(){
-                const v = parseInt(btn.getAttribute('data-value'), 10);
-                input.value = v;
-                paint(v);
-                if (label) label.textContent = v + ' / 5';
-            });
-        });
-
-        // If browser restores form state
-        const committed = parseInt(input.value || '0', 10);
-        paint(committed);
-        if (label) label.textContent = committed ? (committed + ' / 5') : 'Select a rating';
+        paint(0);
     });
 
-    // Auto-scroll when coming from notification: /customer/reviews?ref=XXXX
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
     if (ref) {
-        const el = document.getElementById('review-' + ref);
-        if (el) {
-            setTimeout(() => {
-                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const element = document.getElementById('review-' + ref);
+        if (element) {
+            setTimeout(function(){
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 150);
         }
     }

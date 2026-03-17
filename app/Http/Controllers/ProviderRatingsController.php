@@ -111,9 +111,56 @@ class ProviderRatingsController extends Controller
                 'c.email as customer_email',
             ]);
 
-        // Optional review reference code
-        if (Schema::hasColumn('reviews', 'reference_code')) {
-            $reviewsQuery->addSelect('r.reference_code');
+        if (
+            Schema::hasColumn('reviews', 'booking_id') &&
+            Schema::hasTable('bookings')
+        ) {
+            $reviewsQuery->leftJoin('bookings as b', 'b.id', '=', 'r.booking_id');
+
+            if (Schema::hasTable('services') && Schema::hasColumn('bookings', 'service_id')) {
+                $reviewsQuery->leftJoin('services as s', 's.id', '=', 'b.service_id');
+                $reviewsQuery->addSelect(DB::raw("COALESCE(NULLIF(TRIM(s.name), ''), 'Service') as service_name"));
+            } else {
+                $reviewsQuery->addSelect(DB::raw("'Service' as service_name"));
+            }
+
+            if (Schema::hasTable('service_options') && Schema::hasColumn('bookings', 'service_option_id')) {
+                $areasSub = $this->bookingAreasSubquery();
+
+                $reviewsQuery->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
+                $reviewsQuery->leftJoinSub($areasSub, 'areas', function ($join) {
+                    $join->on('areas.booking_id', '=', 'b.id');
+                });
+
+                $reviewsQuery->addSelect(DB::raw("COALESCE(areas.areas_label, o.label) as option_name"));
+            } else {
+                $reviewsQuery->addSelect(DB::raw("NULL as option_name"));
+            }
+
+            if (Schema::hasColumn('bookings', 'reference_code')) {
+                $reviewsQuery->addSelect('b.reference_code');
+            } elseif (Schema::hasColumn('reviews', 'reference_code')) {
+                $reviewsQuery->addSelect('r.reference_code');
+            } else {
+                $reviewsQuery->addSelect(DB::raw("NULL as reference_code"));
+            }
+
+            if (Schema::hasColumn('bookings', 'booking_date')) {
+                $reviewsQuery->addSelect('b.booking_date');
+            } else {
+                $reviewsQuery->addSelect(DB::raw("NULL as booking_date"));
+            }
+        } else {
+            $reviewsQuery->addSelect(DB::raw("'Service' as service_name"));
+            $reviewsQuery->addSelect(DB::raw("NULL as option_name"));
+
+            if (Schema::hasColumn('reviews', 'reference_code')) {
+                $reviewsQuery->addSelect('r.reference_code');
+            } else {
+                $reviewsQuery->addSelect(DB::raw("NULL as reference_code"));
+            }
+
+            $reviewsQuery->addSelect(DB::raw("NULL as booking_date"));
         }
 
         // Optional customer phone
@@ -131,5 +178,19 @@ class ProviderRatingsController extends Controller
         $reviews = $reviewsQuery->get();
 
         return view('provider.ratings', compact('ratingSummary', 'breakdown', 'reviews'));
+    }
+
+    private function bookingAreasSubquery()
+    {
+        if (!Schema::hasTable('booking_service_options') || !Schema::hasTable('service_options')) {
+            return DB::table('bookings as b_fallback')
+                ->selectRaw('NULL as booking_id, NULL as areas_label')
+                ->whereRaw('1 = 0');
+        }
+
+        return DB::table('booking_service_options as bso')
+            ->join('service_options as so2', 'so2.id', '=', 'bso.service_option_id')
+            ->selectRaw("bso.booking_id, GROUP_CONCAT(so2.label ORDER BY so2.label SEPARATOR ', ') as areas_label")
+            ->groupBy('bso.booking_id');
     }
 }
