@@ -13,8 +13,8 @@
             <div class="ct-hero-shell">
                 <div class="ct-hero-main ct-reveal">
                     <span class="ct-eyebrow">Our Services</span>
-                    <h1 class="ct-title">The same core services, but with the photo-based layout brought back.</h1>
-                    <p class="ct-lead">A quicker view of what each service is for, without long blocks of description.</p>
+                    <h1 class="ct-title">Our services for every kind of home.</h1>
+                    <p class="ct-lead">From routine upkeep to deeper full-space cleaning, each option is here to help you book the right kind of service faster.</p>
                     <div class="ct-actions">
                         <a href="{{ route('customer.register') }}" class="ct-button">Create Account</a>
                         <a href="{{ route('pricing') }}" class="ct-button secondary">See Pricing</a>
