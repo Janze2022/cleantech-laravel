@@ -1,234 +1,267 @@
-{{-- FULL NAV + FIXED OFFSET (COPY/PASTE READY) --}}
+{{-- FULL NAV + FIXED OFFSET --}}
 
 <style>
-/* =========================
-   FIXED NAVBAR OFFSET (GLOBAL)
-========================= */
 :root{
-    --nav-h: 64px; /* fallback; JS will override with exact height */
+    --nav-h: 64px;
 }
 
 html, body{
-    margin:0;
-    padding:0;
-    min-height:100%;
-    background-color:#0b0f19;
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    background-color: #0b0f19;
 }
 
-/* Push ALL page content below fixed navbar */
 .app-content{
     padding-top: var(--nav-h);
 }
 
-/* Prevent anchor links from being hidden under navbar */
 html{
     scroll-padding-top: calc(var(--nav-h) + 12px);
 }
 
-/* =========================
-   ROOT NAVBAR
-========================= */
 .navbar-cleantech{
-    background:#0b0f19;
-    border-bottom:1px solid rgba(255,255,255,.08);
-    padding:.45rem 0;
-    position:fixed;
-    top:0;
-    left:0;
-    right:0;
-    z-index:1050;
+    background: #0b0f19;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    padding: .45rem 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1050;
 }
 
-/* ACCENT BAR */
 .navbar-cleantech::before{
-    content:'';
-    position:absolute;
-    top:0;
-    left:0;
-    height:2px;
-    width:100%;
-    background:linear-gradient(90deg, #0ea5e9, #2563eb, #6366f1);
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 2px;
+    width: 100%;
+    background: linear-gradient(90deg, #0ea5e9, #2563eb, #6366f1);
 }
 
-/* GRID */
 .navbar-grid{
-    display:grid;
-    grid-template-columns:auto 1fr auto;
-    align-items:center;
-    gap:10px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
 }
 
-/* BRAND */
 .navbar-brand{
-    font-weight:800;
-    font-size:.95rem;
-    letter-spacing:.4px;
-    color:#fff !important;
-    display:flex;
-    align-items:center;
-    gap:.5rem;
-    margin:0;
-    padding:0;
+    font-weight: 800;
+    font-size: .95rem;
+    letter-spacing: .4px;
+    color: #fff !important;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0;
+    padding: 0;
 }
 
 .brand-icon{
-    width:30px;
-    height:30px;
-    border-radius:50%;
-    border:1px solid rgba(56,189,248,.45); /* blue border */
-    display:grid;
-    place-items:center;
-
-    color:#38bdf8;            /* blue icon */
-    font-size:1.05rem;
-    font-weight:800;
-    line-height:1;
-
-    /* optional: subtle glow */
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid rgba(56,189,248,.45);
+    display: grid;
+    place-items: center;
+    color: #38bdf8;
     box-shadow: 0 0 0 3px rgba(56,189,248,.10);
 }
 
-/* CENTER LINKS */
+.brand-icon svg,
+.nav-login-icon svg{
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+}
+
 .navbar-center{
-    display:flex;
-    justify-content:center;
+    display: flex;
+    justify-content: center;
 }
 
 .navbar-center-links{
-    display:flex;
-    gap:3.5rem;
-    flex-wrap:wrap;
-    justify-content:center;
-    margin:0;
-    padding:0;
+    display: flex;
+    gap: 3.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
 }
 
 .navbar-center-links .nav-link{
-    color:rgba(255,255,255,.75) !important;
-    font-size:.9rem;
-    font-weight:600;
-    padding:.25rem 0;
-    transition:color .25s ease;
+    color: rgba(255,255,255,.75) !important;
+    font-size: .9rem;
+    font-weight: 600;
+    padding: .25rem 0;
+    transition: color .25s ease;
 }
 
 .navbar-center-links .nav-link:hover{
-    color:#fff !important;
+    color: #fff !important;
 }
 
-/* LOGIN BUTTON */
 .nav-login{
-    background:linear-gradient(135deg, #2563eb, #6366f1);
-    color:#fff !important;
-    border-radius:999px;
-    padding:.35rem .95rem;
-    font-size:.85rem;
-    font-weight:800;
-    box-shadow:0 8px 22px rgba(37,99,235,.4);
-    transition:all .25s ease;
+    background: linear-gradient(135deg, #2563eb, #6366f1);
+    color: #fff !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+    border-radius: 999px;
+    padding: .35rem .95rem;
+    font-size: .85rem;
+    font-weight: 800;
+    box-shadow: 0 8px 22px rgba(37,99,235,.4);
+    transition: all .25s ease;
 }
 
 .nav-login:hover{
-    transform:translateY(-1px);
-    box-shadow:0 12px 30px rgba(37,99,235,.6);
+    transform: translateY(-1px);
+    box-shadow: 0 12px 30px rgba(37,99,235,.6);
 }
 
-/* DROPDOWN */
+.nav-login-icon{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: currentColor;
+}
+
 .dropdown-menu{
-    background:#0f172a;
-    border-radius:14px;
-    border:1px solid rgba(255,255,255,.08);
-    padding:.5rem;
-    min-width:190px;
-    box-shadow:0 25px 45px rgba(0,0,0,.5);
+    background: #0f172a;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.08);
+    padding: .5rem;
+    min-width: 190px;
+    box-shadow: 0 25px 45px rgba(0,0,0,.5);
 }
 
 .dropdown-item{
-    color:rgba(255,255,255,.85);
-    font-size:.85rem;
-    border-radius:10px;
-    padding:.45rem .75rem;
+    color: rgba(255,255,255,.85);
+    font-size: .85rem;
+    border-radius: 10px;
+    padding: .45rem .75rem;
 }
 
 .dropdown-item:hover{
-    background:rgba(255,255,255,.08);
-    color:#fff;
+    background: rgba(255,255,255,.08);
+    color: #fff;
 }
 
 .dropdown-divider{
-    border-top:1px solid rgba(255,255,255,.08);
+    border-top: 1px solid rgba(255,255,255,.08);
 }
 
-/* TOGGLER */
 .navbar-toggler{
-    border:none;
-    padding:.25rem .45rem;
+    border: none;
+    padding: .25rem .45rem;
 }
-.navbar-toggler:focus{ box-shadow:none; }
 
-/* =========================
-   MOBILE
-========================= */
+.navbar-toggler:focus{
+    box-shadow: none;
+}
+
 @media (max-width: 991px){
-    .navbar-grid{ display:block; }
-    .navbar-center{ margin-top:.75rem; }
-    .navbar-center-links{ gap:1.25rem; }
+    .navbar-grid{
+        display: block;
+    }
+
+    .navbar-center{
+        margin-top: .75rem;
+    }
+
+    .navbar-center-links{
+        gap: 1.25rem;
+    }
+
     .nav-login{
-        width:100%;
-        text-align:center;
-        margin-top:.75rem;
+        width: 100%;
+        text-align: center;
+        margin-top: .75rem;
     }
 }
 
-/* MOBILE NAVBAR SIZE FIX */
 @media (max-width: 576px){
-    .navbar-cleantech{ padding:.25rem 0; }
+    .navbar-cleantech{
+        padding: .25rem 0;
+    }
 
-    .navbar-brand{ font-size:.82rem; gap:.35rem; }
-    .brand-icon{ width:24px; height:24px; font-size:.7rem; }
+    .navbar-brand{
+        font-size: .82rem;
+        gap: .35rem;
+    }
 
-    .navbar-toggler{ padding:.15rem .35rem; font-size:.85rem; }
-    .navbar-toggler-icon{ width:1.1em; height:1.1em; }
+    .brand-icon{
+        width: 24px;
+        height: 24px;
+    }
 
-    .navbar-center{ margin-top:.4rem; }
-    .navbar-center-links{ gap:.9rem; }
+    .brand-icon svg,
+    .nav-login-icon svg{
+        width: 13px;
+        height: 13px;
+    }
+
+    .navbar-toggler{
+        padding: .15rem .35rem;
+        font-size: .85rem;
+    }
+
+    .navbar-toggler-icon{
+        width: 1.1em;
+        height: 1.1em;
+    }
+
+    .navbar-center{
+        margin-top: .4rem;
+    }
+
+    .navbar-center-links{
+        gap: .9rem;
+    }
+
     .navbar-center-links .nav-link{
-        font-size:.82rem;
-        padding:.15rem 0;
+        font-size: .82rem;
+        padding: .15rem 0;
     }
 
     .nav-login{
-        padding:.25rem .7rem;
-        font-size:.78rem;
-        margin-top:.5rem;
+        padding: .25rem .7rem;
+        font-size: .78rem;
+        margin-top: .5rem;
     }
 }
-
-
 </style>
 
 <nav class="navbar navbar-expand-lg navbar-dark navbar-cleantech">
     <div class="container navbar-grid">
-
-        {{-- BRAND --}}
         <a class="navbar-brand" href="{{ route('home') }}">
-            <div class="brand-icon">💧</div>
+            <div class="brand-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2.75C12 2.75 6 9.28 6 13.25A6 6 0 0 0 18 13.25C18 9.28 12 2.75 12 2.75Z"></path>
+                    <path d="M9.5 14.25A2.5 2.5 0 0 0 12 16.75"></path>
+                </svg>
+            </div>
             CleanTech
         </a>
 
-        {{-- TOGGLER --}}
-        <button class="navbar-toggler" type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#mainNav"
-                aria-controls="mainNav"
-                aria-expanded="false"
-                aria-label="Toggle navigation">
+        <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#mainNav"
+            aria-controls="mainNav"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+        >
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        {{-- NAV --}}
         <div class="collapse navbar-collapse" id="mainNav">
-
-            {{-- CENTER LINKS (GUEST) --}}
             @if (!session()->has('user_id') && !session()->has('provider_id'))
                 <div class="navbar-center">
                     <ul class="navbar-nav navbar-center-links">
@@ -242,25 +275,27 @@ html{
                         <li class="nav-item"><a class="nav-link" href="{{ route('faq') }}">FAQ</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ route('about') }}">About</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ route('customer.register') }}">Register</a></li>
+                    </ul>
                 </div>
             @endif
 
-            {{-- RIGHT --}}
             <ul class="navbar-nav ms-auto">
-
-                {{-- GUEST --}}
                 @if (!session()->has('user_id') && !session()->has('provider_id'))
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle nav-login" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-                            👤
+                            <span class="nav-login-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20 21A8 8 0 0 0 4 21"></path>
+                                    <circle cx="12" cy="8" r="4"></circle>
+                                </svg>
+                            </span>
+                            <span>Login</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{{ route('customer.login') }}">Customer Login</a></li>
                             <li><a class="dropdown-item" href="{{ route('provider.login') }}">Provider Login</a></li>
                         </ul>
                     </li>
-
-                {{-- CUSTOMER --}}
                 @elseif (session()->has('user_id'))
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
@@ -271,17 +306,17 @@ html{
                             <li><a class="dropdown-item" href="{{ route('customer.profile') }}">Profile</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <a class="dropdown-item text-danger" href="#"
-                                   onclick="event.preventDefault();document.getElementById('customerLogout').submit();">
+                                <a
+                                    class="dropdown-item text-danger"
+                                    href="#"
+                                    onclick="event.preventDefault();document.getElementById('customerLogout').submit();"
+                                >
                                     Logout
                                 </a>
                             </li>
                         </ul>
-                        <form id="customerLogout" method="POST"
-                              action="{{ route('customer.logout') }}" class="d-none">@csrf</form>
+                        <form id="customerLogout" method="POST" action="{{ route('customer.logout') }}" class="d-none">@csrf</form>
                     </li>
-
-                {{-- PROVIDER --}}
                 @elseif (session()->has('provider_id'))
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
@@ -293,41 +328,37 @@ html{
                             <li><a class="dropdown-item" href="{{ route('provider.pending') }}">Approval Status</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <a class="dropdown-item text-danger" href="#"
-                                   onclick="event.preventDefault();document.getElementById('providerLogout').submit();">
+                                <a
+                                    class="dropdown-item text-danger"
+                                    href="#"
+                                    onclick="event.preventDefault();document.getElementById('providerLogout').submit();"
+                                >
                                     Logout
                                 </a>
                             </li>
                         </ul>
-                        <form id="providerLogout" method="POST"
-                              action="{{ route('provider.logout') }}" class="d-none">@csrf</form>
+                        <form id="providerLogout" method="POST" action="{{ route('provider.logout') }}" class="d-none">@csrf</form>
                     </li>
                 @endif
-
             </ul>
         </div>
     </div>
 </nav>
 
-{{-- IMPORTANT: put your page content under this wrapper in your layout --}}
-{{-- <div class="app-content">
-     @yield('content')
-   </div> --}}
-
 <script>
-/* Auto-set the correct offset height for the fixed navbar (desktop + mobile + collapse open/close) */
-(function(){
+(function () {
     const nav = document.querySelector('.navbar-cleantech');
-    if(!nav) return;
 
-    function setOffset(){
+    if (!nav) {
+        return;
+    }
+
+    function setOffset() {
         document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
     }
 
     window.addEventListener('load', setOffset);
     window.addEventListener('resize', setOffset);
-
-    // Bootstrap collapse events (works if bootstrap JS is loaded)
     document.addEventListener('shown.bs.collapse', setOffset);
     document.addEventListener('hidden.bs.collapse', setOffset);
 })();
