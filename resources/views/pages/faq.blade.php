@@ -3,64 +3,65 @@
 @section('title', 'FAQ | CleanTech')
 
 @push('styles')
-<style>
-body { background: #081120; color: #fff; }
-.navbar { background: rgba(5,15,35,.95) !important; }
-.page-hero {
-    padding: 100px 0 70px;
-    text-align: center;
-    background: linear-gradient(rgba(8,17,32,.85), rgba(8,17,32,.95)),
-                url('https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
-}
-.faq-section { padding: 80px 0; }
-.faq-card {
-    background: #0f172a;
-    border-radius: 18px;
-    padding: 1.5rem;
-    box-shadow: 0 14px 40px rgba(0,0,0,.35);
-    margin-bottom: 1rem;
-}
-.faq-card h5 { font-weight: 700; }
-.faq-card p { color: #94a3b8; margin-bottom: 0; }
-</style>
+@include('pages._theme')
 @endpush
 
 @section('content')
+<div class="ct-page">
+    <section class="ct-hero">
+        <div class="container">
+            <div class="ct-hero-shell">
+                <div class="ct-hero-main ct-reveal">
+                    <span class="ct-eyebrow">Frequently Asked Questions</span>
+                    <h1 class="ct-title">Quick answers for the questions customers usually ask first.</h1>
+                    <p class="ct-lead">This page is intentionally more compact than before, so visitors can scan the important booking, provider, and pricing questions without a wall of text.</p>
+                </div>
 
-<section class="page-hero">
-    <div class="container">
-        <h1>Frequently Asked Questions</h1>
-        <p>Answers to common questions about booking, services, payments, and providers.</p>
-    </div>
-</section>
-
-<section class="faq-section">
-    <div class="container">
-        <div class="faq-card">
-            <h5>How do I book a cleaning service?</h5>
-            <p>You can create a customer account, choose a service, select your preferred schedule, and confirm your booking online.</p>
+                <div class="ct-hero-side ct-reveal delay-1">
+                    <div>
+                        <div class="ct-side-label">Best first step</div>
+                        <div class="ct-side-value">Start with service type, date, and provider availability.</div>
+                    </div>
+                    <p class="ct-side-copy">Most confusion disappears once customers know which service fits their space and what date they actually want to book.</p>
+                </div>
+            </div>
         </div>
+    </section>
 
-        <div class="faq-card">
-            <h5>Are CleanTech providers verified?</h5>
-            <p>Yes. Providers go through registration and verification before they are approved on the platform.</p>
+    <section class="ct-section">
+        <div class="container">
+            <div class="ct-faq-stack">
+                <details class="ct-faq-item ct-reveal" open>
+                    <summary>How do I book a cleaning service?</summary>
+                    <p>Create a customer account, choose a service, pick an available provider and date, then confirm the booking details before submitting.</p>
+                </details>
+
+                <details class="ct-faq-item ct-reveal delay-1">
+                    <summary>Are providers checked before they appear on the platform?</summary>
+                    <p>Yes. CleanTech is designed to work with approved providers, and admin review is part of the provider side of the system.</p>
+                </details>
+
+                <details class="ct-faq-item ct-reveal delay-2">
+                    <summary>Can I select my own preferred date and time?</summary>
+                    <p>Yes. The booking flow is date-aware, so customers can view provider availability based on the actual selected date rather than mixed future schedules.</p>
+                </details>
+
+                <details class="ct-faq-item ct-reveal">
+                    <summary>What is the difference between general, deep, and specific area cleaning?</summary>
+                    <p>General cleaning is for routine upkeep, deep cleaning is for a more intensive full-space reset, and specific area cleaning is best when you only need selected rooms or zones handled.</p>
+                </details>
+
+                <details class="ct-faq-item ct-reveal delay-1">
+                    <summary>Can customers cancel a booking?</summary>
+                    <p>Yes, customers can cancel eligible bookings before the job has moved into the in-progress stage. Once the service is already underway, cancellation is restricted on the customer side.</p>
+                </details>
+
+                <details class="ct-faq-item ct-reveal delay-2">
+                    <summary>How do I contact CleanTech directly?</summary>
+                    <p>You can use the contact page to open an email draft directly to <a href="mailto:janzedoysabas@gmail.com" class="ct-inline-link">janzedoysabas@gmail.com</a>.</p>
+                </details>
+            </div>
         </div>
-
-        <div class="faq-card">
-            <h5>Can I choose the date and time of service?</h5>
-            <p>Yes. During booking, you can select your available date and preferred time based on the schedule offered.</p>
-        </div>
-
-        <div class="faq-card">
-            <h5>Do you offer office cleaning?</h5>
-            <p>Yes. CleanTech supports both residential and office cleaning services.</p>
-        </div>
-
-        <div class="faq-card">
-            <h5>How much does cleaning cost?</h5>
-            <p>Pricing depends on the service type and scope of work. You can check the Pricing page for sample rates.</p>
-        </div>
-    </div>
-</section>
-
+    </section>
+</div>
 @endsection

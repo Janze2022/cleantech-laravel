@@ -3,81 +3,73 @@
 @section('title', 'Blog | CleanTech')
 
 @push('styles')
-<style>
-body { background: #081120; color: #fff; }
-.navbar { background: rgba(5,15,35,.95) !important; }
-.page-hero {
-    padding: 100px 0 70px;
-    text-align: center;
-    background: linear-gradient(rgba(8,17,32,.85), rgba(8,17,32,.95)),
-                url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
-}
-.blog-section { padding: 80px 0; }
-.blog-card {
-    background: #0f172a;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 14px 40px rgba(0,0,0,.35);
-    height: 100%;
-}
-.blog-card img {
-    width: 100%;
-    height: 220px;
-    object-fit: cover;
-}
-.blog-card .content { padding: 1.4rem; }
-.blog-card h4 { font-weight: 700; }
-.blog-card p { color: #94a3b8; }
-.blog-date { color: #60a5fa; font-size: .92rem; font-weight: 600; }
-</style>
+@include('pages._theme')
 @endpush
 
 @section('content')
-
-<section class="page-hero">
-    <div class="container">
-        <h1>CleanTech Blog</h1>
-        <p>Helpful cleaning tips, home care ideas, and practical ways to maintain a healthier environment.</p>
-    </div>
-</section>
-
-<section class="blog-section">
-    <div class="container">
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="blog-card">
-                    <img src="https://images.unsplash.com/photo-1585421514738-01798e348b17?auto=format&fit=crop&w=1400&q=80" alt="">
-                    <div class="content">
-                        <div class="blog-date mb-2">Cleaning Tips</div>
-                        <h4>5 Ways to Keep Your Home Fresh Every Day</h4>
-                        <p>Simple daily habits that help reduce dust, mess, and odor without spending hours cleaning.</p>
-                    </div>
+<div class="ct-page">
+    <section class="ct-hero">
+        <div class="container">
+            <div class="ct-hero-shell">
+                <div class="ct-hero-main ct-reveal">
+                    <span class="ct-eyebrow">CleanTech Journal</span>
+                    <h1 class="ct-title">Short, useful reads for cleaner homes and smoother booking habits.</h1>
+                    <p class="ct-lead">This page is meant to feel light and readable, so the blog stays closer to practical tips than long technical articles. Think quick guidance, seasonal reminders, and easier service decisions.</p>
                 </div>
-            </div>
 
-            <div class="col-md-4">
-                <div class="blog-card">
-                    <img src="https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1400&q=80" alt="">
-                    <div class="content">
-                        <div class="blog-date mb-2">Home Care</div>
-                        <h4>When Should You Schedule a Deep Cleaning?</h4>
-                        <p>Learn when a routine clean is not enough and why deep cleaning matters for long-term upkeep.</p>
+                <div class="ct-hero-side ct-reveal delay-1">
+                    <div>
+                        <div class="ct-side-label">Focus</div>
+                        <div class="ct-side-value">Helpful advice you can actually use this week.</div>
                     </div>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="blog-card">
-                    <img src="https://images.unsplash.com/photo-1497366412874-3415097a27e7?auto=format&fit=crop&w=1400&q=80" alt="">
-                    <div class="content">
-                        <div class="blog-date mb-2">Office Hygiene</div>
-                        <h4>Why Clean Workspaces Improve Productivity</h4>
-                        <p>A cleaner office supports focus, organization, and a more professional environment.</p>
+                    <p class="ct-side-copy">From routine upkeep to deciding when a deep clean makes sense, these topics support the actual services offered on CleanTech.</p>
+                    <div class="ct-actions">
+                        <a href="{{ route('services') }}" class="ct-button">View Services</a>
+                        <a href="{{ route('pricing') }}" class="ct-button secondary">See Pricing</a>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
+    <section class="ct-section">
+        <div class="container">
+            <div class="ct-grid three">
+                <article class="ct-blog-card featured ct-reveal">
+                    <div class="ct-blog-meta">Featured guide</div>
+                    <h3>When routine cleaning is enough and when it is time to book a deeper reset</h3>
+                    <p>A simple way to decide between general cleaning, specific area cleaning, and a full deep cleaning schedule without overbooking or overspending.</p>
+                    <div class="ct-badges">
+                        <span class="ct-badge">General cleaning</span>
+                        <span class="ct-badge">Deep cleaning</span>
+                    </div>
+                </article>
+
+                <article class="ct-blog-card ct-reveal delay-1">
+                    <div class="ct-blog-meta">Home care</div>
+                    <h3>Small habits that keep kitchens from turning into weekend projects</h3>
+                    <p>Daily wipe-downs, sink resets, and surface routines that keep grease and clutter from building up too fast.</p>
+                </article>
+
+                <article class="ct-blog-card ct-reveal delay-2">
+                    <div class="ct-blog-meta">Booking tips</div>
+                    <h3>How to choose the right day before you tap Book Now</h3>
+                    <p>Pick service dates that line up with provider availability and give you the best chance of a smooth visit.</p>
+                </article>
+
+                <article class="ct-blog-card ct-reveal">
+                    <div class="ct-blog-meta">Space planning</div>
+                    <h3>Why specific area cleaning works well for high-traffic rooms</h3>
+                    <p>If the whole home does not need attention, targeted cleaning is often the more practical and budget-friendly choice.</p>
+                </article>
+
+                <article class="ct-blog-card ct-reveal delay-1">
+                    <div class="ct-blog-meta">Seasonal reset</div>
+                    <h3>Signs your home is due for a full deep clean</h3>
+                    <p>Look for recurring dust, neglected corners, and spaces that stay messy even after a quick routine pass.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+</div>
 @endsection

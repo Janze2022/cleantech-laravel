@@ -3,101 +3,71 @@
 @section('title', 'How It Works | CleanTech')
 
 @push('styles')
-<style>
-body { background: #081120; color: #fff; }
-.navbar { background: rgba(5,15,35,.95) !important; }
-.page-hero {
-    padding: 100px 0 70px;
-    text-align: center;
-    background: linear-gradient(rgba(8,17,32,.85), rgba(8,17,32,.95)),
-                url('https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
-}
-.step-section { padding: 80px 0; }
-.step-card {
-    background: #0f172a;
-    border-radius: 20px;
-    padding: 2rem;
-    height: 100%;
-    box-shadow: 0 14px 40px rgba(0,0,0,.35);
-}
-.step-number {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #2563eb, #4f46e5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    font-size: 1.2rem;
-    margin-bottom: 1rem;
-}
-.step-card h4 { font-weight: 700; }
-.step-card p { color: #94a3b8; }
-</style>
+@include('pages._theme')
 @endpush
 
 @section('content')
-
-<section class="page-hero">
-    <div class="container">
-        <h1>How CleanTech Works</h1>
-        <p>Booking your cleaning service is simple, fast, and convenient.</p>
-    </div>
-</section>
-
-<section class="step-section">
-    <div class="container">
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="step-card">
-                    <div class="step-number">1</div>
-                    <h4>Choose a Service</h4>
-                    <p>Select the type of cleaning you need based on your home, office, or property requirements.</p>
+<div class="ct-page">
+    <section class="ct-hero">
+        <div class="container">
+            <div class="ct-hero-shell">
+                <div class="ct-hero-main ct-reveal">
+                    <span class="ct-eyebrow">How CleanTech Works</span>
+                    <h1 class="ct-title">From service selection to provider arrival, the flow is meant to stay easy to follow.</h1>
+                    <p class="ct-lead">Instead of packing too much information into one place, this page keeps the process down to a few clear steps so customers understand what happens next at each stage.</p>
                 </div>
-            </div>
 
-            <div class="col-md-4">
-                <div class="step-card">
-                    <div class="step-number">2</div>
-                    <h4>Book Your Schedule</h4>
-                    <p>Pick your preferred date, time, and location through our booking system.</p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="step-card">
-                    <div class="step-number">3</div>
-                    <h4>Get Matched</h4>
-                    <p>Your request is assigned to a verified and qualified service provider.</p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="step-card">
-                    <div class="step-number">4</div>
-                    <h4>Service Delivery</h4>
-                    <p>The assigned cleaner arrives and performs the requested service professionally.</p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="step-card">
-                    <div class="step-number">5</div>
-                    <h4>Review the Service</h4>
-                    <p>After the job is completed, you can rate the provider and share your feedback.</p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="step-card">
-                    <div class="step-number">6</div>
-                    <h4>Enjoy a Cleaner Space</h4>
-                    <p>Relax and enjoy a fresh, neat, and healthier environment.</p>
+                <div class="ct-hero-side ct-reveal delay-1">
+                    <div>
+                        <div class="ct-side-label">Booking rhythm</div>
+                        <div class="ct-side-value">Choose, match, confirm, complete, review.</div>
+                    </div>
+                    <p class="ct-side-copy">CleanTech is structured so the booking journey stays readable on desktop and mobile, especially once provider availability is tied to a real date.</p>
                 </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
+    <section class="ct-section">
+        <div class="container">
+            <div class="ct-step-grid">
+                <article class="ct-step ct-reveal">
+                    <div class="ct-step-number">1</div>
+                    <h3>Pick the service</h3>
+                    <p>Choose between general cleaning, deep cleaning, or specific area cleaning based on what your space actually needs.</p>
+                </article>
+
+                <article class="ct-step ct-reveal delay-1">
+                    <div class="ct-step-number">2</div>
+                    <h3>Choose the date</h3>
+                    <p>Select the day you want the service. Provider lists and booking slots should reflect that specific date only.</p>
+                </article>
+
+                <article class="ct-step ct-reveal delay-2">
+                    <div class="ct-step-number">3</div>
+                    <h3>Review providers</h3>
+                    <p>See which approved providers are available, compare ratings, and check the service option that fits the job.</p>
+                </article>
+
+                <article class="ct-step ct-reveal">
+                    <div class="ct-step-number">4</div>
+                    <h3>Confirm the booking</h3>
+                    <p>Submit the booking details, address, and schedule after checking that everything matches your request.</p>
+                </article>
+
+                <article class="ct-step ct-reveal delay-1">
+                    <div class="ct-step-number">5</div>
+                    <h3>Track progress</h3>
+                    <p>Use your dashboard and bookings pages to monitor status updates, schedule details, and completed jobs.</p>
+                </article>
+
+                <article class="ct-step ct-reveal delay-2">
+                    <div class="ct-step-number">6</div>
+                    <h3>Leave a review</h3>
+                    <p>After completion, rate the provider and leave useful feedback that helps future customers make better decisions.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+</div>
 @endsection
