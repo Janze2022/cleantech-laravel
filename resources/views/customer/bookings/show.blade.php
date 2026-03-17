@@ -23,12 +23,12 @@
         : '—';
 
     $preferredStart = $booking->requested_start_time
-        ? \Carbon\Carbon::createFromFormat('H:i:s', $booking->requested_start_time)->format('h:i A')
+        ? \Carbon\Carbon::parse($booking->requested_start_time)->format('h:i A')
         : '—';
 
     $availabilityLabel = ($booking->time_start && $booking->time_end)
-        ? \Carbon\Carbon::createFromFormat('H:i:s', $booking->time_start)->format('h:i A') . ' – ' .
-          \Carbon\Carbon::createFromFormat('H:i:s', $booking->time_end)->format('h:i A')
+        ? \Carbon\Carbon::parse($booking->time_start)->format('h:i A') . ' – ' .
+          \Carbon\Carbon::parse($booking->time_end)->format('h:i A')
         : '—';
 
     $contactPhone = $booking->contact_phone ?? '—';
@@ -47,7 +47,7 @@
 
     $issued = now()->format('M d, Y h:i A');
 
-    $receiptUrl = "http://172.20.10.11:8000/customer/bookings/".$ref;
+    $receiptUrl = route('customer.bookings.show', $ref);
     $shortCode = $ref;
 @endphp
 

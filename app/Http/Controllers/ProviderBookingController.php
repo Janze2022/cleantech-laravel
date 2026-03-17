@@ -21,6 +21,12 @@ class ProviderBookingController extends Controller
 
     private function bookingAreasSubquery()
     {
+        if (!Schema::hasTable('booking_service_options') || !Schema::hasTable('service_options')) {
+            return DB::table('bookings as b_fallback')
+                ->selectRaw('NULL as booking_id, NULL as areas_label')
+                ->whereRaw('1 = 0');
+        }
+
         return DB::table('booking_service_options as bso')
             ->join('service_options as so2', 'so2.id', '=', 'bso.service_option_id')
             ->selectRaw("
@@ -42,7 +48,7 @@ class ProviderBookingController extends Controller
         $bookings = DB::table('bookings as b')
             ->join('customers as c', 'c.id', '=', 'b.customer_id')
             ->join('services as s', 's.id', '=', 'b.service_id')
-            ->join('service_options as o', 'o.id', '=', 'b.service_option_id')
+            ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
             ->leftJoinSub($areasSub, 'areas', function ($join) {
                 $join->on('areas.booking_id', '=', 'b.id');
             })
@@ -88,7 +94,7 @@ class ProviderBookingController extends Controller
         $query = DB::table('bookings as b')
             ->join('customers as c', 'c.id', '=', 'b.customer_id')
             ->join('services as s', 's.id', '=', 'b.service_id')
-            ->join('service_options as o', 'o.id', '=', 'b.service_option_id')
+            ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
             ->leftJoinSub($areasSub, 'areas', function ($join) {
                 $join->on('areas.booking_id', '=', 'b.id');
             })

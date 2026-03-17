@@ -32,15 +32,15 @@
 }
 
 .auth-slide.slide-1 {
-    background-image: url('{{ asset('images/scene-cleaning.svg') }}');
+    background-image: url('https://isnadservice.com/wp-content/uploads/2021/08/cleaning-06.jpg');
     animation-delay: 0s;
 }
 .auth-slide.slide-2 {
-    background-image: url('{{ asset('images/scene-home.svg') }}');
+    background-image: url('https://media1.popsugar-assets.com/files/thumbor/xDWLBsDpfWLr5GzKWqFN4O5IR34=/fit-in/1456x600/top/filters:format_auto():quality(85):upscale()/2015/03/20/830/n/1922441/9d145d2f_edit_img_front_page_image_file_15494679_1426827560.png');
     animation-delay: 6s;
 }
 .auth-slide.slide-3 {
-    background-image: url('{{ asset('images/scene-office.svg') }}');
+    background-image: url('https://images.ctfassets.net/ckvupp6ihg42/1VtT4o49UZnzRjAgNcEuWG/ea44857bfbafc27107e402dd2a752d8f/AdobeStock_567633621-min.jpeg');
     animation-delay: 12s;
 }
 

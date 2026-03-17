@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class CustomerDashboardController extends Controller
 {
@@ -85,23 +87,39 @@ class CustomerDashboardController extends Controller
         $min    = $request->min;
         $max    = $request->max;
 
-        $bookings = Booking::query()
-            ->where('customer_id', $customerId)
+        $query = DB::table('bookings as b')
+            ->where('b.customer_id', $customerId)
+            ->select(
+                'b.id',
+                'b.reference_code',
+                'b.booking_date',
+                'b.time_start',
+                'b.time_end',
+                'b.price',
+                'b.status',
+                'b.address',
+                'b.contact_phone'
+            );
+
+        if (Schema::hasColumn('bookings', 'created_at')) {
+            $query->addSelect('b.created_at');
+        }
+
+        $bookings = $query
             ->when($q, function ($qq) use ($q) {
                 $qq->where(function ($w) use ($q) {
-                    // based on your schema: reference_code exists
-                    $w->where('reference_code', 'like', "%{$q}%")
-                      ->orWhere('contact_phone', 'like', "%{$q}%")
-                      ->orWhere('address', 'like', "%{$q}%");
+                    $w->where('b.reference_code', 'like', "%{$q}%")
+                        ->orWhere('b.contact_phone', 'like', "%{$q}%")
+                        ->orWhere('b.address', 'like', "%{$q}%");
                 });
             })
-            ->when($status, fn ($qq) => $qq->where('status', $status))
-            ->when($from, fn ($qq) => $qq->whereDate('booking_date', '>=', $from))
-            ->when($to, fn ($qq) => $qq->whereDate('booking_date', '<=', $to))
-            ->when($min !== null && $min !== '', fn ($qq) => $qq->where('price', '>=', $min))
-            ->when($max !== null && $max !== '', fn ($qq) => $qq->where('price', '<=', $max))
-            ->orderByDesc('booking_date')
-            ->orderByDesc('time_start')
+            ->when($status, fn ($qq) => $qq->where('b.status', $status))
+            ->when($from, fn ($qq) => $qq->whereDate('b.booking_date', '>=', $from))
+            ->when($to, fn ($qq) => $qq->whereDate('b.booking_date', '<=', $to))
+            ->when($min !== null && $min !== '', fn ($qq) => $qq->where('b.price', '>=', $min))
+            ->when($max !== null && $max !== '', fn ($qq) => $qq->where('b.price', '<=', $max))
+            ->orderByDesc('b.booking_date')
+            ->orderByDesc('b.time_start')
             ->paginate(10);
 
         return view('customer.bookings_history', compact('bookings'));

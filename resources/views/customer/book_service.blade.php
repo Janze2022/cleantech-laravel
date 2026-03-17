@@ -326,7 +326,7 @@
                 {{-- BARANGAY --}}
                 <div class="mb-3">
                     <label>Barangay (Butuan City)</label>
-                    <select id="barangay" class="form-control" required></select>
+                    <select id="barangay" class="form-control"></select>
 
                     <input type="hidden" name="region" value="Region XIII">
                     <input type="hidden" name="province" value="Agusan del Norte">
@@ -352,14 +352,14 @@
                                 data-start="{{ $a->time_start }}"
                                 data-end="{{ $a->time_end }}"
                                 data-name="{{ $a->first_name }} {{ $a->last_name }}"
-                                data-avatar="{{ $a->profile_image ?? '' }}"
+                                data-avatar="{{ !empty($a->profile_image) ? route('provider.image.public', ['filename' => $a->profile_image]) : '' }}"
                                 {{ old('slot_id') == $a->id ? 'selected' : '' }}
                             >
                                 {{ \Carbon\Carbon::parse($a->date)->format('Y-m-d') }}
                                 |
-                                {{ \Carbon\Carbon::createFromFormat('H:i:s', $a->time_start)->format('h:i A') }}
+                                {{ \Carbon\Carbon::parse($a->time_start)->format('h:i A') }}
                                 –
-                                {{ \Carbon\Carbon::createFromFormat('H:i:s', $a->time_end)->format('h:i A') }}
+                                {{ \Carbon\Carbon::parse($a->time_end)->format('h:i A') }}
                                 ({{ $a->first_name }})
                             </option>
                         @endforeach
@@ -402,7 +402,7 @@ const OLD_OPTION_ID  = @json(old('service_option_id'));
 const OLD_MULTI_OPTION_IDS = @json(old('service_option_ids', []));
 const OLD_PREFERRED_START = @json(old('preferred_start_time') ? substr(old('preferred_start_time'), 0, 5) : '');
 
-const SPECIFIC_AREA_SERVICE_ID = 1;
+const SPECIFIC_AREA_SERVICE_ID = @json($specificAreaServiceId);
 
 function phPhone(i){
     let v = i.value.replace(/\D/g,'');
@@ -810,8 +810,12 @@ fetch('https://psgc.gitlab.io/api/cities-municipalities/160202000/barangays/')
 })
 .catch(() => {
     const barangayEl = document.getElementById('barangay');
+    const barangayTextEl = document.getElementById('barangay_text');
     if (barangayEl) {
-        barangayEl.innerHTML = '<option value="">Unable to load barangays</option>';
+        barangayEl.innerHTML = '<option value="">Unable to load barangays, you can continue without it</option>';
+    }
+    if (barangayTextEl && !barangayTextEl.value) {
+        barangayTextEl.value = '';
     }
 });
 </script>

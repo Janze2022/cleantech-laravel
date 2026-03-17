@@ -18,7 +18,7 @@ body {
     text-align: center;
     background:
         linear-gradient(rgba(8,17,32,.85), rgba(8,17,32,.95)),
-        url('{{ asset('images/scene-cleaning.svg') }}') center/cover no-repeat;
+        url('https://images.unsplash.com/photo-1581578731548-c64695cc6952') center/cover no-repeat;
 }
 
 .pricing-section {

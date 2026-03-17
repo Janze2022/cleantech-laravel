@@ -53,15 +53,15 @@
     transform: scale(1.03); /* prevent edges when blurred by browser */
 }
 .auth-slide.one{
-    background-image:url('{{ asset('images/scene-cleaning.svg') }}');
+    background-image:url('https://images.unsplash.com/photo-1581578731548-c64695cc6952');
     animation-delay:0s;
 }
 .auth-slide.two{
-    background-image:url('{{ asset('images/scene-home.svg') }}');
+    background-image:url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c');
     animation-delay:6s;
 }
 .auth-slide.three{
-    background-image:url('{{ asset('images/scene-office.svg') }}');
+    background-image:url('https://images.unsplash.com/photo-1584622650111-993a426fbf0a');
     animation-delay:12s;
 }
 

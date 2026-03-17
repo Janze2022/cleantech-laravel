@@ -34,7 +34,7 @@ body {
     text-align: center;
     background-image:
         linear-gradient(rgba(13,110,253,.85), rgba(0,180,216,.85)),
-        url("{{ asset('images/scene-cleaning.svg') }}");
+        url("https://images.unsplash.com/photo-1581578731548-c64695cc6952");
     background-size: cover;
     background-position: center;
 }

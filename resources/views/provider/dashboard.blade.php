@@ -484,12 +484,12 @@
                             : '—';
 
                         $preferredStartLabel = $b->requested_start_time
-                            ? \Carbon\Carbon::createFromFormat('H:i:s', $b->requested_start_time)->format('h:i A')
+                            ? \Carbon\Carbon::parse($b->requested_start_time)->format('h:i A')
                             : '—';
 
                         $availabilityLabel = ($b->time_start && $b->time_end)
-                            ? \Carbon\Carbon::createFromFormat('H:i:s', $b->time_start)->format('h:i A') . ' – ' .
-                              \Carbon\Carbon::createFromFormat('H:i:s', $b->time_end)->format('h:i A')
+                            ? \Carbon\Carbon::parse($b->time_start)->format('h:i A') . ' – ' .
+                              \Carbon\Carbon::parse($b->time_end)->format('h:i A')
                             : '—';
                     @endphp
                     <tr>

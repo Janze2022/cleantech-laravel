@@ -66,9 +66,9 @@
         transform: scale(1.03);
     }
 
-    .pending-slide.one{ background-image:url('{{ asset('images/scene-home.svg') }}'); animation-delay:0s; }
-    .pending-slide.two{ background-image:url('{{ asset('images/scene-office.svg') }}'); animation-delay:6s; }
-    .pending-slide.three{ background-image:url('{{ asset('images/scene-cleaning.svg') }}'); animation-delay:12s; }
+    .pending-slide.one{ background-image:url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c'); animation-delay:0s; }
+    .pending-slide.two{ background-image:url('https://images.unsplash.com/photo-1584622650111-993a426fbf0a'); animation-delay:6s; }
+    .pending-slide.three{ background-image:url('https://images.unsplash.com/photo-1590496793929-36417d3117fb'); animation-delay:12s; }
 
     @keyframes fadeSlide{
         0%{opacity:0}

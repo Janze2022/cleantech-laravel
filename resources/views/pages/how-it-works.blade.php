@@ -10,7 +10,7 @@ body { background: #081120; color: #fff; }
     padding: 100px 0 70px;
     text-align: center;
     background: linear-gradient(rgba(8,17,32,.85), rgba(8,17,32,.95)),
-                url('{{ asset('images/scene-cleaning.svg') }}?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+                url('https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
 }
 .step-section { padding: 80px 0; }
 .step-card {

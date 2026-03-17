@@ -52,15 +52,15 @@
 }
 
 .auth-slide.slide-1{
-    background-image:url('{{ asset('images/scene-cleaning.svg') }}');
+    background-image:url('https://images.unsplash.com/photo-1581578731548-c64695cc6952');
     animation-delay:0s;
 }
 .auth-slide.slide-2{
-    background-image:url('{{ asset('images/scene-home.svg') }}');
+    background-image:url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c');
     animation-delay:6s;
 }
 .auth-slide.slide-3{
-    background-image:url('{{ asset('images/scene-office.svg') }}');
+    background-image:url('https://images.unsplash.com/photo-1584622650111-993a426fbf0a');
     animation-delay:12s;
 }
 

@@ -116,11 +116,14 @@ class CustomerBookingController extends Controller
             )
             ->get();
 
+        $specificAreaServiceId = $this->getSpecificAreaServiceId();
+
         return view('customer.book_service', compact(
             'providerData',
             'services',
             'optionsByService',
-            'availability'
+            'availability',
+            'specificAreaServiceId'
         ));
     }
 
@@ -298,16 +301,33 @@ class CustomerBookingController extends Controller
             ]);
 
             // Notify provider about new booking
-            if (Schema::hasTable('provider_notifications')) {
-                DB::table('provider_notifications')->insert([
-                    'provider_id'    => $data['provider_id'],
-                    'type'           => 'new_booking',
-                    'message'        => 'You received a new booking. Ref: ' . $reference,
-                    'reference_code' => $reference,
-                    'is_read'        => 0,
-                    'created_at'     => now(),
-                    'updated_at'     => now(),
-                ]);
+            if (
+                Schema::hasTable('provider_notifications') &&
+                Schema::hasColumns('provider_notifications', ['provider_id', 'message', 'is_read'])
+            ) {
+                $notification = [
+                    'provider_id' => $data['provider_id'],
+                    'message' => 'You received a new booking. Ref: ' . $reference,
+                    'is_read' => 0,
+                ];
+
+                if (Schema::hasColumn('provider_notifications', 'type')) {
+                    $notification['type'] = 'new_booking';
+                }
+
+                if (Schema::hasColumn('provider_notifications', 'reference_code')) {
+                    $notification['reference_code'] = $reference;
+                }
+
+                if (Schema::hasColumn('provider_notifications', 'created_at')) {
+                    $notification['created_at'] = now();
+                }
+
+                if (Schema::hasColumn('provider_notifications', 'updated_at')) {
+                    $notification['updated_at'] = now();
+                }
+
+                DB::table('provider_notifications')->insert($notification);
             }
 
             if (Schema::hasTable('booking_service_options')) {
@@ -358,7 +378,7 @@ class CustomerBookingController extends Controller
 
         $booking = DB::table('bookings as b')
             ->join('services as s', 's.id', '=', 'b.service_id')
-            ->join('service_options as o', 'o.id', '=', 'b.service_option_id')
+            ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
             ->join('service_providers as p', 'p.id', '=', 'b.provider_id')
             ->leftJoinSub($areasSub, 'areas', function ($join) {
                 $join->on('areas.booking_id', '=', 'b.id');
@@ -396,7 +416,7 @@ class CustomerBookingController extends Controller
 
         $bookings = DB::table('bookings as b')
             ->join('services as s', 's.id', '=', 'b.service_id')
-            ->join('service_options as o', 'o.id', '=', 'b.service_option_id')
+            ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
             ->join('service_providers as p', 'p.id', '=', 'b.provider_id')
             ->leftJoinSub($areasSub, 'areas', function ($join) {
                 $join->on('areas.booking_id', '=', 'b.id');
@@ -429,7 +449,7 @@ class CustomerBookingController extends Controller
 
         $booking = DB::table('bookings as b')
             ->join('services as s', 's.id', '=', 'b.service_id')
-            ->join('service_options as o', 'o.id', '=', 'b.service_option_id')
+            ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
             ->join('service_providers as p', 'p.id', '=', 'b.provider_id')
             ->leftJoinSub($areasSub, 'areas', function ($join) {
                 $join->on('areas.booking_id', '=', 'b.id');
@@ -463,7 +483,7 @@ class CustomerBookingController extends Controller
 
     private function bookingAreasSubquery()
     {
-        if (!Schema::hasTable('booking_service_options')) {
+        if (!Schema::hasTable('booking_service_options') || !Schema::hasTable('service_options')) {
             return DB::table('bookings as b_fallback')
                 ->selectRaw('NULL as booking_id, NULL as areas_label')
                 ->whereRaw('1 = 0');

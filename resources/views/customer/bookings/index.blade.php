@@ -202,8 +202,8 @@
                                 : '—';
 
                             $timeLabel = ($b->time_start && $b->time_end)
-                                ? \Carbon\Carbon::createFromFormat('H:i:s', $b->time_start)->format('h:i A') . ' – ' .
-                                  \Carbon\Carbon::createFromFormat('H:i:s', $b->time_end)->format('h:i A')
+                                ? \Carbon\Carbon::parse($b->time_start)->format('h:i A') . ' – ' .
+                                  \Carbon\Carbon::parse($b->time_end)->format('h:i A')
                                 : '—';
                         @endphp
                         <tr>
@@ -240,8 +240,8 @@
                             : '—';
 
                         $timeLabel = ($b->time_start && $b->time_end)
-                            ? \Carbon\Carbon::createFromFormat('H:i:s', $b->time_start)->format('h:i A') . ' – ' .
-                              \Carbon\Carbon::createFromFormat('H:i:s', $b->time_end)->format('h:i A')
+                            ? \Carbon\Carbon::parse($b->time_start)->format('h:i A') . ' – ' .
+                              \Carbon\Carbon::parse($b->time_end)->format('h:i A')
                             : '—';
                     @endphp
                     <div class="booking-card">
