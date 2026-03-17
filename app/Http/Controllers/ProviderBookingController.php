@@ -31,6 +31,62 @@ class ProviderBookingController extends Controller
         return $providerId;
     }
 
+    private function tableHasColumns(string $table, array $columns): bool
+    {
+        return Schema::hasTable($table) && Schema::hasColumns($table, $columns);
+    }
+
+    private function filledString($value): ?string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        return $value !== '' ? $value : null;
+    }
+
+    private function firstFilled(array $values, ?string $fallback = null): ?string
+    {
+        foreach ($values as $value) {
+            $value = $this->filledString($value);
+
+            if ($value !== null) {
+                return $value;
+            }
+        }
+
+        return $fallback;
+    }
+
+    private function normalizeStatusKey($value): string
+    {
+        $value = strtolower(trim((string) ($value ?? '')));
+
+        if ($value === '') {
+            return '';
+        }
+
+        $value = str_replace(['-', ' '], '_', $value);
+
+        if ($value === 'inprogress') {
+            $value = 'in_progress';
+        }
+
+        if (in_array($value, ['canceled', 'cancel'], true)) {
+            $value = 'cancelled';
+        }
+
+        return $value;
+    }
+
+    private function activeStatusKeys(): array
+    {
+        return ['pending', 'confirmed', 'in_progress', 'paid'];
+    }
+
+    private function historyStatusKeys(): array
+    {
+        return ['completed', 'cancelled'];
+    }
+
     private function bookingAreasSubquery()
     {
         if (
@@ -80,72 +136,42 @@ class ProviderBookingController extends Controller
             && Schema::hasColumn('bookings', 'service_option_id');
     }
 
-    private function customerNameSql(string $alias = 'c', bool $joined = true): string
+    private function customerNameFromRecord($customer): string
     {
-        if (!$joined) {
-            return "'Customer'";
+        if (!$customer) {
+            return 'Customer';
         }
 
-        $parts = [];
-
-        if (Schema::hasColumn('customers', 'name')) {
-            $parts[] = "NULLIF(TRIM({$alias}.name), '')";
-        }
-
-        if (Schema::hasColumn('customers', 'first_name') && Schema::hasColumn('customers', 'last_name')) {
-            $parts[] = "NULLIF(TRIM(CONCAT(IFNULL({$alias}.first_name, ''), ' ', IFNULL({$alias}.last_name, ''))), '')";
-        } else {
-            if (Schema::hasColumn('customers', 'first_name')) {
-                $parts[] = "NULLIF(TRIM({$alias}.first_name), '')";
-            }
-
-            if (Schema::hasColumn('customers', 'last_name')) {
-                $parts[] = "NULLIF(TRIM({$alias}.last_name), '')";
-            }
-        }
-
-        if (Schema::hasColumn('customers', 'email')) {
-            $parts[] = "NULLIF(TRIM({$alias}.email), '')";
-        }
-
-        if (empty($parts)) {
-            return "'Customer'";
-        }
-
-        return 'COALESCE(' . implode(', ', $parts) . ", 'Customer')";
+        return $this->firstFilled([
+            $customer->name ?? null,
+            trim(implode(' ', array_filter([
+                $customer->first_name ?? null,
+                $customer->last_name ?? null,
+            ]))),
+            $customer->first_name ?? null,
+            $customer->last_name ?? null,
+            $customer->email ?? null,
+        ], 'Customer');
     }
 
-    private function customerPhoneSql(string $customerAlias = 'c', string $bookingAlias = 'b', bool $joined = true): string
+    private function customerPhoneFromRecord($customer, $booking): ?string
     {
-        $parts = [];
-
-        if ($joined && Schema::hasColumn('customers', 'phone')) {
-            $parts[] = "NULLIF(TRIM({$customerAlias}.phone), '')";
-        }
-
-        if (Schema::hasColumn('bookings', 'contact_phone')) {
-            $parts[] = "NULLIF(TRIM({$bookingAlias}.contact_phone), '')";
-        }
-
-        if (empty($parts)) {
-            return 'NULL';
-        }
-
-        return 'COALESCE(' . implode(', ', $parts) . ')';
+        return $this->firstFilled([
+            $customer->phone ?? null,
+            $booking->contact_phone ?? null,
+        ]);
     }
 
-    private function customerEmailSql(string $alias = 'c', bool $joined = true): string
+    private function customerEmailFromRecord($customer): ?string
     {
-        return $joined && Schema::hasColumn('customers', 'email')
-            ? "{$alias}.email"
-            : 'NULL';
+        return $this->filledString($customer->email ?? null);
     }
 
-    private function serviceNameSql(string $alias = 's', bool $joined = true): string
+    private function serviceNameFromRecord($service): string
     {
-        return $joined && Schema::hasColumn('services', 'name')
-            ? "COALESCE({$alias}.name, 'Service')"
-            : "'Service'";
+        return $this->firstFilled([
+            $service->name ?? null,
+        ], 'Service');
     }
 
     private function applyBookingsOrder($query, array $preferredColumns): void
@@ -160,47 +186,31 @@ class ProviderBookingController extends Controller
         $query->orderByDesc('b.reference_code');
     }
 
-    private function applyBookingSearch($query, string $q, bool $hasCustomersJoin, bool $hasServicesJoin, bool $hasDirectOptionJoin): void
+    private function selectBaseBookings(int $providerId)
     {
-        $query->where(function ($w) use ($q, $hasCustomersJoin, $hasServicesJoin, $hasDirectOptionJoin) {
-            $w->where('b.reference_code', 'like', "%{$q}%");
+        $query = DB::table('bookings as b')
+            ->where('b.provider_id', $providerId)
+            ->select(
+                'b.reference_code',
+                $this->columnOrDefault('bookings', 'id', 'b'),
+                $this->columnOrDefault('bookings', 'customer_id', 'b'),
+                $this->columnOrDefault('bookings', 'service_id', 'b'),
+                $this->columnOrDefault('bookings', 'service_option_id', 'b'),
+                $this->columnOrDefault('bookings', 'booking_date', 'b'),
+                $this->columnOrDefault('bookings', 'requested_start_time', 'b'),
+                $this->columnOrDefault('bookings', 'time_start', 'b'),
+                $this->columnOrDefault('bookings', 'time_end', 'b'),
+                'b.status',
+                $this->columnOrDefault('bookings', 'price', 'b', null, '0'),
+                $this->columnOrDefault('bookings', 'address', 'b'),
+                $this->columnOrDefault('bookings', 'contact_phone', 'b'),
+                $this->columnOrDefault('bookings', 'created_at', 'b'),
+                $this->columnOrDefault('bookings', 'updated_at', 'b')
+            );
 
-            if ($hasServicesJoin && Schema::hasColumn('services', 'name')) {
-                $w->orWhere('s.name', 'like', "%{$q}%");
-            }
+        $this->applyBookingsOrder($query, ['created_at', 'booking_date', 'id']);
 
-            if ($hasDirectOptionJoin && Schema::hasColumn('service_options', 'label')) {
-                $w->orWhere('o.label', 'like', "%{$q}%");
-            }
-
-            if ($hasCustomersJoin && Schema::hasColumn('customers', 'name')) {
-                $w->orWhere('c.name', 'like', "%{$q}%");
-            }
-
-            if ($hasCustomersJoin && Schema::hasColumn('customers', 'first_name')) {
-                $w->orWhere('c.first_name', 'like', "%{$q}%");
-            }
-
-            if ($hasCustomersJoin && Schema::hasColumn('customers', 'last_name')) {
-                $w->orWhere('c.last_name', 'like', "%{$q}%");
-            }
-
-            if ($hasCustomersJoin && Schema::hasColumn('customers', 'email')) {
-                $w->orWhere('c.email', 'like', "%{$q}%");
-            }
-
-            if ($hasCustomersJoin && Schema::hasColumn('customers', 'phone')) {
-                $w->orWhere('c.phone', 'like', "%{$q}%");
-            }
-
-            if (Schema::hasColumn('bookings', 'contact_phone')) {
-                $w->orWhere('b.contact_phone', 'like', "%{$q}%");
-            }
-
-            if (Schema::hasColumn('bookings', 'address')) {
-                $w->orWhere('b.address', 'like', "%{$q}%");
-            }
-        });
+        return $query->get();
     }
 
     private function displayText($value, string $fallback = '-'): string
@@ -260,25 +270,208 @@ class ProviderBookingController extends Controller
         return $startLabel . ' - ' . $endLabel;
     }
 
-    private function decorateBookings($bookings)
+    private function bookingAreasMap($bookingIds)
     {
-        return $bookings->map(function ($booking) {
+        $bookingIds = collect($bookingIds)
+            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->unique()
+            ->values();
+
+        if (
+            $bookingIds->isEmpty() ||
+            !$this->tableHasColumns('booking_service_options', ['booking_id', 'service_option_id']) ||
+            !$this->tableHasColumns('service_options', ['id', 'label'])
+        ) {
+            return collect();
+        }
+
+        return DB::table('booking_service_options as bso')
+            ->join('service_options as so', 'so.id', '=', 'bso.service_option_id')
+            ->whereIn('bso.booking_id', $bookingIds)
+            ->orderBy('so.label')
+            ->get(['bso.booking_id', 'so.label'])
+            ->groupBy('booking_id')
+            ->map(function ($rows) {
+                return $rows->pluck('label')
+                    ->map(fn ($label) => trim((string) $label))
+                    ->filter()
+                    ->unique()
+                    ->implode(', ');
+            });
+    }
+
+    private function enrichBookings($bookings)
+    {
+        $bookings = collect($bookings)->values();
+
+        if ($bookings->isEmpty()) {
+            return $bookings;
+        }
+
+        $customers = collect();
+        if ($this->customersJoinAvailable()) {
+            $customerIds = $bookings->pluck('customer_id')
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->unique()
+                ->values();
+
+            if ($customerIds->isNotEmpty()) {
+                $columns = ['id'];
+
+                foreach (['name', 'first_name', 'last_name', 'email', 'phone'] as $column) {
+                    if (Schema::hasColumn('customers', $column)) {
+                        $columns[] = $column;
+                    }
+                }
+
+                $customers = DB::table('customers')
+                    ->whereIn('id', $customerIds)
+                    ->get($columns)
+                    ->keyBy('id');
+            }
+        }
+
+        $services = collect();
+        if ($this->servicesJoinAvailable()) {
+            $serviceIds = $bookings->pluck('service_id')
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->unique()
+                ->values();
+
+            if ($serviceIds->isNotEmpty()) {
+                $columns = ['id'];
+
+                if (Schema::hasColumn('services', 'name')) {
+                    $columns[] = 'name';
+                }
+
+                $services = DB::table('services')
+                    ->whereIn('id', $serviceIds)
+                    ->get($columns)
+                    ->keyBy('id');
+            }
+        }
+
+        $options = collect();
+        if ($this->directOptionJoinAvailable()) {
+            $optionIds = $bookings->pluck('service_option_id')
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->unique()
+                ->values();
+
+            if ($optionIds->isNotEmpty()) {
+                $options = DB::table('service_options')
+                    ->whereIn('id', $optionIds)
+                    ->get(['id', 'label'])
+                    ->keyBy('id');
+            }
+        }
+
+        $areasMap = $this->bookingAreasMap($bookings->pluck('id'));
+
+        return $bookings->map(function ($booking) use ($customers, $services, $options, $areasMap) {
+            $customer = $customers->get($booking->customer_id);
+            $service = $services->get($booking->service_id);
+            $option = $options->get($booking->service_option_id);
+            $statusKey = $this->normalizeStatusKey($booking->status);
+
+            $booking->raw_status = $booking->status;
+            $booking->status_key = $statusKey !== '' ? $statusKey : 'unknown';
+            $booking->status = $booking->status_key;
+            $booking->name = $this->customerNameFromRecord($customer);
+            $booking->phone = $this->customerPhoneFromRecord($customer, $booking);
+            $booking->email = $this->customerEmailFromRecord($customer);
+            $booking->service = $this->serviceNameFromRecord($service);
+            $booking->option = $this->firstFilled([
+                $areasMap->get($booking->id),
+                $option->label ?? null,
+            ]);
             $booking->display_booking_date = $this->formatDateDisplay($booking->booking_date);
             $booking->display_requested_start_time = $this->formatTimeDisplay($booking->requested_start_time);
             $booking->display_availability = $this->formatTimeRangeDisplay($booking->time_start, $booking->time_end);
             $booking->display_time_range = $this->formatTimeRangeDisplay($booking->time_start, $booking->time_end);
             $booking->display_option = $this->displayText($booking->option);
             $booking->display_email = $this->displayText($booking->email);
-            $booking->display_phone = $this->displayText($booking->contact_phone ?? $booking->phone);
+            $booking->display_phone = $this->displayText($booking->phone ?? $booking->contact_phone);
             $booking->display_price = number_format((float) ($booking->price ?? 0), 2);
 
             return $booking;
-        });
+        })->values();
+    }
+
+    private function filterBookingsByStatuses($bookings, array $allowedStatuses)
+    {
+        $allowedStatuses = array_values(array_unique(array_map(
+            fn ($status) => $this->normalizeStatusKey($status),
+            $allowedStatuses
+        )));
+
+        return collect($bookings)
+            ->filter(function ($booking) use ($allowedStatuses) {
+                return in_array($booking->status_key ?? $this->normalizeStatusKey($booking->status), $allowedStatuses, true);
+            })
+            ->values();
+    }
+
+    private function matchesBookingSearch($booking, string $q): bool
+    {
+        if ($q === '') {
+            return true;
+        }
+
+        $haystack = strtolower(implode(' ', array_filter([
+            $booking->reference_code ?? null,
+            $booking->name ?? null,
+            $booking->email ?? null,
+            $booking->display_phone ?? $booking->phone ?? $booking->contact_phone ?? null,
+            $booking->service ?? null,
+            $booking->option ?? null,
+            $booking->address ?? null,
+        ])));
+
+        return str_contains($haystack, strtolower($q));
+    }
+
+    private function comparableDate($value): ?string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        if ($value === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->toDateString();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function bookingWithinRange($booking, string $from, string $to): bool
+    {
+        $bookingDate = $this->comparableDate($booking->booking_date ?? null);
+
+        if ($bookingDate === null) {
+            return $from === '' && $to === '';
+        }
+
+        $fromDate = $this->comparableDate($from);
+        $toDate = $this->comparableDate($to);
+
+        if ($fromDate !== null && $bookingDate < $fromDate) {
+            return false;
+        }
+
+        if ($toDate !== null && $bookingDate > $toDate) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
      * ACTIVE BOOKINGS (provider can still update status)
-     * Status: confirmed, in_progress, paid
+     * Status: pending, confirmed, in_progress, paid
      */
     public function index()
     {
@@ -292,51 +485,10 @@ class ProviderBookingController extends Controller
         }
 
         try {
-            $areasSub = $this->bookingAreasSubquery();
-            $hasCustomersJoin = $this->customersJoinAvailable();
-            $hasServicesJoin = $this->servicesJoinAvailable();
-            $hasDirectOptionJoin = $this->directOptionJoinAvailable();
-            $optionSql = $hasDirectOptionJoin ? 'o.label' : 'NULL';
-
-            $query = DB::table('bookings as b')
-                ->leftJoinSub($areasSub, 'areas', function ($join) {
-                    $join->on('areas.booking_id', '=', 'b.id');
-                })
-                ->where('b.provider_id', $providerId)
-                ->whereIn('b.status', ['confirmed', 'in_progress', 'paid'])
-                ->select(
-                    'b.reference_code',
-                    $this->columnOrDefault('bookings', 'booking_date', 'b'),
-                    $this->columnOrDefault('bookings', 'requested_start_time', 'b'),
-                    $this->columnOrDefault('bookings', 'time_start', 'b'),
-                    $this->columnOrDefault('bookings', 'time_end', 'b'),
-                    'b.status',
-                    $this->columnOrDefault('bookings', 'price', 'b', null, '0'),
-                    $this->columnOrDefault('bookings', 'address', 'b'),
-                    $this->columnOrDefault('bookings', 'contact_phone', 'b'),
-                    DB::raw($this->customerNameSql('c', $hasCustomersJoin) . ' as name'),
-                    DB::raw($this->customerPhoneSql('c', 'b', $hasCustomersJoin) . ' as phone'),
-                    DB::raw($this->customerEmailSql('c', $hasCustomersJoin) . ' as email'),
-                    DB::raw($this->serviceNameSql('s', $hasServicesJoin) . ' as service'),
-                    DB::raw("COALESCE(areas.areas_label, {$optionSql}) as option"),
-                    $this->columnOrDefault('bookings', 'created_at', 'b')
-                );
-
-            if ($hasCustomersJoin) {
-                $query->leftJoin('customers as c', 'c.id', '=', 'b.customer_id');
-            }
-
-            if ($hasServicesJoin) {
-                $query->leftJoin('services as s', 's.id', '=', 'b.service_id');
-            }
-
-            if ($hasDirectOptionJoin) {
-                $query->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
-            }
-
-            $this->applyBookingsOrder($query, ['created_at', 'booking_date', 'id']);
-
-            $bookings = $this->decorateBookings($query->get());
+            $bookings = $this->filterBookingsByStatuses(
+                $this->enrichBookings($this->selectBaseBookings($providerId)),
+                $this->activeStatusKeys()
+            );
         } catch (\Throwable $e) {
             report($e);
             $loadError = 'Unable to load bookings right now.';
@@ -365,69 +517,31 @@ class ProviderBookingController extends Controller
         }
 
         try {
-            $areasSub = $this->bookingAreasSubquery();
-            $hasCustomersJoin = $this->customersJoinAvailable();
-            $hasServicesJoin = $this->servicesJoinAvailable();
-            $hasDirectOptionJoin = $this->directOptionJoinAvailable();
-            $optionSql = $hasDirectOptionJoin ? 'o.label' : 'NULL';
+            $bookings = $this->filterBookingsByStatuses(
+                $this->enrichBookings($this->selectBaseBookings($providerId)),
+                ['paid', 'completed', 'cancelled']
+            )->filter(function ($booking) use ($q, $status, $from, $to) {
+                if (!$this->bookingWithinRange($booking, $from, $to)) {
+                    return false;
+                }
 
-            $query = DB::table('bookings as b')
-                ->leftJoinSub($areasSub, 'areas', function ($join) {
-                    $join->on('areas.booking_id', '=', 'b.id');
-                })
-                ->where('b.provider_id', $providerId)
-                ->whereIn('b.status', ['paid', 'completed', 'cancelled'])
-                ->select(
-                    'b.reference_code',
-                    $this->columnOrDefault('bookings', 'booking_date', 'b'),
-                    $this->columnOrDefault('bookings', 'requested_start_time', 'b'),
-                    $this->columnOrDefault('bookings', 'time_start', 'b'),
-                    $this->columnOrDefault('bookings', 'time_end', 'b'),
-                    'b.status',
-                    $this->columnOrDefault('bookings', 'price', 'b', null, '0'),
-                    $this->columnOrDefault('bookings', 'address', 'b'),
-                    $this->columnOrDefault('bookings', 'contact_phone', 'b'),
-                    DB::raw($this->customerNameSql('c', $hasCustomersJoin) . ' as name'),
-                    DB::raw($this->customerPhoneSql('c', 'b', $hasCustomersJoin) . ' as phone'),
-                    DB::raw($this->customerEmailSql('c', $hasCustomersJoin) . ' as email'),
-                    DB::raw($this->serviceNameSql('s', $hasServicesJoin) . ' as service'),
-                    DB::raw("COALESCE(areas.areas_label, {$optionSql}) as option"),
-                    $this->columnOrDefault('bookings', 'created_at', 'b')
-                );
+                $statusKey = $booking->status_key ?? $this->normalizeStatusKey($booking->status);
 
-            if ($hasCustomersJoin) {
-                $query->leftJoin('customers as c', 'c.id', '=', 'b.customer_id');
-            }
+                if ($status === 'not_completed' && !in_array($statusKey, ['paid', 'cancelled'], true)) {
+                    return false;
+                }
 
-            if ($hasServicesJoin) {
-                $query->leftJoin('services as s', 's.id', '=', 'b.service_id');
-            }
+                if (
+                    $status !== 'all' &&
+                    $status !== 'not_completed' &&
+                    in_array($status, ['paid', 'completed', 'cancelled'], true) &&
+                    $statusKey !== $status
+                ) {
+                    return false;
+                }
 
-            if ($hasDirectOptionJoin) {
-                $query->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
-            }
-
-            if ($from && Schema::hasColumn('bookings', 'booking_date')) {
-                $query->whereDate('b.booking_date', '>=', $from);
-            }
-
-            if ($to && Schema::hasColumn('bookings', 'booking_date')) {
-                $query->whereDate('b.booking_date', '<=', $to);
-            }
-
-            if ($status === 'not_completed') {
-                $query->whereIn('b.status', ['paid', 'cancelled']);
-            } elseif ($status !== 'all' && in_array($status, ['paid', 'completed', 'cancelled'], true)) {
-                $query->where('b.status', $status);
-            }
-
-            if ($q !== '') {
-                $this->applyBookingSearch($query, $q, $hasCustomersJoin, $hasServicesJoin, $hasDirectOptionJoin);
-            }
-
-            $this->applyBookingsOrder($query, ['booking_date', 'created_at', 'id']);
-
-            $bookings = $this->decorateBookings($query->get());
+                return $this->matchesBookingSearch($booking, $q);
+            })->values();
         } catch (\Throwable $e) {
             report($e);
             $loadError = 'Unable to load booking history right now.';
@@ -445,40 +559,31 @@ class ProviderBookingController extends Controller
         }
 
         try {
-            $areasSub = $this->bookingAreasSubquery();
-            $hasCustomersJoin = $this->customersJoinAvailable();
-            $hasServicesJoin = $this->servicesJoinAvailable();
-            $hasDirectOptionJoin = $this->directOptionJoinAvailable();
-            $optionSql = $hasDirectOptionJoin ? 'o.label' : "''";
-
-            $query = DB::table('bookings as b')
-                ->leftJoinSub($areasSub, 'areas', function ($join) {
-                    $join->on('areas.booking_id', '=', 'b.id');
-                })
-                ->where('b.provider_id', $providerId)
-                ->where('b.reference_code', $reference_code)
-                ->select(
-                    'b.*',
-                    DB::raw($this->customerNameSql('c', $hasCustomersJoin) . ' as customer_name'),
-                    DB::raw($this->customerEmailSql('c', $hasCustomersJoin) . ' as customer_email'),
-                    DB::raw($this->customerPhoneSql('c', 'b', $hasCustomersJoin) . ' as customer_phone'),
-                    DB::raw($this->serviceNameSql('s', $hasServicesJoin) . ' as service_name'),
-                    DB::raw("COALESCE(areas.areas_label, {$optionSql}, '') as option_label")
-                );
-
-            if ($hasCustomersJoin) {
-                $query->leftJoin('customers as c', 'c.id', '=', 'b.customer_id');
-            }
-
-            if ($hasServicesJoin) {
-                $query->leftJoin('services as s', 's.id', '=', 'b.service_id');
-            }
-
-            if ($hasDirectOptionJoin) {
-                $query->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
-            }
-
-            $booking = $query->first();
+            $booking = $this->enrichBookings(
+                DB::table('bookings as b')
+                    ->where('b.provider_id', $providerId)
+                    ->where('b.reference_code', $reference_code)
+                    ->select(
+                        'b.reference_code',
+                        $this->columnOrDefault('bookings', 'id', 'b'),
+                        $this->columnOrDefault('bookings', 'customer_id', 'b'),
+                        $this->columnOrDefault('bookings', 'provider_id', 'b'),
+                        $this->columnOrDefault('bookings', 'service_id', 'b'),
+                        $this->columnOrDefault('bookings', 'service_option_id', 'b'),
+                        $this->columnOrDefault('bookings', 'booking_date', 'b'),
+                        $this->columnOrDefault('bookings', 'requested_start_time', 'b'),
+                        $this->columnOrDefault('bookings', 'time_start', 'b'),
+                        $this->columnOrDefault('bookings', 'time_end', 'b'),
+                        'b.status',
+                        $this->columnOrDefault('bookings', 'price', 'b', null, '0'),
+                        $this->columnOrDefault('bookings', 'address', 'b'),
+                        $this->columnOrDefault('bookings', 'contact_phone', 'b'),
+                        $this->columnOrDefault('bookings', 'created_at', 'b'),
+                        $this->columnOrDefault('bookings', 'updated_at', 'b')
+                    )
+                    ->limit(1)
+                    ->get()
+            )->first();
         } catch (\Throwable $e) {
             report($e);
 
@@ -487,6 +592,12 @@ class ProviderBookingController extends Controller
         }
 
         abort_if(!$booking, 404);
+
+        $booking->customer_name = $booking->name;
+        $booking->customer_email = $booking->email;
+        $booking->customer_phone = $booking->phone;
+        $booking->service_name = $booking->service;
+        $booking->option_label = $booking->option ?? '';
 
         return view('provider.bookings.show', compact('booking'));
     }
@@ -508,6 +619,7 @@ class ProviderBookingController extends Controller
         abort_if(!$booking, 404);
 
         $allowed = [
+            'pending'     => ['confirmed', 'cancelled', 'in_progress'],
             'confirmed'   => ['in_progress', 'cancelled'],
             'in_progress' => ['paid', 'cancelled'],
             'paid'        => ['completed'],
@@ -515,7 +627,7 @@ class ProviderBookingController extends Controller
             'cancelled'   => [],
         ];
 
-        $current = strtolower((string) $booking->status);
+        $current = $this->normalizeStatusKey($booking->status);
         $next    = strtolower((string) $data['status']);
 
         if ($next === $current) {
@@ -557,40 +669,45 @@ class ProviderBookingController extends Controller
                 default       => 'Your booking status has been updated to ' . $statusLabel . '.',
             };
 
-            $type = Schema::hasColumn('notifications', 'type')
-                ? ($next === 'completed' ? 'review' : 'booking_status')
-                : null;
+            if (
+                Schema::hasTable('notifications') &&
+                Schema::hasColumns('notifications', ['user_id', 'reference_code', 'message', 'is_read'])
+            ) {
+                $type = Schema::hasColumn('notifications', 'type')
+                    ? ($next === 'completed' ? 'review' : 'booking_status')
+                    : null;
 
-            $hasUpdatedAt = Schema::hasColumn('notifications', 'updated_at');
-            $hasCreatedAt = Schema::hasColumn('notifications', 'created_at');
+                $hasUpdatedAt = Schema::hasColumn('notifications', 'updated_at');
+                $hasCreatedAt = Schema::hasColumn('notifications', 'created_at');
 
-            $uniqueKeys = [
-                'user_id'        => $booking->customer_id,
-                'reference_code' => $booking->reference_code,
-            ];
+                $uniqueKeys = [
+                    'user_id'        => $booking->customer_id,
+                    'reference_code' => $booking->reference_code,
+                ];
 
-            if ($type !== null) {
-                $uniqueKeys['type'] = $type;
+                if ($type !== null) {
+                    $uniqueKeys['type'] = $type;
+                }
+
+                $values = [
+                    'message' => $message,
+                    'is_read' => 0,
+                ];
+
+                if ($type !== null) {
+                    $values['type'] = $type;
+                }
+
+                if ($hasCreatedAt) {
+                    $values['created_at'] = now();
+                }
+
+                if ($hasUpdatedAt) {
+                    $values['updated_at'] = now();
+                }
+
+                DB::table('notifications')->updateOrInsert($uniqueKeys, $values);
             }
-
-            $values = [
-                'message' => $message,
-                'is_read' => 0,
-            ];
-
-            if ($type !== null) {
-                $values['type'] = $type;
-            }
-
-            if ($hasCreatedAt) {
-                $values['created_at'] = now();
-            }
-
-            if ($hasUpdatedAt) {
-                $values['updated_at'] = now();
-            }
-
-            DB::table('notifications')->updateOrInsert($uniqueKeys, $values);
         });
 
         return back()->with('success', 'Booking status updated to ' . strtoupper($next) . '.');

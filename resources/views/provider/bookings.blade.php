@@ -6,6 +6,7 @@
 
 @php
     $nextOptions = [
+        'pending' => ['confirmed' => 'Confirmed', 'cancelled' => 'Cancelled'],
         'confirmed' => ['in_progress' => 'In Progress', 'cancelled' => 'Cancelled'],
         'in_progress' => ['paid' => 'Paid', 'cancelled' => 'Cancelled'],
         'paid' => ['completed' => 'Completed'],
@@ -170,6 +171,7 @@
     text-transform:uppercase;
 }
 
+.status-badge.pending{ background:rgba(148,163,184,.16); color:#cbd5e1; }
 .status-badge.confirmed{ background:rgba(56,189,248,.14); color:var(--accent); }
 .status-badge.in_progress{ background:rgba(250,204,21,.14); color:var(--warn); }
 .status-badge.paid{ background:rgba(34,197,94,.14); color:var(--success); }
@@ -300,7 +302,7 @@
                     </thead>
                     <tbody>
                         @foreach ($bookings as $b)
-                            @php($current = strtolower((string) $b->status))
+                            @php($current = $b->status_key ?? strtolower((string) $b->status))
                             <tr>
                                 <td>
                                     <div class="customer-name">{{ $b->name }}</div>
@@ -360,7 +362,7 @@
 
             <div class="mobile-list">
                 @foreach ($bookings as $b)
-                    @php($current = strtolower((string) $b->status))
+                    @php($current = $b->status_key ?? strtolower((string) $b->status))
                     <div class="booking-card">
                         <div class="booking-card-head">
                             <div>

@@ -325,7 +325,7 @@
                     </thead>
                     <tbody>
                         @foreach($bookings as $b)
-                            @php($statusKey = strtolower((string) $b->status))
+                            @php($statusKey = $b->status_key ?? strtolower((string) $b->status))
                             <tr>
                                 <td>
                                     <div class="person-name">{{ $b->name }}</div>
@@ -357,7 +357,7 @@
 
             <div class="mobile-list">
                 @foreach($bookings as $b)
-                    @php($statusKey = strtolower((string) $b->status))
+                    @php($statusKey = $b->status_key ?? strtolower((string) $b->status))
                     <div class="history-card">
                         <div class="history-card-head">
                             <div>
