@@ -14,7 +14,7 @@
                 <div class="ct-hero-main ct-reveal">
                     <span class="ct-eyebrow">About CleanTech</span>
                     <h1 class="ct-title">Clean home service that feels easier to book and easier to trust.</h1>
-                    <p class="ct-lead">CleanTech connects customers with approved local providers for practical home cleaning without the cluttered experience.</p>
+                    <p class="ct-lead">CleanTech connects customers with approved local providers for practical home cleaning that is easy to book and easy to follow.</p>
                     <div class="ct-actions">
                         <a href="{{ route('services') }}" class="ct-button">View Services</a>
                         <a href="{{ route('contact') }}" class="ct-button secondary">Contact Us</a>
@@ -35,23 +35,17 @@
                     <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1400&q=80" alt="Professional cleaning service">
                 </div>
 
-                <div class="ct-grid three">
+                <div class="ct-grid two">
                     <article class="ct-card ct-reveal">
                         <div class="ct-kicker">Mission</div>
-                        <h3>Make booking simple</h3>
-                        <p>Clear services, cleaner layouts, and less confusion for customers.</p>
+                        <h3>What drives CleanTech</h3>
+                        <p>To provide reliable and affordable home cleaning, repair, and maintenance services that help make everyday living easier. We aim to deliver services with honesty, convenience, and customer care at the center of what we do.</p>
                     </article>
 
                     <article class="ct-card ct-reveal delay-1">
                         <div class="ct-kicker">Vision</div>
-                        <h3>Be locally dependable</h3>
-                        <p>A platform people use because it feels reliable and easy to understand.</p>
-                    </article>
-
-                    <article class="ct-card ct-reveal delay-2">
-                        <div class="ct-kicker">Focus</div>
-                        <h3>Keep it practical</h3>
-                        <p>Real service details, verified providers, and a smoother booking flow.</p>
+                        <h3>Where we want to grow</h3>
+                        <p>To be a trusted and accessible service provider in the community, known for dependable work, practical solutions, and a commitment to helping households when they need support.</p>
                     </article>
                 </div>
             </div>

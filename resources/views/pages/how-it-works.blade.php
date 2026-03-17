@@ -13,12 +13,12 @@
             <div class="ct-hero-shell">
                 <div class="ct-hero-main ct-reveal">
                     <span class="ct-eyebrow">How It Works</span>
-                    <h1 class="ct-title">A simpler path from service selection to completed booking.</h1>
-                    <p class="ct-lead">CleanTech is meant to feel clear at each step, not overloaded with too many screens or too much explanation.</p>
+                    <h1 class="ct-title">Book a service in a few clear steps.</h1>
+                    <p class="ct-lead">Choose a service, find an available provider, confirm the details, and track the booking until the job is done.</p>
                 </div>
 
                 <div class="ct-photo-card tall ct-reveal delay-1">
-                    <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1400&q=80" alt="Cleaning workflow">
+                    <img src="https://images.unsplash.com/photo-1600566753052-a76f8b726051?auto=format&fit=crop&w=1400&q=80" alt="Customer planning a home service booking">
                 </div>
             </div>
         </div>
@@ -47,8 +47,14 @@
 
                 <article class="ct-step ct-reveal">
                     <div class="ct-step-number">4</div>
-                    <h3>Confirm and track</h3>
-                    <p>Submit the booking and monitor updates from your dashboard.</p>
+                    <h3>Confirm the booking</h3>
+                    <p>Review the details and submit the request once everything looks right.</p>
+                </article>
+
+                <article class="ct-step ct-reveal delay-1">
+                    <div class="ct-step-number">5</div>
+                    <h3>Track and review</h3>
+                    <p>Monitor updates from your dashboard and leave a review after the job is completed.</p>
                 </article>
             </div>
         </div>

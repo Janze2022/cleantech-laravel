@@ -14,7 +14,7 @@
                 <div class="ct-hero-main ct-reveal">
                     <span class="ct-eyebrow">Contact Us</span>
                     <h1 class="ct-title">Need help with booking, service details, or provider concerns?</h1>
-                    <p class="ct-lead">Send a quick message and CleanTech will open an email draft to the actual support address.</p>
+                    <p class="ct-lead">Send a quick message and CleanTech will open an email draft straight to our support email.</p>
                 </div>
 
                 <div class="ct-photo-card tall ct-reveal delay-1">
