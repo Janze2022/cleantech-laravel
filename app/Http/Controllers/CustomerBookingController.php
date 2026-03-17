@@ -8,6 +8,13 @@ use Illuminate\Support\Facades\Schema;
 
 class CustomerBookingController extends Controller
 {
+    private const CUSTOMER_CANCELLABLE_STATUSES = [
+        'pending',
+        'accepted',
+        'confirmed',
+        'scheduled',
+    ];
+
     /**
      * PROVIDER PROFILE (Customer side)
      * URL example: /customer/providers/1
@@ -424,7 +431,9 @@ class CustomerBookingController extends Controller
             ->where('b.customer_id', session('user_id'))
             ->orderByDesc('b.created_at')
             ->select(
+                'b.id',
                 'b.reference_code',
+                'b.provider_id',
                 's.name as service',
                 DB::raw("COALESCE(areas.areas_label, o.label) as `option`"),
                 DB::raw("TRIM(CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, ''))) as provider_name"),
@@ -481,6 +490,75 @@ class CustomerBookingController extends Controller
         return view('customer.bookings.show', compact('booking'));
     }
 
+    public function cancel(Request $request, string $reference)
+    {
+        $customerId = (int) session('user_id');
+
+        if (!$customerId) {
+            return redirect()
+                ->route('customer.login')
+                ->withErrors(['general' => 'Session expired. Please login again.']);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $booking = DB::table('bookings')
+                ->where('customer_id', $customerId)
+                ->where('reference_code', $reference)
+                ->lockForUpdate()
+                ->first([
+                    'id',
+                    'reference_code',
+                    'provider_id',
+                    'booking_date',
+                    'time_start',
+                    'time_end',
+                    'status',
+                ]);
+
+            if (!$booking) {
+                DB::rollBack();
+                abort(404);
+            }
+
+            $status = $this->normalizeStatus((string) ($booking->status ?? ''));
+
+            if (!$this->customerCanCancelStatus($status)) {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    'general' => 'This booking can no longer be cancelled from the customer side once work is already in progress.',
+                ]);
+            }
+
+            DB::table('bookings')
+                ->where('id', $booking->id)
+                ->update([
+                    'status' => 'cancelled',
+                    'updated_at' => now(),
+                ]);
+
+            $this->restoreAvailabilitySlot($booking);
+            $this->notifyProviderAboutCancellation($booking);
+
+            DB::commit();
+
+            return redirect()
+                ->route('customer.bookings.show', $booking->reference_code)
+                ->with('success', 'Booking cancelled successfully.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            DB::rollBack();
+            report($exception);
+
+            return back()->withErrors([
+                'general' => 'Unable to cancel this booking right now. Please try again.',
+            ]);
+        }
+    }
+
     private function bookingAreasSubquery()
     {
         if (!Schema::hasTable('booking_service_options') || !Schema::hasTable('service_options')) {
@@ -517,5 +595,128 @@ class CustomerBookingController extends Controller
         }
 
         return $time;
+    }
+
+    private function normalizeStatus(string $status): string
+    {
+        $value = strtolower(trim($status));
+
+        if (in_array($value, ['canceled', 'cancel'], true)) {
+            return 'cancelled';
+        }
+
+        return $value;
+    }
+
+    private function customerCanCancelStatus(string $status): bool
+    {
+        return in_array($this->normalizeStatus($status), self::CUSTOMER_CANCELLABLE_STATUSES, true);
+    }
+
+    private function restoreAvailabilitySlot(object $booking): void
+    {
+        if (!Schema::hasTable('provider_availability')) {
+            return;
+        }
+
+        $providerId = (int) ($booking->provider_id ?? 0);
+        $bookingDate = trim((string) ($booking->booking_date ?? ''));
+        $slotStart = $this->normalizeTime((string) ($booking->time_start ?? ''));
+        $slotEnd = $this->normalizeTime((string) ($booking->time_end ?? ''));
+
+        if (!$providerId || $bookingDate === '' || $slotStart === '' || $slotEnd === '') {
+            return;
+        }
+
+        $today = now(config('app.timezone') ?? 'Asia/Manila')->toDateString();
+        if ($bookingDate < $today) {
+            return;
+        }
+
+        $conflictingBookingExists = DB::table('bookings')
+            ->where('provider_id', $providerId)
+            ->whereDate('booking_date', $bookingDate)
+            ->where('id', '!=', $booking->id)
+            ->get(['status', 'time_start', 'time_end'])
+            ->contains(function ($row) use ($slotStart, $slotEnd) {
+                $status = $this->normalizeStatus((string) ($row->status ?? ''));
+
+                return $status !== 'cancelled'
+                    && $this->normalizeTime((string) ($row->time_start ?? '')) === $slotStart
+                    && $this->normalizeTime((string) ($row->time_end ?? '')) === $slotEnd;
+            });
+
+        if ($conflictingBookingExists) {
+            return;
+        }
+
+        $matchingSlot = DB::table('provider_availability')
+            ->where('provider_id', $providerId)
+            ->whereDate('date', $bookingDate)
+            ->get()
+            ->first(function ($slot) use ($slotStart, $slotEnd) {
+                return $this->normalizeTime((string) ($slot->time_start ?? '')) === $slotStart
+                    && $this->normalizeTime((string) ($slot->time_end ?? '')) === $slotEnd;
+            });
+
+        if ($matchingSlot) {
+            DB::table('provider_availability')
+                ->where('id', $matchingSlot->id)
+                ->update([
+                    'status' => 'active',
+                    'updated_at' => now(),
+                ]);
+
+            return;
+        }
+
+        DB::table('provider_availability')->insert([
+            'provider_id' => $providerId,
+            'date' => $bookingDate,
+            'time_start' => $slotStart,
+            'time_end' => $slotEnd,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    private function notifyProviderAboutCancellation(object $booking): void
+    {
+        if (
+            !Schema::hasTable('provider_notifications') ||
+            !Schema::hasColumns('provider_notifications', ['provider_id', 'message', 'is_read'])
+        ) {
+            return;
+        }
+
+        $providerId = (int) ($booking->provider_id ?? 0);
+        if (!$providerId) {
+            return;
+        }
+
+        $notification = [
+            'provider_id' => $providerId,
+            'message' => 'A booking was cancelled by the customer. Ref: ' . $booking->reference_code,
+            'is_read' => 0,
+        ];
+
+        if (Schema::hasColumn('provider_notifications', 'type')) {
+            $notification['type'] = 'booking_cancelled';
+        }
+
+        if (Schema::hasColumn('provider_notifications', 'reference_code')) {
+            $notification['reference_code'] = $booking->reference_code;
+        }
+
+        if (Schema::hasColumn('provider_notifications', 'created_at')) {
+            $notification['created_at'] = now();
+        }
+
+        if (Schema::hasColumn('provider_notifications', 'updated_at')) {
+            $notification['updated_at'] = now();
+        }
+
+        DB::table('provider_notifications')->insert($notification);
     }
 }

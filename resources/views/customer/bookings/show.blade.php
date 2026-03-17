@@ -12,6 +12,8 @@
     $stLower = strtolower((string)$status);
 
     $isPaid = in_array($stLower, ['paid','completed']);
+    $canCancel = in_array($stLower, ['pending', 'accepted', 'confirmed', 'scheduled'], true);
+    $cancelLocked = in_array($stLower, ['in_progress', 'ongoing', 'active', 'paid', 'completed'], true);
 
     $amount = (float)($booking->price ?? 0);
 
@@ -158,6 +160,31 @@
     flex-wrap:wrap;
 }
 
+.notice{
+    margin-bottom:1rem;
+    padding:.9rem 1rem;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.08);
+    font-weight:800;
+}
+.notice.success{
+    border-color:rgba(34,197,94,.22);
+    background:rgba(34,197,94,.10);
+    color:#bbf7d0;
+}
+.notice.error{
+    border-color:rgba(239,68,68,.22);
+    background:rgba(239,68,68,.10);
+    color:#fecaca;
+}
+
+.action-note{
+    margin-top:.35rem;
+    color:var(--text-muted);
+    font-size:.86rem;
+    line-height:1.5;
+}
+
 .btnx{
     padding:.75rem 1rem;
     border-radius:12px;
@@ -171,6 +198,11 @@
 .btnx.primary{
     border:none;
     background: linear-gradient(180deg,#0ea5e9,#38bdf8);
+}
+.btnx.danger{
+    border-color:rgba(239,68,68,.24);
+    background:rgba(239,68,68,.10);
+    color:#fecaca;
 }
 .btnx:hover{ filter: brightness(1.05); }
 
@@ -309,6 +341,14 @@
 <div class="wrap">
     <div class="cardx">
 
+        @if(session('success'))
+            <div class="notice success">{{ session('success') }}</div>
+        @endif
+
+        @if($errors->has('general'))
+            <div class="notice error">{{ $errors->first('general') }}</div>
+        @endif
+
         <div class="header">
             <div>
                 <h3 class="title">Booking Details</h3>
@@ -381,6 +421,15 @@
         <div class="actions">
             <a href="{{ route('customer.bookings') }}" class="btnx primary">Back</a>
 
+            @if($canCancel)
+                <form method="POST"
+                      action="{{ route('customer.bookings.cancel', $ref) }}"
+                      onsubmit="return confirm('Cancel this booking?');">
+                    @csrf
+                    <button type="submit" class="btnx danger">Cancel Booking</button>
+                </form>
+            @endif
+
             <button type="button" class="btnx" onclick="toggleReceiptPreview()">
                 Preview Receipt
             </button>
@@ -389,6 +438,12 @@
                 Print Receipt
             </button>
         </div>
+
+        @if($canCancel)
+            <div class="action-note">You can still cancel this booking while it is confirmed and waiting to start.</div>
+        @elseif($cancelLocked)
+            <div class="action-note">Customer cancellation is locked once the provider has already started the booking.</div>
+        @endif
 
         <div id="receiptPreview" class="preview-wrap">
             <div class="preview-shell">

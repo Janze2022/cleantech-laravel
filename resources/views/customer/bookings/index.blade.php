@@ -12,273 +12,505 @@
         'in_progress',
         'ongoing',
         'active',
-        'scheduled'
+        'scheduled',
     ];
 
-    $currentBookings = $bookings->filter(function($b) use ($currentStatuses){
-        $st = strtolower(trim((string)($b->status ?? '')));
-        return in_array($st, $currentStatuses, true);
+    $cancellableStatuses = [
+        'pending',
+        'accepted',
+        'confirmed',
+        'scheduled',
+    ];
+
+    $currentBookings = $bookings->filter(function ($booking) use ($currentStatuses) {
+        $status = strtolower(trim((string) ($booking->status ?? '')));
+
+        return in_array($status, $currentStatuses, true);
     })->values();
 @endphp
 
 <style>
-:root {
-    --bg-card: #020b1f;
-    --bg-deep: #020617;
-    --border-soft: rgba(255,255,255,.08);
-    --border-softer: rgba(255,255,255,.05);
-    --text-muted: rgba(255,255,255,.55);
-    --text-strong: rgba(255,255,255,.90);
-    --accent: #38bdf8;
+:root{
+    --book-bg:#020617;
+    --book-card:#051023;
+    --book-card-soft:#09162b;
+    --book-border:rgba(255,255,255,.08);
+    --book-border-soft:rgba(255,255,255,.05);
+    --book-text:rgba(255,255,255,.92);
+    --book-muted:rgba(255,255,255,.58);
+    --book-accent:#38bdf8;
+    --book-danger:#ef4444;
 }
 
-.bookings-page { min-height: calc(100vh - 120px); }
-
-.bookings-card {
-    background: linear-gradient(180deg, var(--bg-card), var(--bg-deep));
-    border: 1px solid var(--border-soft);
-    border-radius: 18px;
-    padding: 2rem;
+.bookings-shell{
+    min-height:calc(100vh - 120px);
 }
 
-.bookings-header h3 { font-weight: 900; margin-bottom: .25rem; letter-spacing: -.02em; }
-.bookings-header p { color: var(--text-muted); font-size: .92rem; margin: 0; }
-
-.bookings-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 1.25rem;
+.bookings-card{
+    background:linear-gradient(180deg, var(--book-card), var(--book-bg));
+    border:1px solid var(--book-border);
+    border-radius:20px;
+    padding:1.4rem;
 }
 
-.bookings-table thead th {
-    text-align: left;
-    font-size: .75rem;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    border-bottom: 1px solid var(--border-soft);
-    padding: .9rem;
-    white-space: nowrap;
+.bookings-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:1rem;
+    flex-wrap:wrap;
+    margin-bottom:1rem;
 }
 
-.bookings-table tbody td {
-    padding: 1rem .9rem;
-    border-bottom: 1px solid rgba(255,255,255,.04);
-    font-size: .92rem;
-    vertical-align: middle;
+.bookings-title{
+    margin:0;
+    font-weight:950;
+    letter-spacing:-.02em;
 }
-.bookings-table tbody tr:hover { background: rgba(56,189,248,.03); }
 
-.status {
+.bookings-subtitle{
+    margin:.3rem 0 0;
+    color:var(--book-muted);
+    font-size:.9rem;
+    max-width:760px;
+}
+
+.flash{
+    margin-bottom:1rem;
+    padding:.9rem 1rem;
+    border-radius:14px;
+    border:1px solid var(--book-border);
+    font-weight:800;
+}
+
+.flash.success{
+    background:rgba(34,197,94,.1);
+    border-color:rgba(34,197,94,.22);
+    color:#bbf7d0;
+}
+
+.flash.error{
+    background:rgba(239,68,68,.1);
+    border-color:rgba(239,68,68,.22);
+    color:#fecaca;
+}
+
+.summary-pill{
     display:inline-flex;
     align-items:center;
-    padding: .35rem .75rem;
-    border-radius: 999px;
-    font-size: .7rem;
-    font-weight: 800;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    border: 1px solid rgba(255,255,255,.10);
-    background: rgba(2,6,23,.25);
-    white-space: nowrap;
-}
-.status.pending,
-.status.accepted,
-.status.confirmed,
-.status.in_progress,
-.status.ongoing,
-.status.active,
-.status.scheduled {
-    background: rgba(56,189,248,.12);
-    color: #38bdf8;
-    border-color: rgba(56,189,248,.25);
+    gap:.45rem;
+    min-height:38px;
+    padding:.5rem .8rem;
+    border-radius:999px;
+    border:1px solid rgba(56,189,248,.22);
+    background:rgba(56,189,248,.09);
+    color:rgba(255,255,255,.95);
+    font-size:.8rem;
+    font-weight:900;
+    white-space:nowrap;
 }
 
-.btn-view {
-    display:inline-block;
-    padding:.5rem .8rem;
+.booking-table-wrap{
+    border:1px solid var(--book-border-soft);
+    border-radius:18px;
+    overflow:hidden;
+    background:rgba(255,255,255,.02);
+}
+
+.booking-table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+.booking-table th{
+    padding:.88rem .9rem;
+    text-align:left;
+    color:var(--book-muted);
+    font-size:.74rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    border-bottom:1px solid var(--book-border);
+    white-space:nowrap;
+}
+
+.booking-table td{
+    padding:1rem .9rem;
+    border-bottom:1px solid rgba(255,255,255,.04);
+    vertical-align:top;
+    font-size:.92rem;
+}
+
+.booking-table tbody tr:hover{
+    background:rgba(56,189,248,.03);
+}
+
+.booking-ref{
+    font-weight:900;
+    color:var(--book-text);
+    line-height:1.2;
+}
+
+.booking-meta{
+    margin-top:.25rem;
+    color:var(--book-muted);
+    font-size:.8rem;
+    line-height:1.4;
+}
+
+.status-pill{
+    display:inline-flex;
+    align-items:center;
+    padding:.36rem .75rem;
+    border-radius:999px;
+    font-size:.7rem;
+    font-weight:900;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    border:1px solid rgba(255,255,255,.1);
+    background:rgba(2,6,23,.25);
+    white-space:nowrap;
+}
+
+.status-pill.pending,
+.status-pill.accepted,
+.status-pill.confirmed,
+.status-pill.scheduled{
+    background:rgba(56,189,248,.11);
+    border-color:rgba(56,189,248,.24);
+    color:#7dd3fc;
+}
+
+.status-pill.in_progress,
+.status-pill.ongoing,
+.status-pill.active{
+    background:rgba(245,158,11,.10);
+    border-color:rgba(245,158,11,.24);
+    color:#fcd34d;
+}
+
+.status-note{
+    margin-top:.35rem;
+    color:var(--book-muted);
+    font-size:.78rem;
+    line-height:1.35;
+}
+
+.action-group{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.55rem;
+}
+
+.btn-view,
+.btn-cancel{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:40px;
+    padding:.58rem .88rem;
     border-radius:12px;
-    background:rgba(56,189,248,.12);
-    color:var(--accent);
     font-weight:900;
     text-decoration:none;
-    border:1px solid rgba(56,189,248,.25);
-    white-space: nowrap;
+    border:1px solid transparent;
+    white-space:nowrap;
 }
-.btn-view:hover { background:rgba(56,189,248,.18); color:var(--accent); }
 
-.empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: .95rem; }
-
-.mobile-list{ display:none; margin-top: 1rem; }
-.booking-card{
-    background: rgba(2,6,23,.35);
-    border: 1px solid var(--border-softer);
-    border-radius: 16px;
-    padding: 1rem;
+.btn-view{
+    background:rgba(56,189,248,.12);
+    border-color:rgba(56,189,248,.22);
+    color:var(--book-accent);
 }
-.booking-top{
+
+.btn-view:hover{
+    background:rgba(56,189,248,.18);
+    color:var(--book-accent);
+}
+
+.btn-cancel{
+    background:rgba(239,68,68,.10);
+    border-color:rgba(239,68,68,.2);
+    color:#fca5a5;
+}
+
+.btn-cancel:hover{
+    background:rgba(239,68,68,.16);
+    color:#fecaca;
+}
+
+.btn-cancel-inline{
+    min-height:40px;
+    padding:.58rem .88rem;
+    border-radius:12px;
+    border:1px solid rgba(239,68,68,.2);
+    background:rgba(239,68,68,.10);
+    color:#fca5a5;
+    font-weight:900;
+}
+
+.empty-state{
+    text-align:center;
+    padding:3rem 1rem;
+    color:var(--book-muted);
+    font-size:.95rem;
+    border:1px dashed rgba(255,255,255,.12);
+    border-radius:16px;
+}
+
+.mobile-list{
+    display:none;
+    flex-direction:column;
+    gap:.8rem;
+}
+
+.mobile-card{
+    background:rgba(2,6,23,.38);
+    border:1px solid var(--book-border-soft);
+    border-radius:16px;
+    padding:1rem;
+}
+
+.mobile-top{
     display:flex;
+    align-items:flex-start;
     justify-content:space-between;
     gap:.75rem;
-    align-items:flex-start;
 }
-.booking-ref{
-    font-weight: 950;
-    color: var(--text-strong);
-    letter-spacing: -.01em;
-    font-size: .98rem;
-}
-.booking-meta{
-    margin-top:.2rem;
-    color: var(--text-muted);
-    font-size: .86rem;
-    line-height: 1.35;
-}
-.booking-grid{
-    margin-top:.85rem;
+
+.mobile-grid{
     display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:.65rem .75rem;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:.7rem;
+    margin-top:.85rem;
 }
-.kv .k{
-    color: var(--text-muted);
-    font-size: .72rem;
-    text-transform: uppercase;
-    letter-spacing: .08em;
+
+.mobile-k{
+    color:var(--book-muted);
+    font-size:.7rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    font-weight:800;
 }
-.kv .v{
-    margin-top:.2rem;
-    color: var(--text-strong);
-    font-weight: 800;
-    font-size: .9rem;
-    word-break: break-word;
+
+.mobile-v{
+    margin-top:.22rem;
+    color:var(--book-text);
+    font-size:.88rem;
+    font-weight:800;
+    word-break:break-word;
 }
-.booking-actions{
-    margin-top: .9rem;
+
+.mobile-actions{
     display:flex;
+    flex-wrap:wrap;
     gap:.6rem;
+    margin-top:.95rem;
 }
-.booking-actions .btn-view{ width: 100%; text-align:center; }
+
+.mobile-actions > a,
+.mobile-actions > form{
+    flex:1 1 0;
+}
+
+.mobile-actions form button{
+    width:100%;
+}
 
 @media (max-width: 768px){
-    .bookings-card{ padding: 1.1rem; border-radius: 16px; }
-    .bookings-table{ display:none; }
-    .mobile-list{ display:flex; flex-direction:column; gap:.75rem; }
-    .booking-grid{ grid-template-columns: 1fr; }
+    .bookings-card{
+        padding:1.05rem;
+        border-radius:16px;
+    }
+
+    .booking-table-wrap{
+        display:none;
+    }
+
+    .mobile-list{
+        display:flex;
+    }
+
+    .mobile-grid{
+        grid-template-columns:1fr;
+    }
+
+    .mobile-actions > a,
+    .mobile-actions > form{
+        flex-basis:100%;
+    }
 }
 </style>
 
-<div class="bookings-page">
+<div class="bookings-shell">
     <div class="bookings-card">
 
-        <div class="bookings-header mb-3">
-            <h3>My Bookings</h3>
-            <p>Current / ongoing bookings only</p>
+        @if(session('success'))
+            <div class="flash success">{{ session('success') }}</div>
+        @endif
+
+        @if($errors->has('general'))
+            <div class="flash error">{{ $errors->first('general') }}</div>
+        @endif
+
+        <div class="bookings-head">
+            <div>
+                <h3 class="bookings-title">My Bookings</h3>
+                <p class="bookings-subtitle">
+                    Track your current bookings here. You can still cancel while a booking is confirmed or waiting to start, but cancellation is locked once the provider is already in progress.
+                </p>
+            </div>
+
+            <div class="summary-pill">
+                <i class="bi bi-calendar-check"></i>
+                <span>{{ $currentBookings->count() }} active booking{{ $currentBookings->count() === 1 ? '' : 's' }}</span>
+            </div>
         </div>
 
         @if($currentBookings->isEmpty())
             <div class="empty-state">No current bookings found.</div>
         @else
-
-            <table class="bookings-table" aria-label="Bookings table">
-                <thead>
-                    <tr>
-                        <th>Reference</th>
-                        <th>Service</th>
-                        <th>Date</th>
-                        <th>Schedule</th>
-                        <th>Price</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($currentBookings as $b)
-                        @php
-                            $statusClass = strtolower((string)($b->status ?? ''));
-
-                            $dateLabel = $b->booking_date
-                                ? \Carbon\Carbon::parse($b->booking_date)->format('F d, Y')
-                                : '—';
-
-                            $timeLabel = ($b->time_start && $b->time_end)
-                                ? \Carbon\Carbon::parse($b->time_start)->format('h:i A') . ' – ' .
-                                  \Carbon\Carbon::parse($b->time_end)->format('h:i A')
-                                : '—';
-                        @endphp
+            <div class="booking-table-wrap">
+                <table class="booking-table" aria-label="Bookings table">
+                    <thead>
                         <tr>
-                            <td>{{ $b->reference_code }}</td>
-                            <td>
-                                <div>{{ $b->service }}</div>
-                                <small style="color:rgba(255,255,255,.55);">{{ $b->option }}</small>
-                            </td>
-                            <td>{{ $dateLabel }}</td>
-                            <td>{{ $timeLabel }}</td>
-                            <td>₱{{ number_format($b->price, 2) }}</td>
-                            <td>
-                                <span class="status {{ $statusClass }}">
-                                    {{ ucfirst(str_replace('_',' ',$b->status)) }}
-                                </span>
-                            </td>
-                            <td>
-                                <a class="btn-view" href="{{ route('customer.bookings.show', $b->reference_code) }}">
-                                    View Details
-                                </a>
-                            </td>
+                            <th>Booking</th>
+                            <th>Date</th>
+                            <th>Schedule</th>
+                            <th>Provider</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Action</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach($currentBookings as $booking)
+                            @php
+                                $statusClass = strtolower((string) ($booking->status ?? ''));
+                                $canCancel = in_array($statusClass, $cancellableStatuses, true);
 
-            <div class="mobile-list" aria-label="Bookings list (mobile)">
-                @foreach($currentBookings as $b)
-                    @php
-                        $statusClass = strtolower((string)($b->status ?? ''));
+                                $dateLabel = $booking->booking_date
+                                    ? \Carbon\Carbon::parse($booking->booking_date)->format('F d, Y')
+                                    : '—';
 
-                        $dateLabel = $b->booking_date
-                            ? \Carbon\Carbon::parse($b->booking_date)->format('F d, Y')
-                            : '—';
+                                $timeLabel = ($booking->time_start && $booking->time_end)
+                                    ? \Carbon\Carbon::parse($booking->time_start)->format('h:i A') . ' – ' .
+                                      \Carbon\Carbon::parse($booking->time_end)->format('h:i A')
+                                    : '—';
+                            @endphp
 
-                        $timeLabel = ($b->time_start && $b->time_end)
-                            ? \Carbon\Carbon::parse($b->time_start)->format('h:i A') . ' – ' .
-                              \Carbon\Carbon::parse($b->time_end)->format('h:i A')
-                            : '—';
-                    @endphp
-                    <div class="booking-card">
-                        <div class="booking-top">
-                            <div style="min-width:0;">
-                                <div class="booking-ref">#{{ $b->reference_code }}</div>
-                                <div class="booking-meta">
-                                    {{ $b->service }} • {{ $b->option }}
-                                </div>
-                            </div>
-                            <span class="status {{ $statusClass }}">{{ ucfirst(str_replace('_',' ',$b->status)) }}</span>
-                        </div>
+                            <tr>
+                                <td>
+                                    <div class="booking-ref">{{ $booking->reference_code }}</div>
+                                    <div class="booking-meta">{{ $booking->service }} • {{ $booking->option }}</div>
+                                </td>
+                                <td>{{ $dateLabel }}</td>
+                                <td>{{ $timeLabel }}</td>
+                                <td>{{ $booking->provider_name ?: 'Provider not assigned' }}</td>
+                                <td>PHP {{ number_format((float) $booking->price, 2) }}</td>
+                                <td>
+                                    <span class="status-pill {{ $statusClass }}">
+                                        {{ ucfirst(str_replace('_', ' ', $booking->status)) }}
+                                    </span>
+                                    @if(!$canCancel)
+                                        <div class="status-note">Customer cancellation is locked after the job starts.</div>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div class="action-group">
+                                        <a class="btn-view" href="{{ route('customer.bookings.show', $booking->reference_code) }}">
+                                            View Details
+                                        </a>
 
-                        <div class="booking-grid">
-                            <div class="kv">
-                                <div class="k">Date</div>
-                                <div class="v">{{ $dateLabel }}</div>
-                            </div>
-                            <div class="kv">
-                                <div class="k">Schedule</div>
-                                <div class="v">{{ $timeLabel }}</div>
-                            </div>
-                            <div class="kv">
-                                <div class="k">Price</div>
-                                <div class="v">₱{{ number_format($b->price, 2) }}</div>
-                            </div>
-                        </div>
-
-                        <div class="booking-actions">
-                            <a class="btn-view" href="{{ route('customer.bookings.show', $b->reference_code) }}">
-                                View Details
-                            </a>
-                        </div>
-                    </div>
-                @endforeach
+                                        @if($canCancel)
+                                            <form method="POST"
+                                                  action="{{ route('customer.bookings.cancel', $booking->reference_code) }}"
+                                                  onsubmit="return confirm('Cancel this booking?');">
+                                                @csrf
+                                                <button type="submit" class="btn-cancel-inline">
+                                                    Cancel
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
 
+            <div class="mobile-list" aria-label="Bookings list (mobile)">
+                @foreach($currentBookings as $booking)
+                    @php
+                        $statusClass = strtolower((string) ($booking->status ?? ''));
+                        $canCancel = in_array($statusClass, $cancellableStatuses, true);
+
+                        $dateLabel = $booking->booking_date
+                            ? \Carbon\Carbon::parse($booking->booking_date)->format('F d, Y')
+                            : '—';
+
+                        $timeLabel = ($booking->time_start && $booking->time_end)
+                            ? \Carbon\Carbon::parse($booking->time_start)->format('h:i A') . ' – ' .
+                              \Carbon\Carbon::parse($booking->time_end)->format('h:i A')
+                            : '—';
+                    @endphp
+
+                    <article class="mobile-card">
+                        <div class="mobile-top">
+                            <div>
+                                <div class="booking-ref">{{ $booking->reference_code }}</div>
+                                <div class="booking-meta">{{ $booking->service }} • {{ $booking->option }}</div>
+                            </div>
+
+                            <span class="status-pill {{ $statusClass }}">
+                                {{ ucfirst(str_replace('_', ' ', $booking->status)) }}
+                            </span>
+                        </div>
+
+                        <div class="mobile-grid">
+                            <div>
+                                <div class="mobile-k">Date</div>
+                                <div class="mobile-v">{{ $dateLabel }}</div>
+                            </div>
+
+                            <div>
+                                <div class="mobile-k">Schedule</div>
+                                <div class="mobile-v">{{ $timeLabel }}</div>
+                            </div>
+
+                            <div>
+                                <div class="mobile-k">Provider</div>
+                                <div class="mobile-v">{{ $booking->provider_name ?: 'Provider not assigned' }}</div>
+                            </div>
+
+                            <div>
+                                <div class="mobile-k">Amount</div>
+                                <div class="mobile-v">PHP {{ number_format((float) $booking->price, 2) }}</div>
+                            </div>
+                        </div>
+
+                        <div class="mobile-actions">
+                            <a class="btn-view" href="{{ route('customer.bookings.show', $booking->reference_code) }}">
+                                View Details
+                            </a>
+
+                            @if($canCancel)
+                                <form method="POST"
+                                      action="{{ route('customer.bookings.cancel', $booking->reference_code) }}"
+                                      onsubmit="return confirm('Cancel this booking?');">
+                                    @csrf
+                                    <button type="submit" class="btn-cancel">
+                                        Cancel Booking
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+
+                        @if(!$canCancel)
+                            <div class="status-note">Customer cancellation is locked after the job starts.</div>
+                        @endif
+                    </article>
+                @endforeach
+            </div>
         @endif
 
     </div>

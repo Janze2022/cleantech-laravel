@@ -315,6 +315,9 @@ Route::prefix('customer')
         Route::get('/bookings/{reference}', [CustomerBookingController::class, 'show'])
             ->name('bookings.show');
 
+        Route::post('/bookings/{reference}/cancel', [CustomerBookingController::class, 'cancel'])
+            ->name('bookings.cancel');
+
         // REVIEWS
         Route::get('/reviews', [CustomerReviewController::class, 'index'])
             ->name('reviews');

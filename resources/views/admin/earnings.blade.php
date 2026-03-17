@@ -142,15 +142,16 @@
 
 .tool-grid{
     display:grid;
-    grid-template-columns:minmax(0, 1.55fr) minmax(320px, .95fr);
+    grid-template-columns:minmax(0, 1.75fr) minmax(300px, .9fr);
     gap:1rem;
+    align-items:start;
 }
 
 .tool-card{
     background:rgba(255,255,255,.02);
     border:1px solid var(--earn-border-soft);
     border-radius:16px;
-    padding:1rem;
+    padding:.95rem;
 }
 
 .tool-head{
@@ -191,8 +192,9 @@
 
 .filters-form{
     display:grid;
-    grid-template-columns:minmax(0, 1.6fr) repeat(3, minmax(0, .86fr));
+    grid-template-columns:minmax(0, 1.45fr) repeat(3, minmax(140px, .8fr)) auto auto;
     gap:.75rem;
+    align-items:end;
 }
 
 .print-form{
@@ -209,6 +211,11 @@
 
 .field.full{
     grid-column:1 / -1;
+}
+
+.field.action-field label{
+    opacity:0;
+    pointer-events:none;
 }
 
 .field label{
@@ -242,6 +249,11 @@
 .field input::-webkit-calendar-picker-indicator{
     filter:invert(1);
     opacity:.82;
+}
+
+.field.action-field .btn-admin,
+.field.action-field .btn-admin-soft{
+    width:100%;
 }
 
 .action-row{
@@ -624,18 +636,22 @@
                                 <option value="remitted" {{ $remittanceFilter === 'remitted' ? 'selected' : '' }}>Remitted</option>
                             </select>
                         </div>
-                    </div>
 
-                    <div class="action-row">
-                        <button type="submit" class="btn-admin">
-                            <i class="fa fa-search"></i>
-                            <span>Apply</span>
-                        </button>
+                        <div class="field action-field">
+                            <label>&nbsp;</label>
+                            <button type="submit" class="btn-admin">
+                                <i class="fa fa-search"></i>
+                                <span>Apply</span>
+                            </button>
+                        </div>
 
-                        <a href="{{ route('admin.earnings') }}" class="btn-admin-soft">
-                            <i class="fa fa-rotate-left"></i>
-                            <span>Reset</span>
-                        </a>
+                        <div class="field action-field">
+                            <label>&nbsp;</label>
+                            <a href="{{ route('admin.earnings') }}" class="btn-admin-soft">
+                                <i class="fa fa-rotate-left"></i>
+                                <span>Reset</span>
+                            </a>
+                        </div>
                     </div>
                 </form>
 

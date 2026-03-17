@@ -77,7 +77,7 @@
             left: 260px;
             right: 0;
             top: 0;
-            z-index: 100;
+            z-index: 1200;
         }
 
         .brand {
@@ -91,24 +91,82 @@
             color: #38bdf8;
         }
 
-        .admin-dropdown .dropdown-menu {
-            background: #020617;
-            border: 1px solid rgba(255,255,255,.08);
-            border-radius: 12px;
+        .admin-user-menu{
+            position: relative;
         }
 
-        .admin-dropdown .dropdown-item {
-            color: #cbd5f5;
-            font-size: .9rem;
+        .admin-user-trigger{
+            display:inline-flex;
+            align-items:center;
+            gap:.5rem;
+            min-height:40px;
+            padding:.5rem .85rem;
+            border-radius:999px;
+            border:1px solid rgba(255,255,255,.08);
+            background:rgba(255,255,255,.02);
+            color:#e5e7eb;
+            font-weight:700;
         }
 
-        .admin-dropdown .dropdown-item:hover {
-            background: #0f172a;
-            color: #38bdf8;
+        .admin-user-trigger:hover{
+            background:#0f172a;
         }
 
-        .admin-dropdown .logout {
-            color: #ef4444;
+        .admin-user-trigger i{
+            font-size:.82rem;
+            opacity:.8;
+            transition:transform .2s ease;
+        }
+
+        .admin-user-menu.open .admin-user-trigger i{
+            transform:rotate(180deg);
+        }
+
+        .admin-user-panel{
+            position:absolute;
+            top:calc(100% + 10px);
+            right:0;
+            min-width:220px;
+            padding:.45rem;
+            border-radius:16px;
+            border:1px solid rgba(255,255,255,.08);
+            background:#020617;
+            box-shadow:0 18px 40px rgba(0,0,0,.35);
+            display:none;
+            z-index:1300;
+        }
+
+        .admin-user-menu.open .admin-user-panel{
+            display:block;
+        }
+
+        .admin-user-item{
+            width:100%;
+            display:flex;
+            align-items:center;
+            gap:.65rem;
+            padding:.75rem .85rem;
+            border:none;
+            border-radius:12px;
+            background:transparent;
+            color:#cbd5f5;
+            text-decoration:none;
+            font-size:.9rem;
+            text-align:left;
+        }
+
+        .admin-user-item:hover{
+            background:#0f172a;
+            color:#38bdf8;
+        }
+
+        .admin-user-divider{
+            margin:.35rem 0;
+            border-top:1px solid rgba(255,255,255,.06);
+        }
+
+        .admin-user-item.logout{
+            color:#ef4444;
         }
 
         /* ================================
@@ -236,20 +294,32 @@
         </div>
     </div>
 
-    <div class="dropdown admin-dropdown">
-        <a class="text-decoration-none text-light dropdown-toggle" href="#" data-bs-toggle="dropdown">
-            {{ session('admin_name', 'Admin') }}
-        </a>
-        <ul class="dropdown-menu dropdown-menu-end mt-2">
-            <li><a class="dropdown-item" href="{{ route('admin.profile') }}">Profile</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-                <form method="POST" action="{{ route('admin.logout') }}">
-                    @csrf
-                    <button class="dropdown-item logout">Logout</button>
-                </form>
-            </li>
-        </ul>
+    <div class="admin-user-menu" id="adminUserMenu">
+        <button type="button"
+                class="admin-user-trigger"
+                id="adminUserTrigger"
+                aria-haspopup="true"
+                aria-expanded="false">
+            <span>{{ session('admin_name', 'Admin') }}</span>
+            <i class="fa fa-chevron-down"></i>
+        </button>
+
+        <div class="admin-user-panel" id="adminUserPanel">
+            <a class="admin-user-item" href="{{ route('admin.profile') }}">
+                <i class="fa fa-user"></i>
+                <span>Profile</span>
+            </a>
+
+            <div class="admin-user-divider"></div>
+
+            <form method="POST" action="{{ route('admin.logout') }}">
+                @csrf
+                <button type="submit" class="admin-user-item logout">
+                    <i class="fa fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -264,6 +334,49 @@
 function toggleAdminSidebar() {
     document.querySelector('.admin-sidebar').classList.toggle('show');
 }
+
+(function () {
+    const menu = document.getElementById('adminUserMenu');
+    const trigger = document.getElementById('adminUserTrigger');
+
+    if (!menu || !trigger) {
+        return;
+    }
+
+    function closeMenu() {
+        menu.classList.remove('open');
+        trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function openMenu() {
+        menu.classList.add('open');
+        trigger.setAttribute('aria-expanded', 'true');
+    }
+
+    trigger.addEventListener('click', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (menu.classList.contains('open')) {
+            closeMenu();
+            return;
+        }
+
+        openMenu();
+    });
+
+    document.addEventListener('click', function (event) {
+        if (!menu.contains(event.target)) {
+            closeMenu();
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeMenu();
+        }
+    });
+})();
 </script>
 
 </body>
