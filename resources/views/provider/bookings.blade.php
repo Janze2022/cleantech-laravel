@@ -279,6 +279,10 @@
         <div class="flash error">{{ $errors->first() }}</div>
     @endif
 
+    @if(!empty($loadError))
+        <div class="flash error">{{ $loadError }}</div>
+    @endif
+
     <div class="panel">
         @if ($bookings->isEmpty())
             <div class="empty-state">No active bookings yet.</div>

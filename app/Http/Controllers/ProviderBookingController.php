@@ -33,7 +33,12 @@ class ProviderBookingController extends Controller
 
     private function bookingAreasSubquery()
     {
-        if (!Schema::hasTable('booking_service_options') || !Schema::hasTable('service_options')) {
+        if (
+            !Schema::hasTable('booking_service_options') ||
+            !Schema::hasTable('service_options') ||
+            !Schema::hasColumns('booking_service_options', ['booking_id', 'service_option_id']) ||
+            !Schema::hasColumns('service_options', ['id', 'label'])
+        ) {
             return DB::table('bookings as b_fallback')
                 ->selectRaw('NULL as booking_id, NULL as areas_label')
                 ->whereRaw('1 = 0');
@@ -48,8 +53,39 @@ class ProviderBookingController extends Controller
             ->groupBy('bso.booking_id');
     }
 
-    private function customerNameSql(string $alias = 'c'): string
+    private function bookingsTableAvailable(): bool
     {
+        return Schema::hasTable('bookings')
+            && Schema::hasColumns('bookings', ['provider_id', 'status', 'reference_code']);
+    }
+
+    private function customersJoinAvailable(): bool
+    {
+        return Schema::hasTable('customers')
+            && Schema::hasColumn('customers', 'id')
+            && Schema::hasColumn('bookings', 'customer_id');
+    }
+
+    private function servicesJoinAvailable(): bool
+    {
+        return Schema::hasTable('services')
+            && Schema::hasColumn('services', 'id')
+            && Schema::hasColumn('bookings', 'service_id');
+    }
+
+    private function directOptionJoinAvailable(): bool
+    {
+        return Schema::hasTable('service_options')
+            && Schema::hasColumns('service_options', ['id', 'label'])
+            && Schema::hasColumn('bookings', 'service_option_id');
+    }
+
+    private function customerNameSql(string $alias = 'c', bool $joined = true): string
+    {
+        if (!$joined) {
+            return "'Customer'";
+        }
+
         $parts = [];
 
         if (Schema::hasColumn('customers', 'name')) {
@@ -79,11 +115,11 @@ class ProviderBookingController extends Controller
         return 'COALESCE(' . implode(', ', $parts) . ", 'Customer')";
     }
 
-    private function customerPhoneSql(string $customerAlias = 'c', string $bookingAlias = 'b'): string
+    private function customerPhoneSql(string $customerAlias = 'c', string $bookingAlias = 'b', bool $joined = true): string
     {
         $parts = [];
 
-        if (Schema::hasColumn('customers', 'phone')) {
+        if ($joined && Schema::hasColumn('customers', 'phone')) {
             $parts[] = "NULLIF(TRIM({$customerAlias}.phone), '')";
         }
 
@@ -98,19 +134,38 @@ class ProviderBookingController extends Controller
         return 'COALESCE(' . implode(', ', $parts) . ')';
     }
 
-    private function customerEmailSql(string $alias = 'c'): string
+    private function customerEmailSql(string $alias = 'c', bool $joined = true): string
     {
-        return Schema::hasColumn('customers', 'email')
+        return $joined && Schema::hasColumn('customers', 'email')
             ? "{$alias}.email"
             : 'NULL';
     }
 
-    private function applyBookingSearch($query, string $q, bool $hasDirectOptionJoin): void
+    private function serviceNameSql(string $alias = 's', bool $joined = true): string
     {
-        $query->where(function ($w) use ($q, $hasDirectOptionJoin) {
+        return $joined && Schema::hasColumn('services', 'name')
+            ? "COALESCE({$alias}.name, 'Service')"
+            : "'Service'";
+    }
+
+    private function applyBookingsOrder($query, array $preferredColumns): void
+    {
+        foreach ($preferredColumns as $column) {
+            if (Schema::hasColumn('bookings', $column)) {
+                $query->orderByDesc('b.' . $column);
+                return;
+            }
+        }
+
+        $query->orderByDesc('b.reference_code');
+    }
+
+    private function applyBookingSearch($query, string $q, bool $hasCustomersJoin, bool $hasServicesJoin, bool $hasDirectOptionJoin): void
+    {
+        $query->where(function ($w) use ($q, $hasCustomersJoin, $hasServicesJoin, $hasDirectOptionJoin) {
             $w->where('b.reference_code', 'like', "%{$q}%");
 
-            if (Schema::hasColumn('services', 'name')) {
+            if ($hasServicesJoin && Schema::hasColumn('services', 'name')) {
                 $w->orWhere('s.name', 'like', "%{$q}%");
             }
 
@@ -118,23 +173,23 @@ class ProviderBookingController extends Controller
                 $w->orWhere('o.label', 'like', "%{$q}%");
             }
 
-            if (Schema::hasColumn('customers', 'name')) {
+            if ($hasCustomersJoin && Schema::hasColumn('customers', 'name')) {
                 $w->orWhere('c.name', 'like', "%{$q}%");
             }
 
-            if (Schema::hasColumn('customers', 'first_name')) {
+            if ($hasCustomersJoin && Schema::hasColumn('customers', 'first_name')) {
                 $w->orWhere('c.first_name', 'like', "%{$q}%");
             }
 
-            if (Schema::hasColumn('customers', 'last_name')) {
+            if ($hasCustomersJoin && Schema::hasColumn('customers', 'last_name')) {
                 $w->orWhere('c.last_name', 'like', "%{$q}%");
             }
 
-            if (Schema::hasColumn('customers', 'email')) {
+            if ($hasCustomersJoin && Schema::hasColumn('customers', 'email')) {
                 $w->orWhere('c.email', 'like', "%{$q}%");
             }
 
-            if (Schema::hasColumn('customers', 'phone')) {
+            if ($hasCustomersJoin && Schema::hasColumn('customers', 'phone')) {
                 $w->orWhere('c.phone', 'like', "%{$q}%");
             }
 
@@ -228,50 +283,66 @@ class ProviderBookingController extends Controller
     public function index()
     {
         $providerId = $this->providerId();
-        $areasSub = $this->bookingAreasSubquery();
-        $hasDirectOptionJoin = Schema::hasTable('service_options')
-            && Schema::hasColumn('service_options', 'id')
-            && Schema::hasColumn('bookings', 'service_option_id');
-        $optionSql = $hasDirectOptionJoin && Schema::hasColumn('service_options', 'label')
-            ? 'o.label'
-            : 'NULL';
+        $bookings = collect();
+        $loadError = null;
 
-        $bookings = DB::table('bookings as b')
-            ->leftJoin('customers as c', 'c.id', '=', 'b.customer_id')
-            ->leftJoin('services as s', 's.id', '=', 'b.service_id')
-            ->leftJoinSub($areasSub, 'areas', function ($join) {
-                $join->on('areas.booking_id', '=', 'b.id');
-            })
-            ->where('b.provider_id', $providerId)
-            ->whereIn('b.status', ['confirmed', 'in_progress', 'paid'])
-            ->orderByDesc('b.created_at')
-            ->select(
-                'b.reference_code',
-                $this->columnOrDefault('bookings', 'booking_date', 'b'),
-                $this->columnOrDefault('bookings', 'requested_start_time', 'b'),
-                $this->columnOrDefault('bookings', 'time_start', 'b'),
-                $this->columnOrDefault('bookings', 'time_end', 'b'),
-                'b.status',
-                $this->columnOrDefault('bookings', 'price', 'b', null, '0'),
-                $this->columnOrDefault('bookings', 'address', 'b'),
-                $this->columnOrDefault('bookings', 'contact_phone', 'b'),
-                DB::raw($this->customerNameSql('c') . ' as name'),
-                DB::raw($this->customerPhoneSql('c', 'b') . ' as phone'),
-                DB::raw($this->customerEmailSql('c') . ' as email'),
-                DB::raw("COALESCE(s.name, 'Service') as service"),
-                DB::raw("COALESCE(areas.areas_label, {$optionSql}) as option"),
-                $this->columnOrDefault('bookings', 'created_at', 'b')
-            );
-
-        if ($hasDirectOptionJoin) {
-            $bookings->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
+        if (!$this->bookingsTableAvailable()) {
+            $loadError = 'Bookings data is not available right now.';
+            return view('provider.bookings', compact('bookings', 'loadError'));
         }
 
-        $bookings = $bookings->get();
+        try {
+            $areasSub = $this->bookingAreasSubquery();
+            $hasCustomersJoin = $this->customersJoinAvailable();
+            $hasServicesJoin = $this->servicesJoinAvailable();
+            $hasDirectOptionJoin = $this->directOptionJoinAvailable();
+            $optionSql = $hasDirectOptionJoin ? 'o.label' : 'NULL';
 
-        $bookings = $this->decorateBookings($bookings);
+            $query = DB::table('bookings as b')
+                ->leftJoinSub($areasSub, 'areas', function ($join) {
+                    $join->on('areas.booking_id', '=', 'b.id');
+                })
+                ->where('b.provider_id', $providerId)
+                ->whereIn('b.status', ['confirmed', 'in_progress', 'paid'])
+                ->select(
+                    'b.reference_code',
+                    $this->columnOrDefault('bookings', 'booking_date', 'b'),
+                    $this->columnOrDefault('bookings', 'requested_start_time', 'b'),
+                    $this->columnOrDefault('bookings', 'time_start', 'b'),
+                    $this->columnOrDefault('bookings', 'time_end', 'b'),
+                    'b.status',
+                    $this->columnOrDefault('bookings', 'price', 'b', null, '0'),
+                    $this->columnOrDefault('bookings', 'address', 'b'),
+                    $this->columnOrDefault('bookings', 'contact_phone', 'b'),
+                    DB::raw($this->customerNameSql('c', $hasCustomersJoin) . ' as name'),
+                    DB::raw($this->customerPhoneSql('c', 'b', $hasCustomersJoin) . ' as phone'),
+                    DB::raw($this->customerEmailSql('c', $hasCustomersJoin) . ' as email'),
+                    DB::raw($this->serviceNameSql('s', $hasServicesJoin) . ' as service'),
+                    DB::raw("COALESCE(areas.areas_label, {$optionSql}) as option"),
+                    $this->columnOrDefault('bookings', 'created_at', 'b')
+                );
 
-        return view('provider.bookings', compact('bookings'));
+            if ($hasCustomersJoin) {
+                $query->leftJoin('customers as c', 'c.id', '=', 'b.customer_id');
+            }
+
+            if ($hasServicesJoin) {
+                $query->leftJoin('services as s', 's.id', '=', 'b.service_id');
+            }
+
+            if ($hasDirectOptionJoin) {
+                $query->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
+            }
+
+            $this->applyBookingsOrder($query, ['created_at', 'booking_date', 'id']);
+
+            $bookings = $this->decorateBookings($query->get());
+        } catch (\Throwable $e) {
+            report($e);
+            $loadError = 'Unable to load bookings right now.';
+        }
+
+        return view('provider.bookings', compact('bookings', 'loadError'));
     }
 
     /**
@@ -281,110 +352,139 @@ class ProviderBookingController extends Controller
     public function history(Request $request)
     {
         $providerId = $this->providerId();
-        $areasSub = $this->bookingAreasSubquery();
-        $hasDirectOptionJoin = Schema::hasTable('service_options')
-            && Schema::hasColumn('service_options', 'id')
-            && Schema::hasColumn('bookings', 'service_option_id');
-        $optionSql = $hasDirectOptionJoin && Schema::hasColumn('service_options', 'label')
-            ? 'o.label'
-            : 'NULL';
-
         $q      = trim((string) $request->query('q', ''));
         $status = (string) $request->query('status', 'all');
         $from   = (string) $request->query('from', '');
         $to     = (string) $request->query('to', '');
+        $bookings = collect();
+        $loadError = null;
 
-        $query = DB::table('bookings as b')
-            ->leftJoin('customers as c', 'c.id', '=', 'b.customer_id')
-            ->leftJoin('services as s', 's.id', '=', 'b.service_id')
-            ->leftJoinSub($areasSub, 'areas', function ($join) {
-                $join->on('areas.booking_id', '=', 'b.id');
-            })
-            ->where('b.provider_id', $providerId)
-            ->whereIn('b.status', ['paid', 'completed', 'cancelled'])
-            ->select(
-                'b.reference_code',
-                $this->columnOrDefault('bookings', 'booking_date', 'b'),
-                $this->columnOrDefault('bookings', 'requested_start_time', 'b'),
-                $this->columnOrDefault('bookings', 'time_start', 'b'),
-                $this->columnOrDefault('bookings', 'time_end', 'b'),
-                'b.status',
-                $this->columnOrDefault('bookings', 'price', 'b', null, '0'),
-                $this->columnOrDefault('bookings', 'address', 'b'),
-                $this->columnOrDefault('bookings', 'contact_phone', 'b'),
-                DB::raw($this->customerNameSql('c') . ' as name'),
-                DB::raw($this->customerPhoneSql('c', 'b') . ' as phone'),
-                DB::raw($this->customerEmailSql('c') . ' as email'),
-                DB::raw("COALESCE(s.name, 'Service') as service"),
-                DB::raw("COALESCE(areas.areas_label, {$optionSql}) as option"),
-                $this->columnOrDefault('bookings', 'created_at', 'b')
-            );
-
-        if ($hasDirectOptionJoin) {
-            $query->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
+        if (!$this->bookingsTableAvailable()) {
+            $loadError = 'Booking history is not available right now.';
+            return view('provider.bookings_history', compact('bookings', 'q', 'status', 'from', 'to', 'loadError'));
         }
 
-        if ($from) {
-            $query->whereDate('b.booking_date', '>=', $from);
+        try {
+            $areasSub = $this->bookingAreasSubquery();
+            $hasCustomersJoin = $this->customersJoinAvailable();
+            $hasServicesJoin = $this->servicesJoinAvailable();
+            $hasDirectOptionJoin = $this->directOptionJoinAvailable();
+            $optionSql = $hasDirectOptionJoin ? 'o.label' : 'NULL';
+
+            $query = DB::table('bookings as b')
+                ->leftJoinSub($areasSub, 'areas', function ($join) {
+                    $join->on('areas.booking_id', '=', 'b.id');
+                })
+                ->where('b.provider_id', $providerId)
+                ->whereIn('b.status', ['paid', 'completed', 'cancelled'])
+                ->select(
+                    'b.reference_code',
+                    $this->columnOrDefault('bookings', 'booking_date', 'b'),
+                    $this->columnOrDefault('bookings', 'requested_start_time', 'b'),
+                    $this->columnOrDefault('bookings', 'time_start', 'b'),
+                    $this->columnOrDefault('bookings', 'time_end', 'b'),
+                    'b.status',
+                    $this->columnOrDefault('bookings', 'price', 'b', null, '0'),
+                    $this->columnOrDefault('bookings', 'address', 'b'),
+                    $this->columnOrDefault('bookings', 'contact_phone', 'b'),
+                    DB::raw($this->customerNameSql('c', $hasCustomersJoin) . ' as name'),
+                    DB::raw($this->customerPhoneSql('c', 'b', $hasCustomersJoin) . ' as phone'),
+                    DB::raw($this->customerEmailSql('c', $hasCustomersJoin) . ' as email'),
+                    DB::raw($this->serviceNameSql('s', $hasServicesJoin) . ' as service'),
+                    DB::raw("COALESCE(areas.areas_label, {$optionSql}) as option"),
+                    $this->columnOrDefault('bookings', 'created_at', 'b')
+                );
+
+            if ($hasCustomersJoin) {
+                $query->leftJoin('customers as c', 'c.id', '=', 'b.customer_id');
+            }
+
+            if ($hasServicesJoin) {
+                $query->leftJoin('services as s', 's.id', '=', 'b.service_id');
+            }
+
+            if ($hasDirectOptionJoin) {
+                $query->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
+            }
+
+            if ($from && Schema::hasColumn('bookings', 'booking_date')) {
+                $query->whereDate('b.booking_date', '>=', $from);
+            }
+
+            if ($to && Schema::hasColumn('bookings', 'booking_date')) {
+                $query->whereDate('b.booking_date', '<=', $to);
+            }
+
+            if ($status === 'not_completed') {
+                $query->whereIn('b.status', ['paid', 'cancelled']);
+            } elseif ($status !== 'all' && in_array($status, ['paid', 'completed', 'cancelled'], true)) {
+                $query->where('b.status', $status);
+            }
+
+            if ($q !== '') {
+                $this->applyBookingSearch($query, $q, $hasCustomersJoin, $hasServicesJoin, $hasDirectOptionJoin);
+            }
+
+            $this->applyBookingsOrder($query, ['booking_date', 'created_at', 'id']);
+
+            $bookings = $this->decorateBookings($query->get());
+        } catch (\Throwable $e) {
+            report($e);
+            $loadError = 'Unable to load booking history right now.';
         }
 
-        if ($to) {
-            $query->whereDate('b.booking_date', '<=', $to);
-        }
-
-        if ($status === 'not_completed') {
-            $query->whereIn('b.status', ['paid', 'cancelled']);
-        } elseif ($status !== 'all' && in_array($status, ['paid', 'completed', 'cancelled'], true)) {
-            $query->where('b.status', $status);
-        }
-
-        if ($q !== '') {
-            $this->applyBookingSearch($query, $q, $hasDirectOptionJoin);
-        }
-
-        $bookings = $query
-            ->orderByDesc('b.booking_date')
-            ->orderByDesc('b.created_at')
-            ->get();
-
-        $bookings = $this->decorateBookings($bookings);
-
-        return view('provider.bookings_history', compact('bookings', 'q', 'status', 'from', 'to'));
+        return view('provider.bookings_history', compact('bookings', 'q', 'status', 'from', 'to', 'loadError'));
     }
 
     public function show(string $reference_code)
     {
         $providerId = $this->providerId();
-        $areasSub = $this->bookingAreasSubquery();
-        $hasDirectOptionJoin = Schema::hasTable('service_options')
-            && Schema::hasColumn('service_options', 'id')
-            && Schema::hasColumn('bookings', 'service_option_id');
-        $optionSql = $hasDirectOptionJoin && Schema::hasColumn('service_options', 'label')
-            ? 'o.label'
-            : "''";
-
-        $booking = DB::table('bookings as b')
-            ->leftJoin('customers as c', 'c.id', '=', 'b.customer_id')
-            ->leftJoin('services as s', 's.id', '=', 'b.service_id')
-            ->leftJoinSub($areasSub, 'areas', function ($join) {
-                $join->on('areas.booking_id', '=', 'b.id');
-            })
-            ->where('b.provider_id', $providerId)
-            ->where('b.reference_code', $reference_code)
-            ->select(
-                'b.*',
-                DB::raw($this->customerNameSql('c') . ' as customer_name'),
-                DB::raw($this->customerEmailSql('c') . ' as customer_email'),
-                DB::raw($this->customerPhoneSql('c', 'b') . ' as customer_phone'),
-                DB::raw("COALESCE(s.name, 'Service') as service_name"),
-                DB::raw("COALESCE(areas.areas_label, {$optionSql}, '') as option_label")
-            );
-
-        if ($hasDirectOptionJoin) {
-            $booking->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
+        if (!$this->bookingsTableAvailable()) {
+            return redirect()->route('provider.bookings')
+                ->withErrors(['general' => 'Booking details are not available right now.']);
         }
 
-        $booking = $booking->first();
+        try {
+            $areasSub = $this->bookingAreasSubquery();
+            $hasCustomersJoin = $this->customersJoinAvailable();
+            $hasServicesJoin = $this->servicesJoinAvailable();
+            $hasDirectOptionJoin = $this->directOptionJoinAvailable();
+            $optionSql = $hasDirectOptionJoin ? 'o.label' : "''";
+
+            $query = DB::table('bookings as b')
+                ->leftJoinSub($areasSub, 'areas', function ($join) {
+                    $join->on('areas.booking_id', '=', 'b.id');
+                })
+                ->where('b.provider_id', $providerId)
+                ->where('b.reference_code', $reference_code)
+                ->select(
+                    'b.*',
+                    DB::raw($this->customerNameSql('c', $hasCustomersJoin) . ' as customer_name'),
+                    DB::raw($this->customerEmailSql('c', $hasCustomersJoin) . ' as customer_email'),
+                    DB::raw($this->customerPhoneSql('c', 'b', $hasCustomersJoin) . ' as customer_phone'),
+                    DB::raw($this->serviceNameSql('s', $hasServicesJoin) . ' as service_name'),
+                    DB::raw("COALESCE(areas.areas_label, {$optionSql}, '') as option_label")
+                );
+
+            if ($hasCustomersJoin) {
+                $query->leftJoin('customers as c', 'c.id', '=', 'b.customer_id');
+            }
+
+            if ($hasServicesJoin) {
+                $query->leftJoin('services as s', 's.id', '=', 'b.service_id');
+            }
+
+            if ($hasDirectOptionJoin) {
+                $query->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
+            }
+
+            $booking = $query->first();
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()->route('provider.bookings')
+                ->withErrors(['general' => 'Unable to load booking details right now.']);
+        }
 
         abort_if(!$booking, 404);
 

@@ -107,6 +107,15 @@
     font-size:.86rem;
 }
 
+.flash{
+    border-radius:14px;
+    padding:.9rem 1rem;
+    border:1px solid rgba(239,68,68,.25);
+    background:rgba(239,68,68,.10);
+    color:#fecaca;
+    font-weight:700;
+}
+
 .empty-state{
     text-align:center;
     color:var(--text-muted);
@@ -252,6 +261,10 @@
         <h2>Past Bookings</h2>
         <p>Review completed, paid, and cancelled jobs.</p>
     </div>
+
+    @if(!empty($loadError))
+        <div class="flash">{{ $loadError }}</div>
+    @endif
 
     <div class="panel">
         <form method="GET" action="{{ route('provider.bookings.history') }}">
