@@ -151,9 +151,25 @@ class ProviderProfileController extends Controller
         return $this->serveProviderImage($filename);
     }
 
+    public function publicDocument($filename)
+    {
+        return $this->serveProviderDocument($filename);
+    }
+
     protected function serveProviderImage($filename)
     {
         $path = $this->normalizeProfileImagePath($filename);
+
+        if (!$path || !Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        return Storage::disk('public')->response($path);
+    }
+
+    protected function serveProviderDocument($filename)
+    {
+        $path = $this->normalizeDocumentPath($filename);
 
         if (!$path || !Storage::disk('public')->exists($path)) {
             abort(404);
@@ -200,6 +216,32 @@ class ProviderProfileController extends Controller
 
         // fallback to basename only
         return 'providers/' . basename($value);
+    }
+
+    protected function normalizeDocumentPath($value)
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        $value = str_replace('\\', '/', trim($value));
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            $parsedPath = parse_url($value, PHP_URL_PATH);
+            $value = $parsedPath ?: $value;
+        }
+
+        $value = ltrim($value, '/');
+
+        if (Str::startsWith($value, 'storage/')) {
+            $value = substr($value, 8);
+        }
+
+        if (Str::startsWith($value, 'providers/id/')) {
+            return $value;
+        }
+
+        return 'providers/id/' . basename($value);
     }
 
     public function changePassword(Request $request)
