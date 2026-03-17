@@ -7,8 +7,8 @@
 @php
     $profileImageUrl = asset('images/avatar-placeholder.svg');
 
-    if (!empty($customer->profile_image) && file_exists(public_path('uploads/customers/' . $customer->profile_image))) {
-        $profileImageUrl = asset('uploads/customers/' . $customer->profile_image) . '?v=' . time();
+    if (!empty($customer->profile_image)) {
+        $profileImageUrl = route('customer.image.public', ['filename' => basename($customer->profile_image)]) . '?v=' . time();
     }
 @endphp
 

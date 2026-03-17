@@ -87,6 +87,10 @@ Route::get('/provider-document/{filename}', [ProviderProfileController::class, '
     ->where('filename', '.*')
     ->name('provider.document.public');
 
+Route::get('/customer-image/{filename}', [CustomerProfileController::class, 'publicImage'])
+    ->where('filename', '.*')
+    ->name('customer.image.public');
+
 /*
 |--------------------------------------------------------------------------
 | ADMIN — GUEST

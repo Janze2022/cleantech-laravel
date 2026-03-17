@@ -19,6 +19,8 @@ This is the CleanTech booking platform built on Laravel 12.
 - Set `APP_URL` to your real Laravel Cloud URL, not a local IP address
 - Set the correct MySQL credentials for Cloud
 - Set a valid `APP_KEY`
+- Attach an object storage bucket for uploads because the app filesystem is replaced on each deploy
+- Set `FILESYSTEM_DISK=s3` on Cloud, or set `PUBLIC_FILESYSTEM_DISK=s3` if you only want uploaded images/documents on object storage
 - Run `php artisan migrate --force` during deploy
 - Run `php artisan storage:link` if your deployment image does not already create it
 - Clear cached config/routes after env changes with:
@@ -29,6 +31,6 @@ php artisan optimize:clear
 
 ## Notes
 
-- Provider profile images are served through app routes, so they do not depend on direct public `storage` URLs.
-- Customer profile images are saved under `public/uploads/customers`.
+- Provider and customer uploaded images/documents are now read through app routes backed by the `public` disk.
+- On Laravel Cloud, local uploaded files are not persistent across redeploys unless the `public` disk points to object storage.
 - Several marketing pages still hotlink external third-party images. If any remain broken in production, replace them with locally hosted assets inside `public/`.

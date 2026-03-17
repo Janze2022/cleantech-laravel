@@ -677,8 +677,8 @@
 
                             $reviewerAvatar = asset('images/avatar-placeholder.svg');
 
-                            if (!empty($customerImage) && file_exists(public_path('uploads/customers/' . $customerImage))) {
-                                $reviewerAvatar = asset('uploads/customers/' . $customerImage) . '?v=' . time();
+                            if (!empty($customerImage)) {
+                                $reviewerAvatar = route('customer.image.public', ['filename' => basename($customerImage)]) . '?v=' . time();
                             }
                         @endphp
 
