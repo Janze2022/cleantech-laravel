@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -34,6 +35,79 @@ class ProviderBookingController extends Controller
                 GROUP_CONCAT(so2.label ORDER BY so2.label SEPARATOR ', ') as areas_label
             ")
             ->groupBy('bso.booking_id');
+    }
+
+    private function displayText($value, string $fallback = '-'): string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        return $value !== '' ? $value : $fallback;
+    }
+
+    private function formatDateDisplay($value, string $format = 'M d, Y'): string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        if ($value === '') {
+            return '-';
+        }
+
+        try {
+            return Carbon::parse($value)->format($format);
+        } catch (\Throwable $e) {
+            return $value;
+        }
+    }
+
+    private function formatTimeDisplay($value, string $format = 'h:i A'): string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        if ($value === '') {
+            return '-';
+        }
+
+        try {
+            return Carbon::parse($value)->format($format);
+        } catch (\Throwable $e) {
+            return $value;
+        }
+    }
+
+    private function formatTimeRangeDisplay($start, $end): string
+    {
+        $startLabel = $this->formatTimeDisplay($start);
+        $endLabel = $this->formatTimeDisplay($end);
+
+        if ($startLabel === '-' && $endLabel === '-') {
+            return '-';
+        }
+
+        if ($startLabel === '-') {
+            return $endLabel;
+        }
+
+        if ($endLabel === '-') {
+            return $startLabel;
+        }
+
+        return $startLabel . ' - ' . $endLabel;
+    }
+
+    private function decorateBookings($bookings)
+    {
+        return $bookings->map(function ($booking) {
+            $booking->display_booking_date = $this->formatDateDisplay($booking->booking_date);
+            $booking->display_requested_start_time = $this->formatTimeDisplay($booking->requested_start_time);
+            $booking->display_availability = $this->formatTimeRangeDisplay($booking->time_start, $booking->time_end);
+            $booking->display_time_range = $this->formatTimeRangeDisplay($booking->time_start, $booking->time_end);
+            $booking->display_option = $this->displayText($booking->option);
+            $booking->display_email = $this->displayText($booking->email);
+            $booking->display_phone = $this->displayText($booking->contact_phone ?? $booking->phone);
+            $booking->display_price = number_format((float) ($booking->price ?? 0), 2);
+
+            return $booking;
+        });
     }
 
     /**
@@ -73,6 +147,8 @@ class ProviderBookingController extends Controller
                 'b.created_at'
             )
             ->get();
+
+        $bookings = $this->decorateBookings($bookings);
 
         return view('provider.bookings', compact('bookings'));
     }
@@ -126,7 +202,9 @@ class ProviderBookingController extends Controller
             $query->whereDate('b.booking_date', '<=', $to);
         }
 
-        if ($status !== 'all' && in_array($status, ['paid', 'completed', 'cancelled'], true)) {
+        if ($status === 'not_completed') {
+            $query->whereIn('b.status', ['paid', 'cancelled']);
+        } elseif ($status !== 'all' && in_array($status, ['paid', 'completed', 'cancelled'], true)) {
             $query->where('b.status', $status);
         }
 
@@ -146,6 +224,8 @@ class ProviderBookingController extends Controller
             ->orderByDesc('b.booking_date')
             ->orderByDesc('b.created_at')
             ->get();
+
+        $bookings = $this->decorateBookings($bookings);
 
         return view('provider.bookings_history', compact('bookings', 'q', 'status', 'from', 'to'));
     }
