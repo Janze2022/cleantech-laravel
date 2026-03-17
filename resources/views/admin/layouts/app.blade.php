@@ -215,6 +215,9 @@
     <a href="{{ route('admin.bookings') }}" class="{{ request()->routeIs('admin.bookings') ? 'active' : '' }}">
         <i class="fa fa-calendar-check me-2"></i> Bookings
     </a>
+    <a href="{{ route('admin.earnings') }}" class="{{ request()->routeIs('admin.earnings*') ? 'active' : '' }}">
+        <i class="fa fa-wallet me-2"></i> Earnings
+    </a>
     <a href="{{ route('admin.reports') }}" class="{{ request()->routeIs('admin.reports') ? 'active' : '' }}">
         <i class="fa fa-chart-pie me-2"></i> Reports
     </a>

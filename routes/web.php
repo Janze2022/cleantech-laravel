@@ -50,6 +50,7 @@ use App\Http\Controllers\Admin\AdminProviderController;
 use App\Http\Controllers\Admin\AdminCustomerController;
 use App\Http\Controllers\Admin\AdminBookingController;
 use App\Http\Controllers\Admin\AdminReportController;
+use App\Http\Controllers\Admin\AdminEarningsController;
 use App\Http\Controllers\Admin\ProfileController;
 
 /*
@@ -181,6 +182,21 @@ Route::prefix('admin')
 
         Route::post('/bookings/{id}/status', [AdminBookingController::class, 'updateStatus'])
             ->name('bookings.status');
+
+        // =====================
+        // EARNINGS / REMITTANCE
+        // =====================
+        Route::get('/earnings', [AdminEarningsController::class, 'index'])
+            ->name('earnings');
+
+        Route::get('/earnings/print', [AdminEarningsController::class, 'print'])
+            ->name('earnings.print');
+
+        Route::post('/earnings/remit', [AdminEarningsController::class, 'markRemitted'])
+            ->name('earnings.remit');
+
+        Route::post('/earnings/outstanding', [AdminEarningsController::class, 'markOutstanding'])
+            ->name('earnings.outstanding');
 
         // =====================
         // PROFILE
