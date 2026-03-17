@@ -123,7 +123,7 @@
     display: grid;
     grid-template-columns: auto 1fr;
     gap: .7rem;
-    align-items: start;
+    align-items: center;
     padding: .78rem .85rem;
     border-radius: 16px;
     border: 1px solid rgba(255,255,255,.08);
@@ -140,6 +140,16 @@
     background: rgba(56,189,248,.12);
     border: 1px solid rgba(56,189,248,.2);
     font-size: .9rem;
+}
+
+.auth-point-icon svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .auth-point strong {
@@ -334,7 +344,15 @@
 
                 <div class="auth-points">
                     <div class="auth-point">
-                        <div class="auth-point-icon"><i class="bi bi-calendar-check"></i></div>
+                        <div class="auth-point-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M8 2v4"></path>
+                                <path d="M16 2v4"></path>
+                                <rect x="3" y="4" width="18" height="18" rx="3"></rect>
+                                <path d="M3 10h18"></path>
+                                <path d="m9.5 15 1.5 1.5 3.5-3.5"></path>
+                            </svg>
+                        </div>
                         <div>
                             <strong>Fast booking</strong>
                             <span>Choose a service and reserve an available provider with less friction.</span>
@@ -342,7 +360,12 @@
                     </div>
 
                     <div class="auth-point">
-                        <div class="auth-point-icon"><i class="bi bi-shield-check"></i></div>
+                        <div class="auth-point-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 3 5 6v5c0 5 3.5 8.5 7 10 3.5-1.5 7-5 7-10V6l-7-3Z"></path>
+                                <path d="m9.5 12.5 1.7 1.7 3.3-3.7"></path>
+                            </svg>
+                        </div>
                         <div>
                             <strong>Trusted providers</strong>
                             <span>See approved providers and follow cleaner status updates.</span>
@@ -350,7 +373,12 @@
                     </div>
 
                     <div class="auth-point">
-                        <div class="auth-point-icon"><i class="bi bi-stars"></i></div>
+                        <div class="auth-point-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path d="m12 3 1.8 3.7L18 8.2l-3 2.8.7 4.2-3.7-2-3.7 2 .7-4.2-3-2.8 4.2-1.5L12 3Z"></path>
+                                <path d="M19 15.5 20 18l2.5 1-2.5 1L19 22l-1-2.5-2.5-1 2.5-1L19 15.5Z"></path>
+                            </svg>
+                        </div>
                         <div>
                             <strong>Simple follow-up</strong>
                             <span>Track completed bookings and leave reviews from your dashboard.</span>
