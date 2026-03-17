@@ -18,7 +18,7 @@
                 </div>
 
                 <div class="ct-photo-card tall ct-reveal delay-1">
-                    <img src="https://images.unsplash.com/photo-1600566753052-a76f8b726051?auto=format&fit=crop&w=1400&q=80" alt="Customer planning a home service booking">
+                    <img src="https://images.unsplash.com/photo-1603712725038-e9334ae8f39f?auto=format&fit=crop&w=1400&q=80" alt="Cleaner preparing equipment for a service visit">
                 </div>
             </div>
         </div>

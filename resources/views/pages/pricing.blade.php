@@ -13,12 +13,12 @@
             <div class="ct-hero-shell">
                 <div class="ct-hero-main ct-reveal">
                     <span class="ct-eyebrow">Pricing</span>
-                    <h1 class="ct-title">Cleaner pricing blocks with the main amounts up front.</h1>
-                    <p class="ct-lead">Base prices are shown here to keep comparisons easier before the customer goes into the booking flow.</p>
+                    <h1 class="ct-title">Simple starting prices for each cleaning service.</h1>
+                    <p class="ct-lead">Use this page to compare the main service options before choosing the one that fits your home and budget.</p>
                 </div>
 
                 <div class="ct-photo-card tall ct-reveal delay-1">
-                    <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1400&q=80" alt="Cleaning pricing and service planning">
+                    <img src="https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=1400&q=80" alt="Reviewing service prices and booking options">
                 </div>
             </div>
         </div>

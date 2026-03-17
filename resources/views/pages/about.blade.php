@@ -22,7 +22,7 @@
                 </div>
 
                 <div class="ct-photo-card tall ct-reveal delay-1">
-                    <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1400&q=80" alt="CleanTech team discussion">
+                    <img src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1400&q=80" alt="CleanTech team planning services">
                 </div>
             </div>
         </div>
@@ -32,7 +32,7 @@
         <div class="container">
             <div class="ct-split">
                 <div class="ct-photo-card short ct-reveal">
-                    <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1400&q=80" alt="Professional cleaning service">
+                    <img src="https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&w=1400&q=80" alt="Professional home cleaning service">
                 </div>
 
                 <div class="ct-grid two">
