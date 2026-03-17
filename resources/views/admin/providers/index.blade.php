@@ -1131,10 +1131,15 @@
 @foreach($providers as $p)
     @php
         $docUrl = $p->id_image ? route('admin.providers.document', $p->id) : null;
-        $docExt = $p->id_image ? strtolower(pathinfo((string) $p->id_image, PATHINFO_EXTENSION)) : null;
-        $imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
-        $isImage = $docExt && in_array($docExt, $imageExts);
+        $rawDocName = trim((string) ($p->id_image ?? ''));
+        $docExt = $rawDocName !== ''
+            ? strtolower(pathinfo(parse_url($rawDocName, PHP_URL_PATH) ?? $rawDocName, PATHINFO_EXTENSION))
+            : null;
+
+        $imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif'];
+        $isImage = $docExt && in_array($docExt, $imageExts, true);
         $isPdf = $docExt === 'pdf';
+        $isPossiblyUnsupportedImage = in_array($docExt, ['heic', 'heif'], true);
 
         $fullName = trim(
             ($p->first_name ?? '') . ' ' .
@@ -1352,6 +1357,7 @@
                             <div class="section-mini-title">Uploaded ID Document</div>
 
                             @if($p->id_image && $docUrl)
+
                                 @if($isImage)
                                     <div class="doc-box">
                                         <div class="doc-thumb">
@@ -1382,6 +1388,22 @@
                                             <span class="file-note">Image document uploaded</span>
                                         </div>
                                     </div>
+
+                                @elseif($isPossiblyUnsupportedImage)
+                                    <div class="doc-box">
+                                        <div class="doc-actions">
+                                            <a href="{{ $docUrl }}"
+                                               target="_blank"
+                                               class="btn btn-outline-info btnx">
+                                                Open File
+                                            </a>
+
+                                            <span class="file-note">
+                                                This image format ({{ strtoupper($docExt) }}) may not preview in-browser. Open it in a new tab or convert it to JPG/PNG on upload.
+                                            </span>
+                                        </div>
+                                    </div>
+
                                 @elseif($isPdf)
                                     <div class="doc-box">
                                         <div class="doc-actions">
@@ -1404,6 +1426,7 @@
                                             <span class="file-note">PDF document uploaded</span>
                                         </div>
                                     </div>
+
                                 @else
                                     <div class="doc-box">
                                         <div class="doc-actions">
@@ -1429,6 +1452,7 @@
                                         </div>
                                     </div>
                                 @endif
+
                             @else
                                 <div class="text-white-50">No document uploaded</div>
                             @endif
