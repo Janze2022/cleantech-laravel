@@ -51,14 +51,10 @@
     100% { opacity: 0; }
 }
 
-/* Overlay */
 .auth-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        rgba(15,23,42,.45),
-        rgba(15,23,42,.55)
-    );
+    background: linear-gradient(rgba(15,23,42,.45), rgba(15,23,42,.55));
     z-index: 1;
 }
 
@@ -70,23 +66,63 @@
 }
 
 .password-wrapper input{
-    padding-right: 45px;
+    padding-right: 56px;
 }
 
 .password-toggle{
     position: absolute;
-    right: 12px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
-    border: none;
-    background: transparent;
-    font-size: 1.2rem;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(148,163,184,.28);
+    background: rgba(255,255,255,.06);
+    border-radius: 10px;
     cursor: pointer;
     color: #cbd5f5;
+    font-size: 0;
+    line-height: 0;
+    transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.password-toggle svg{
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .password-toggle:hover{
     color: #fff;
+    background: rgba(96,165,250,.12);
+    border-color: rgba(96,165,250,.35);
+}
+
+.password-toggle:focus{
+    outline: none;
+    color: #fff;
+    background: rgba(96,165,250,.14);
+    border-color: rgba(96,165,250,.45);
+    box-shadow: 0 0 0 .15rem rgba(96,165,250,.18);
+}
+
+.password-toggle .icon-hide{
+    display: none;
+}
+
+.password-toggle.is-visible .icon-show{
+    display: none;
+}
+
+.password-toggle.is-visible .icon-hide{
+    display: block;
 }
 
 /* =========================
@@ -97,23 +133,14 @@
     z-index: 3;
     width: 100%;
     max-width: 420px;
-
-    background: linear-gradient(
-        180deg,
-        rgba(15, 23, 42, .85),
-        rgba(30, 41, 59, .82)
-    );
-
+    background: linear-gradient(180deg, rgba(15, 23, 42, .85), rgba(30, 41, 59, .82));
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-
     border-radius: 20px;
     border: 1px solid rgba(96,165,250,.25);
-
     box-shadow:
         0 30px 80px rgba(2,6,23,.65),
         inset 0 1px 0 rgba(255,255,255,.06);
-
     padding: 2.3rem 2.1rem;
 }
 
@@ -165,7 +192,6 @@
     font-weight: 600;
     background: linear-gradient(135deg,#3b82f6,#0ea5e9);
     border: none;
-
     box-shadow:
         0 10px 30px rgba(59,130,246,.45),
         inset 0 1px 0 rgba(255,255,255,.25);
@@ -215,7 +241,6 @@
 
 <div class="auth-page">
 
-    <!-- Slides -->
     <div class="auth-slide slide-1"></div>
     <div class="auth-slide slide-2"></div>
     <div class="auth-slide slide-3"></div>
@@ -254,7 +279,6 @@
                 >
             </div>
 
-            <!-- PASSWORD WITH EYE -->
             <div class="mb-4 password-wrapper">
                 <input
                     type="password"
@@ -264,7 +288,7 @@
                     placeholder="Password"
                     required
                 >
-                <button type="button" class="password-toggle" id="togglePassword">👁</button>
+                <button type="button" class="password-toggle" id="togglePassword"></button>
             </div>
 
             <button class="btn btn-primary w-100">
@@ -298,22 +322,35 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function(){
-
     const togglePassword = document.getElementById("togglePassword");
     const passwordInput = document.getElementById("password");
 
+    if (!togglePassword || !passwordInput) {
+        return;
+    }
+
+    togglePassword.innerHTML = `
+        <svg class="icon-show" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        <svg class="icon-hide" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 3l18 18"></path>
+            <path d="M10.6 10.7a3 3 0 0 0 4 4"></path>
+            <path d="M9.4 5.2A11.8 11.8 0 0 1 12 5c6.5 0 10 7 10 7a13.7 13.7 0 0 1-4 4.9"></path>
+            <path d="M6.6 6.7C4.1 8.3 2.5 12 2.5 12a13.8 13.8 0 0 0 6 5.1"></path>
+        </svg>
+    `;
+    togglePassword.setAttribute("aria-label", "Show password");
+    togglePassword.setAttribute("aria-pressed", "false");
+
     togglePassword.addEventListener("click", function(){
-
-        if(passwordInput.type === "password"){
-            passwordInput.type = "text";
-            togglePassword.textContent = "👁‍🗨";
-        } else {
-            passwordInput.type = "password";
-            togglePassword.textContent = "👁";
-        }
-
+        const isVisible = passwordInput.type === "text";
+        passwordInput.type = isVisible ? "password" : "text";
+        togglePassword.classList.toggle("is-visible", !isVisible);
+        togglePassword.setAttribute("aria-label", isVisible ? "Show password" : "Hide password");
+        togglePassword.setAttribute("aria-pressed", isVisible ? "false" : "true");
     });
-
 });
 </script>
 

@@ -5,11 +5,41 @@
 @section('content')
 
 @php
-    // Expected from controller:
-    // $services => collection of services (id, name, description optional, image optional)
-    // $providers => collection of providers (id, first_name, last_name, city, province, profile_image optional)
-    // Optional:
-    // $serviceProviders => array: [service_id => [providers...]] for accurate filtering per service
+    $tz = config('app.timezone') ?: 'Asia/Manila';
+    $selectedDateString = $selectedDateString ?? now($tz)->toDateString();
+    $selectedDateLabel = $selectedDateLabel ?? \Carbon\Carbon::parse($selectedDateString, $tz)->format('F d, Y');
+    $todayDateString = $todayDateString ?? now($tz)->toDateString();
+
+    $allProvidersArr = $providers
+        ? $providers->map(function ($p) {
+            return [
+                'id' => $p->id,
+                'first_name' => $p->first_name,
+                'last_name' => $p->last_name,
+                'city' => $p->city,
+                'province' => $p->province,
+                'profile_image' => $p->profile_image,
+                'availability_date' => $p->availability_date ?? null,
+            ];
+        })->values()
+        : collect([]);
+
+    $svcProvidersArr = [];
+    if (isset($serviceProviders) && is_array($serviceProviders)) {
+        foreach ($serviceProviders as $sid => $plist) {
+            $svcProvidersArr[$sid] = collect($plist)->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'first_name' => $p->first_name,
+                    'last_name' => $p->last_name,
+                    'city' => $p->city,
+                    'province' => $p->province,
+                    'profile_image' => $p->profile_image,
+                    'availability_date' => $p->availability_date ?? null,
+                ];
+            })->values();
+        }
+    }
 @endphp
 
 <style>
@@ -23,7 +53,6 @@
     --warn:#f59e0b;
 }
 
-/* Layout */
 .page-shell{ max-width: 1200px; margin: 0 auto; }
 .card-dark{
     background: linear-gradient(180deg, var(--bg-card), var(--bg-deep));
@@ -31,10 +60,9 @@
     border-radius: 18px;
 }
 .card-pad{ padding: 1.25rem; }
-.page-title{ font-weight: 900; letter-spacing: -.02em; margin:0; }
+.page-title{ font-weight: 900; letter-spacing: -.02em; margin: 0; }
 .page-sub{ color: var(--text-muted); }
 
-/* Inputs */
 .input-dark, .select-dark{
     background: rgba(2, 6, 23, .55) !important;
     border: 1px solid rgba(255,255,255,.10) !important;
@@ -43,7 +71,6 @@
 }
 .input-dark::placeholder{ color: rgba(255,255,255,.35); }
 
-/* Buttons */
 .btn-outline-accent{
     background: transparent;
     border: 1px solid rgba(56,189,248,.45);
@@ -77,14 +104,13 @@
 }
 .btn-soft-success:hover{ background: rgba(34,197,94,.16); }
 
-/* Pills */
 .pill{
     display:inline-flex;
     align-items:center;
     gap:.35rem;
     padding:.22rem .55rem;
-    border-radius: 999px;
-    font-size: .75rem;
+    border-radius:999px;
+    font-size:.75rem;
     border: 1px solid rgba(255,255,255,.10);
     color: rgba(255,255,255,.72);
     background: rgba(2,6,23,.30);
@@ -93,7 +119,31 @@
 .pill.success{ border-color: rgba(34,197,94,.25); color: rgba(34,197,94,.95); }
 .pill.warn{ border-color: rgba(245,158,11,.25); color: rgba(245,158,11,.95); }
 
-/* Service cards */
+.date-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:.4rem;
+    padding:.3rem .65rem;
+    border-radius:999px;
+    font-size:.8rem;
+    color: rgba(255,255,255,.9);
+    border: 1px solid rgba(56,189,248,.28);
+    background: rgba(56,189,248,.10);
+}
+
+.filter-grid{
+    display:grid;
+    grid-template-columns:minmax(0,1.6fr) minmax(0,1.25fr) auto;
+    gap:.75rem;
+    align-items:end;
+}
+
+.date-filter-form{
+    display:flex;
+    gap:.65rem;
+    align-items:flex-end;
+}
+
 .service-card{
     background: linear-gradient(180deg, rgba(2,11,31,.85), rgba(2,6,23,.95));
     border: 1px solid rgba(255,255,255,.08);
@@ -120,8 +170,8 @@
     position: relative;
 }
 .service-thumb img{
-    width:100%;
-    height:100%;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
     opacity: .92;
     filter: contrast(1.05) saturate(1.05);
@@ -143,7 +193,6 @@
 .service-name{ font-weight: 900; color: rgba(255,255,255,.95); margin: 0 0 .35rem 0; }
 .service-desc{ color: rgba(255,255,255,.60); font-size: .92rem; margin: 0 0 .75rem 0; min-height: 2.4em; }
 
-/* Provider list */
 .provider-card{
     background: rgba(2, 6, 23, .35);
     border: 1px solid rgba(255,255,255,.08);
@@ -166,11 +215,9 @@
 .provider-name{ font-weight: 900; color: rgba(255,255,255,.92); line-height: 1.1; }
 .provider-loc{ color: rgba(255,255,255,.55); font-size: .86rem; }
 
-/* Panel */
 .panel-title{ font-weight: 900; margin: 0; }
 .panel-sub{ color: rgba(255,255,255,.55); font-size: .9rem; }
 
-/* Empty */
 .empty-hint{
     color: rgba(255,255,255,.55);
     border: 1px dashed rgba(255,255,255,.12);
@@ -178,14 +225,26 @@
     padding: 1.1rem;
     background: rgba(2,6,23,.25);
 }
+
+@media (max-width: 991px){
+    .filter-grid{
+        grid-template-columns:1fr;
+    }
+}
+
+@media (max-width: 767px){
+    .date-filter-form{
+        flex-direction:column;
+        align-items:stretch;
+    }
+}
 </style>
 
 <div class="page-shell py-4">
-
     <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
         <div>
             <h3 class="page-title">Services</h3>
-            <div class="page-sub">Select a service to see available providers on the right.</div>
+            <div class="page-sub">Select a service to see providers available on {{ $selectedDateLabel }}.</div>
         </div>
 
         <div class="d-flex gap-2">
@@ -194,17 +253,35 @@
     </div>
 
     <div class="row g-3">
-        {{-- LEFT: Services --}}
         <div class="col-12 col-lg-8">
             <div class="card-dark card-pad mb-3">
-                <div class="row g-2 align-items-end">
-                    <div class="col-12 col-md-8">
+                <div class="filter-grid">
+                    <div>
                         <label class="page-sub mb-1">Search services</label>
-                        <input id="svcSearch" type="text" class="form-control input-dark"
-                               placeholder="e.g. general cleaning, deep cleaning, specific area clean">
+                        <input
+                            id="svcSearch"
+                            type="text"
+                            class="form-control input-dark"
+                            placeholder="e.g. general cleaning, deep cleaning, specific area clean"
+                        >
                     </div>
-                    <div class="col-12 col-md-4 d-flex justify-content-md-end gap-2">
-                        <button id="clearSelection" class="btn btn-outline-accent" type="button">Clear Selection</button>
+
+                    <div>
+                        <label class="page-sub mb-1">Available date</label>
+                        <form method="GET" action="{{ route('customer.services') }}" class="date-filter-form">
+                            <input
+                                type="date"
+                                name="date"
+                                class="form-control input-dark"
+                                value="{{ $selectedDateString }}"
+                                min="{{ $todayDateString }}"
+                            >
+                            <button class="btn btn-outline-accent" type="submit">Apply Date</button>
+                        </form>
+                    </div>
+
+                    <div class="d-flex">
+                        <button id="clearSelection" class="btn btn-outline-accent w-100" type="button">Clear Selection</button>
                     </div>
                 </div>
             </div>
@@ -234,25 +311,24 @@
 
                             if (filter_var($img, FILTER_VALIDATE_URL)) {
                                 $thumb = $img;
+                            } elseif (str_starts_with($imgPath, 'storage/')) {
+                                $thumb = asset($imgPath);
                             } else {
-                                if (str_starts_with($imgPath, 'storage/')) {
-                                    $thumb = asset($imgPath);
-                                } else {
-                                    $thumb = asset('storage/' . $imgPath);
-                                }
+                                $thumb = asset('storage/' . $imgPath);
                             }
                         }
 
-                        $fallbackSrc = $fallbackThumb ?: 'https://via.placeholder.com/800x500?text=Service';
+                        $thumb = $thumb ?: $fallbackThumb;
                         $localFallback = '/images/service-generic.svg';
-                        $thumb = $thumb ?: $fallbackSrc;
                         $tag = str_contains($key, 'deep') ? 'Deep' : (str_contains($key, 'general') ? 'General' : 'Area');
                     @endphp
 
                     <div class="col-12 col-md-6">
-                        <div class="service-card"
-                             data-service-id="{{ $s->id }}"
-                             data-service-name="{{ e($svcName) }}">
+                        <div
+                            class="service-card"
+                            data-service-id="{{ $s->id }}"
+                            data-service-name="{{ e($svcName) }}"
+                        >
                             <div class="service-thumb">
                                 <img
                                     src="{{ $thumb }}"
@@ -268,7 +344,7 @@
                                 </div>
 
                                 <p class="service-desc">
-                                    {{ $desc ? $desc : 'Tap to view available providers for this service.' }}
+                                    {{ $desc ?: 'Tap to view available providers for this service.' }}
                                 </p>
 
                                 <div class="d-flex flex-wrap gap-2 mb-3">
@@ -278,7 +354,7 @@
                                 </div>
 
                                 <button class="btn btn-solid-accent w-100 btn-view-providers" type="button">
-                                    View Providers →
+                                    View Providers ->
                                 </button>
                             </div>
                         </div>
@@ -291,25 +367,32 @@
             </div>
         </div>
 
-        {{-- RIGHT: Providers --}}
         <div class="col-12 col-lg-4">
             <div class="card-dark card-pad">
                 <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
                     <div>
                         <h5 class="panel-title">Available Providers</h5>
-                        <div class="panel-sub" id="panelSub">Select a service to filter providers.</div>
+                        <div class="panel-sub" id="panelSub">Select a service to filter providers for {{ $selectedDateLabel }}.</div>
                     </div>
                     <span class="pill accent" id="providerCountPill">0</span>
                 </div>
 
+                <div class="mb-3">
+                    <span class="date-badge">Date: {{ $selectedDateLabel }}</span>
+                </div>
+
                 <div class="mb-2">
-                    <input id="provSearch" type="text" class="form-control input-dark"
-                           placeholder="Search provider name/location...">
+                    <input
+                        id="provSearch"
+                        type="text"
+                        class="form-control input-dark"
+                        placeholder="Search provider name/location..."
+                    >
                 </div>
 
                 <div id="providersList" class="d-grid gap-2">
                     <div class="empty-hint">
-                        Pick a service on the left to show who’s available.
+                        Pick a service on the left to show who is available on {{ $selectedDateLabel }}.
                     </div>
                 </div>
             </div>
@@ -317,39 +400,11 @@
     </div>
 </div>
 
-@php
-    $allProvidersArr = $providers ? $providers->map(function($p){
-        return [
-            'id' => $p->id,
-            'first_name' => $p->first_name,
-            'last_name' => $p->last_name,
-            'city' => $p->city,
-            'province' => $p->province,
-            'profile_image' => $p->profile_image,
-        ];
-    })->values() : collect([]);
-
-    $svcProvidersArr = [];
-    if (isset($serviceProviders) && is_array($serviceProviders)) {
-        foreach ($serviceProviders as $sid => $plist) {
-            $svcProvidersArr[$sid] = collect($plist)->map(function($p){
-                return [
-                    'id' => $p->id,
-                    'first_name' => $p->first_name,
-                    'last_name' => $p->last_name,
-                    'city' => $p->city,
-                    'province' => $p->province,
-                    'profile_image' => $p->profile_image,
-                ];
-            })->values();
-        }
-    }
-@endphp
-
 <script>
 (() => {
     const allProviders = @json($allProvidersArr);
     const serviceProviders = @json($svcProvidersArr);
+    const selectedDateLabel = @json($selectedDateLabel);
 
     const servicesGrid = document.getElementById('servicesGrid');
     const svcSearch = document.getElementById('svcSearch');
@@ -362,37 +417,36 @@
     let selectedServiceId = null;
     let selectedServiceName = null;
 
-    function escapeHtml(str){
+    function escapeHtml(str) {
         return (str ?? '').toString()
-            .replaceAll('&','&amp;')
-            .replaceAll('<','&lt;')
-            .replaceAll('>','&gt;')
-            .replaceAll('"','&quot;')
-            .replaceAll("'",'&#039;');
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
-    function fallbackAvatar(p){
+    function fallbackAvatar() {
         return `{{ asset('images/avatar-placeholder.svg') }}`;
     }
 
-    function avatarUrl(p){
-        if (p.profile_image) {
-            const filename = String(p.profile_image).split('/').pop();
+    function avatarUrl(provider) {
+        if (provider.profile_image) {
+            const filename = String(provider.profile_image).split('/').pop();
             return `{{ route('provider.image.public', ['filename' => '__FILENAME__']) }}`
                 .replace('__FILENAME__', filename) + `?v=${Date.now()}`;
         }
 
-        return fallbackAvatar(p);
+        return fallbackAvatar();
     }
 
-    function providerCardHTML(p){
-        const name = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || 'Provider';
-        const loc = `${p.city ?? ''}${p.province ? ', ' + p.province : ''}`.trim() || '—';
-
-        const viewUrl = `{{ url('/customer/providers') }}/${p.id}`;
-        const bookUrl = `{{ url('/customer/book') }}/${p.id}`;
-        const imgUrl = avatarUrl(p);
-        const fallback = fallbackAvatar(p);
+    function providerCardHTML(provider) {
+        const name = `${provider.first_name ?? ''} ${provider.last_name ?? ''}`.trim() || 'Provider';
+        const location = `${provider.city ?? ''}${provider.province ? ', ' + provider.province : ''}`.trim() || '-';
+        const viewUrl = `{{ url('/customer/providers') }}/${provider.id}`;
+        const bookUrl = `{{ url('/customer/book') }}/${provider.id}`;
+        const imgUrl = avatarUrl(provider);
+        const fallback = fallbackAvatar();
 
         return `
             <div class="provider-card">
@@ -405,7 +459,7 @@
                     >
                     <div class="flex-grow-1">
                         <div class="provider-name">${escapeHtml(name)}</div>
-                        <div class="provider-loc">${escapeHtml(loc)}</div>
+                        <div class="provider-loc">${escapeHtml(location)}</div>
                     </div>
                 </div>
                 <div class="d-flex gap-2 mt-3">
@@ -416,48 +470,58 @@
         `;
     }
 
-    function getProvidersForSelectedService(){
-        if (!selectedServiceId) return [];
-        if (serviceProviders && serviceProviders[selectedServiceId]) return serviceProviders[selectedServiceId];
+    function getProvidersForSelectedService() {
+        if (!selectedServiceId) {
+            return [];
+        }
+
+        if (serviceProviders && serviceProviders[selectedServiceId]) {
+            return serviceProviders[selectedServiceId];
+        }
+
         return allProviders;
     }
 
-    function applyProviderSearch(list){
+    function applyProviderSearch(list) {
         const term = (provSearch.value || '').trim().toLowerCase();
-        if (!term) return list;
 
-        return list.filter(p => {
-            const name = `${p.first_name ?? ''} ${p.last_name ?? ''}`.toLowerCase();
-            const loc = `${p.city ?? ''} ${p.province ?? ''}`.toLowerCase();
-            return name.includes(term) || loc.includes(term);
+        if (!term) {
+            return list;
+        }
+
+        return list.filter((provider) => {
+            const name = `${provider.first_name ?? ''} ${provider.last_name ?? ''}`.toLowerCase();
+            const location = `${provider.city ?? ''} ${provider.province ?? ''}`.toLowerCase();
+
+            return name.includes(term) || location.includes(term);
         });
     }
 
-    function renderProviders(){
-        if (!selectedServiceId){
-            providersList.innerHTML = `<div class="empty-hint">Pick a service on the left to show who’s available.</div>`;
+    function renderProviders() {
+        if (!selectedServiceId) {
+            providersList.innerHTML = `<div class="empty-hint">Pick a service on the left to show who is available on ${escapeHtml(selectedDateLabel)}.</div>`;
             providerCountPill.textContent = '0';
-            panelSub.textContent = 'Select a service to filter providers.';
+            panelSub.textContent = `Select a service to filter providers for ${selectedDateLabel}.`;
             return;
         }
 
-        panelSub.textContent = `Showing providers for: ${selectedServiceName}`;
+        panelSub.textContent = `Showing providers for ${selectedServiceName} on ${selectedDateLabel}`;
 
         let list = getProvidersForSelectedService();
         list = applyProviderSearch(list);
 
         providerCountPill.textContent = String(list.length);
 
-        if (!list.length){
-            providersList.innerHTML = `<div class="empty-hint">No providers match this service/search.</div>`;
+        if (!list.length) {
+            providersList.innerHTML = `<div class="empty-hint">No providers are available for ${escapeHtml(selectedServiceName)} on ${escapeHtml(selectedDateLabel)}.</div>`;
             return;
         }
 
         providersList.innerHTML = list.map(providerCardHTML).join('');
     }
 
-    function setSelectedService(card){
-        servicesGrid.querySelectorAll('.service-card.selected').forEach(el => el.classList.remove('selected'));
+    function setSelectedService(card) {
+        servicesGrid.querySelectorAll('.service-card.selected').forEach((element) => element.classList.remove('selected'));
 
         card.classList.add('selected');
         selectedServiceId = card.getAttribute('data-service-id');
@@ -467,27 +531,32 @@
         renderProviders();
     }
 
-    servicesGrid.addEventListener('click', (e) => {
-        const card = e.target.closest('.service-card');
-        if (!card) return;
+    servicesGrid?.addEventListener('click', (event) => {
+        const card = event.target.closest('.service-card');
+
+        if (!card) {
+            return;
+        }
+
         setSelectedService(card);
     });
 
-    svcSearch.addEventListener('input', () => {
+    svcSearch?.addEventListener('input', () => {
         const term = (svcSearch.value || '').trim().toLowerCase();
-        servicesGrid.querySelectorAll('.service-card').forEach(card => {
+
+        servicesGrid.querySelectorAll('.service-card').forEach((card) => {
             const name = (card.getAttribute('data-service-name') || '').toLowerCase();
             const show = !term || name.includes(term);
             card.parentElement.style.display = show ? '' : 'none';
         });
     });
 
-    provSearch.addEventListener('input', () => renderProviders());
+    provSearch?.addEventListener('input', () => renderProviders());
 
-    clearSelection.addEventListener('click', () => {
+    clearSelection?.addEventListener('click', () => {
         selectedServiceId = null;
         selectedServiceName = null;
-        servicesGrid.querySelectorAll('.service-card.selected').forEach(el => el.classList.remove('selected'));
+        servicesGrid.querySelectorAll('.service-card.selected').forEach((element) => element.classList.remove('selected'));
         provSearch.value = '';
         renderProviders();
     });

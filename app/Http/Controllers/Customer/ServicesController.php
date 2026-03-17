@@ -3,13 +3,33 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ServicesController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $today = now()->toDateString();
+        $timezone = config('app.timezone') ?: 'Asia/Manila';
+        $today = Carbon::now($timezone)->startOfDay();
+        $requestedDate = trim((string) $request->query('date', ''));
+
+        try {
+            $selectedDate = $requestedDate !== ''
+                ? Carbon::createFromFormat('Y-m-d', $requestedDate, $timezone)->startOfDay()
+                : $today->copy();
+        } catch (\Throwable $exception) {
+            $selectedDate = $today->copy();
+        }
+
+        if ($selectedDate->lt($today)) {
+            $selectedDate = $today->copy();
+        }
+
+        $selectedDateString = $selectedDate->toDateString();
+        $selectedDateLabel = $selectedDate->format('F d, Y');
+        $todayDateString = $today->toDateString();
 
         $services = DB::table('services')
             ->where('is_active', 1)
@@ -20,19 +40,26 @@ class ServicesController extends Controller
             ->where('service_providers.status', 'Approved')
             ->where('service_providers.is_verified', 1)
             ->where('provider_availability.status', 'active')
-            ->where('provider_availability.date', '>=', $today)
+            ->whereDate('provider_availability.date', $selectedDateString)
             ->select(
                 'service_providers.id',
                 'service_providers.first_name',
                 'service_providers.last_name',
                 'service_providers.city',
                 'service_providers.province',
-                'service_providers.profile_image'
+                'service_providers.profile_image',
+                'provider_availability.date as availability_date'
             )
             ->distinct()
             ->get();
 
-        return view('customer.services', compact('services', 'providers'));
+        return view('customer.services', compact(
+            'services',
+            'providers',
+            'selectedDateString',
+            'selectedDateLabel',
+            'todayDateString'
+        ));
     }
 
     public function provider(int $id)
