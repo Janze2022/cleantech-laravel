@@ -105,6 +105,7 @@ Route::prefix('admin')
     });
 
 /*
+|/*
 |--------------------------------------------------------------------------
 | ADMIN — AUTHENTICATED
 |--------------------------------------------------------------------------
@@ -138,14 +139,17 @@ Route::prefix('admin')
         Route::get('/providers', [AdminProviderController::class, 'index'])
             ->name('providers');
 
-        Route::post('/providers/{id}/approve', [AdminProviderController::class, 'approve'])
-            ->name('providers.approve');
-
         Route::get('/providers/{id}/document', [AdminProviderController::class, 'document'])
             ->name('providers.document');
 
+        Route::post('/providers/{id}/approve', [AdminProviderController::class, 'approve'])
+            ->name('providers.approve');
+
         Route::post('/providers/{id}/reject', [AdminProviderController::class, 'reject'])
             ->name('providers.reject');
+
+        Route::post('/providers/{id}/suspend', [AdminProviderController::class, 'suspend'])
+            ->name('providers.suspend');
 
         Route::post('/providers/{id}/unapprove', [AdminProviderController::class, 'unapprove'])
             ->name('providers.unapprove');
@@ -192,70 +196,6 @@ Route::prefix('admin')
         Route::get('/reports/export', [AdminReportController::class, 'export'])
             ->name('reports.export');
     });
-
-/*
-|--------------------------------------------------------------------------
-| CUSTOMER — GUEST
-|--------------------------------------------------------------------------
-*/
-Route::prefix('customer')
-    ->name('customer.')
-    ->middleware('customer.guest')
-    ->group(function () {
-
-        // REGISTER
-        Route::get('/register', [CustomerRegisterController::class, 'show'])
-            ->name('register');
-
-        Route::post('/register', [CustomerRegisterController::class, 'store'])
-            ->name('register.submit');
-
-        // REGISTER OTP
-        Route::get('/verify', [CustomerOtpController::class, 'show'])
-            ->name('verify');
-
-        Route::post('/verify', [CustomerOtpController::class, 'verify'])
-            ->name('verify.submit');
-
-        Route::post('/verify/resend', [CustomerOtpController::class, 'resend'])
-            ->name('otp.resend');
-
-        Route::get('/verified', fn () => view('customer.verified'))
-            ->name('verified');
-
-        // LOGIN
-        Route::get('/login', [CustomerLoginController::class, 'show'])
-            ->name('login');
-
-        Route::post('/login', [CustomerLoginController::class, 'login'])
-            ->name('login.submit');
-
-        // FORGOT PASSWORD
-        Route::get('/forgot-password', [CustomerForgotPasswordController::class, 'show'])
-            ->name('forgot');
-
-        Route::post('/forgot-password', [CustomerForgotPasswordController::class, 'sendOtp'])
-            ->name('forgot.submit');
-
-        // VERIFY OTP
-        Route::get('/forgot-password/verify', [CustomerForgotPasswordController::class, 'showVerifyOtp'])
-            ->name('forgot.verify');
-
-        Route::post('/forgot-password/verify', [CustomerForgotPasswordController::class, 'verifyOtp'])
-            ->name('forgot.verify.submit');
-
-        // RESET PASSWORD
-        Route::get('/forgot-password/reset', [CustomerForgotPasswordController::class, 'showResetForm'])
-            ->name('forgot.reset');
-
-        Route::post('/forgot-password/reset', [CustomerForgotPasswordController::class, 'resetPassword'])
-            ->name('forgot.reset.submit');
-
-        // SUCCESS
-        Route::get('/forgot-password/success', [CustomerForgotPasswordController::class, 'success'])
-            ->name('forgot.success');
-    });
-
 /*
 |--------------------------------------------------------------------------
 | CUSTOMER — AUTHENTICATED

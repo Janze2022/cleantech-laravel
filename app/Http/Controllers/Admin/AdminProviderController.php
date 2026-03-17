@@ -79,29 +79,48 @@ class AdminProviderController extends Controller
             ->select('id', 'id_image')
             ->first();
 
-        abort_if(!$provider || !$provider->id_image, 404, 'Document not found.');
+        abort_if(!$provider, 404, 'Provider not found.');
+        abort_if(empty($provider->id_image), 404, 'Document not found.');
 
-        $path = ltrim($provider->id_image, '/');
+        $rawPath = trim((string) $provider->id_image);
 
-        if (Storage::disk('public')->exists($path)) {
-            $disk = Storage::disk('public');
-        } else {
-            abort(404, 'Document not found.');
+        // Normalize possible saved formats:
+        // storage/ids/file.jpg
+        // /storage/ids/file.jpg
+        // ids/file.jpg
+        // public/ids/file.jpg
+        $path = ltrim($rawPath, '/');
+
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, 8); // remove "storage/"
         }
 
-        $mime = $disk->mimeType($path) ?: 'application/octet-stream';
-        $stream = $disk->readStream($path);
+        if (str_starts_with($path, 'public/')) {
+            $path = substr($path, 7); // remove "public/"
+        }
 
-        abort_if(!$stream, 404, 'Document not found.');
+        if (!Storage::disk('public')->exists($path)) {
+            abort(404, 'File not found in storage.');
+        }
+
+        $mime = Storage::disk('public')->mimeType($path) ?: 'application/octet-stream';
+        $stream = Storage::disk('public')->readStream($path);
+
+        abort_if(!$stream, 404, 'Unable to open document.');
 
         return response()->stream(function () use ($stream) {
             fpassthru($stream);
+
             if (is_resource($stream)) {
                 fclose($stream);
             }
         }, 200, [
             'Content-Type' => $mime,
             'Content-Disposition' => 'inline; filename="' . basename($path) . '"',
+            'Content-Length' => Storage::disk('public')->size($path),
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
             'X-Content-Type-Options' => 'nosniff',
         ]);
     }
