@@ -1,7 +1,13 @@
 <?php
 
 $cloudDiskName = env('PUBLIC_FILESYSTEM_DISK', env('FILESYSTEM_DISK', 'local'));
-$useCloudBackedPublicDisk = !empty($cloudDiskName) && !in_array($cloudDiskName, ['local', 'public'], true);
+$cloudCredentialsPresent =
+    filled(env('AWS_ACCESS_KEY_ID')) &&
+    filled(env('AWS_SECRET_ACCESS_KEY')) &&
+    filled(env('AWS_BUCKET')) &&
+    filled(env('AWS_ENDPOINT'));
+
+$useCloudBackedPublicDisk = $cloudCredentialsPresent && !empty($cloudDiskName) && $cloudDiskName !== 'local';
 
 $cloudDiskConfig = [
     'driver' => 's3',
