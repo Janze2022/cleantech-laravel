@@ -216,25 +216,34 @@
                         $desc = $s->description ?? $s->desc ?? null;
 
                         $key = strtolower($svcName);
-                        $fallbackThumb = null;
+                        $fallbackThumb = 'https://scentral.ca/wp-content/uploads/2020/01/cleaning-services-1210x723-1.jpeg';
 
                         if (str_contains($key, 'general')) {
-                            $fallbackThumb = '{{ asset('images/service-generic.svg') }}';
+                            $fallbackThumb = 'https://scentral.ca/wp-content/uploads/2020/01/cleaning-services-1210x723-1.jpeg';
                         } elseif (str_contains($key, 'deep')) {
-                            $fallbackThumb = '{{ asset('images/service-generic.svg') }}';
+                            $fallbackThumb = 'https://thepolishedbubbleco.com/wp-content/uploads/2025/09/deep-cleaning.jpg';
                         } elseif (str_contains($key, 'specific') || str_contains($key, 'area')) {
-                            $fallbackThumb = '{{ asset('images/service-generic.svg') }}';
+                            $fallbackThumb = 'https://homemaidbetter.com/wp-content/uploads/2018/07/Deep-Cleaning.jpg';
                         }
 
                         $img = $s->image ?? $s->service_image ?? null;
+                        $thumb = null;
 
                         if ($img) {
                             $imgPath = ltrim(str_replace('\\', '/', $img), '/');
-                            $thumb = url('/storage/' . $imgPath);
-                        } else {
-                            $thumb = $fallbackThumb;
+
+                            if (filter_var($img, FILTER_VALIDATE_URL)) {
+                                $thumb = $img;
+                            } else {
+                                if (str_starts_with($imgPath, 'storage/')) {
+                                    $thumb = asset($imgPath);
+                                } else {
+                                    $thumb = asset('storage/' . $imgPath);
+                                }
+                            }
                         }
 
+                        $fallbackSrc = $fallbackThumb ?: 'https://via.placeholder.com/800x500?text=Service';
                         $tag = str_contains($key, 'deep') ? 'Deep' : (str_contains($key, 'general') ? 'General' : 'Area');
                     @endphp
 
@@ -247,7 +256,7 @@
                                     <img
                                         src="{{ $thumb }}"
                                         alt="{{ $svcName }}"
-                                        onerror="this.onerror=null;this.src='{{ $fallbackThumb ?: 'https://via.placeholder.com/800x500?text=Service' }}';"
+                                        onerror="this.onerror=null;this.src='{{ $fallbackSrc }}';"
                                     >
                                 @else
                                     <div class="thumb-fallback">{{ strtoupper(substr($svcName,0,2)) }}</div>
