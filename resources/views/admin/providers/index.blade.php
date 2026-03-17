@@ -1122,7 +1122,7 @@
 
 @foreach($providers as $p)
     @php
-        $docUrl = $p->id_image ? route('admin.providers.document', $p->id) : null;
+        $docUrl = $p->id_image ? route('admin.providers.document', ['id' => $p->id], false) : null;
         $docExt = $p->id_image ? strtolower(pathinfo($p->id_image, PATHINFO_EXTENSION)) : null;
         $imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
         $isImage = $docExt && in_array($docExt, $imageExts);
@@ -1350,11 +1350,17 @@
                                             src="{{ $docUrl }}"
                                             alt="Uploaded ID Document"
                                             class="img-fluid rounded border"
+                                            onerror="this.classList.add('d-none'); this.nextElementSibling.classList.remove('d-none');"
                                             data-doc-url="{{ $docUrl }}"
                                             data-doc-type="image"
                                             data-bs-toggle="modal"
                                             data-bs-target="#documentPreviewModal"
                                         >
+                                        <div class="d-none mt-2">
+                                            <a href="{{ $docUrl }}" target="_blank" class="btn btn-outline-info btnx">
+                                                Open Uploaded Document
+                                            </a>
+                                        </div>
                                     </div>
                                 @elseif($isPdf)
                                     <div class="doc-box">

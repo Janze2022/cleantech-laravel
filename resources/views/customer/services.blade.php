@@ -244,6 +244,8 @@
                         }
 
                         $fallbackSrc = $fallbackThumb ?: 'https://via.placeholder.com/800x500?text=Service';
+                        $localFallback = '/images/service-generic.svg';
+                        $thumb = $thumb ?: $fallbackSrc;
                         $tag = str_contains($key, 'deep') ? 'Deep' : (str_contains($key, 'general') ? 'General' : 'Area');
                     @endphp
 
@@ -252,15 +254,11 @@
                              data-service-id="{{ $s->id }}"
                              data-service-name="{{ e($svcName) }}">
                             <div class="service-thumb">
-                                @if($thumb)
-                                    <img
-                                        src="{{ $thumb }}"
-                                        alt="{{ $svcName }}"
-                                        onerror="this.onerror=null;this.src='{{ $fallbackSrc }}';"
-                                    >
-                                @else
-                                    <div class="thumb-fallback">{{ strtoupper(substr($svcName,0,2)) }}</div>
-                                @endif
+                                <img
+                                    src="{{ $thumb }}"
+                                    alt="{{ $svcName }}"
+                                    onerror="this.onerror=null;this.src='{{ $localFallback }}';"
+                                >
                             </div>
 
                             <div class="service-body">
