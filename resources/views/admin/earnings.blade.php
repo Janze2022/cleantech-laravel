@@ -209,37 +209,39 @@
 
 .toolbar-grid{
     display:grid;
-    grid-template-columns:minmax(0, 1.6fr) minmax(340px, 1fr);
-    gap:12px;
-    align-items:start;
+    grid-template-columns:1fr;
+    gap:10px;
 }
 
 .tool-block{
-    border:1px solid var(--earn-border-soft);
-    border-radius:14px;
-    background:rgba(255,255,255,.02);
-    padding:12px;
+    border-top:1px solid var(--earn-border-soft);
+    padding-top:10px;
+}
+
+.tool-block:first-child{
+    border-top:none;
+    padding-top:0;
 }
 
 .tool-block-title{
-    margin:0 0 10px;
-    font-size:.82rem;
+    margin:0 0 8px;
+    font-size:.74rem;
     font-weight:900;
-    letter-spacing:.08em;
+    letter-spacing:.14em;
     text-transform:uppercase;
     color:#cbd5e1;
 }
 
 .filter-grid{
     display:grid;
-    grid-template-columns:minmax(0, 1.45fr) repeat(3, minmax(120px, .8fr)) auto auto;
+    grid-template-columns:minmax(230px, 1.7fr) repeat(3, minmax(145px, .9fr)) auto auto;
     gap:10px;
     align-items:end;
 }
 
 .print-grid{
     display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
+    grid-template-columns:minmax(140px, .72fr) minmax(240px, 1.15fr) minmax(190px, .9fr) auto;
     gap:10px;
     align-items:end;
 }
@@ -279,6 +281,7 @@
     background:linear-gradient(180deg, rgba(2,6,23,.92), rgba(4,10,24,.98));
     border:1px solid rgba(255,255,255,.10);
     color:var(--earn-text);
+    color-scheme:dark;
     border-radius:12px;
     padding:.7rem .9rem;
     outline:none;
@@ -294,6 +297,11 @@
 
 .field input::placeholder{
     color:rgba(203,213,225,.48);
+}
+
+.field select option{
+    background:#07111f;
+    color:#f8fafc;
 }
 
 .field input::-webkit-calendar-picker-indicator{
@@ -543,11 +551,11 @@
         grid-template-columns:repeat(2, minmax(0, 1fr));
     }
 
-    .toolbar-grid{
-        grid-template-columns:1fr;
+    .filter-grid{
+        grid-template-columns:repeat(3, minmax(0, 1fr));
     }
 
-    .filter-grid{
+    .print-grid{
         grid-template-columns:repeat(2, minmax(0, 1fr));
     }
 }
@@ -729,17 +737,17 @@
                                 </select>
                             </div>
 
-                            <div class="field full" id="printDateWrap">
+                            <div class="field" id="printDateWrap">
                                 <label for="printDate">Date</label>
                                 <input id="printDate" type="date" name="date" value="{{ $dateTo }}">
                             </div>
 
-                            <div class="field full" id="printMonthWrap" style="display:none;">
+                            <div class="field" id="printMonthWrap" style="display:none;">
                                 <label for="printMonth">Month</label>
                                 <input id="printMonth" type="month" name="month" value="{{ substr($dateTo, 0, 7) }}">
                             </div>
 
-                            <div class="field full action">
+                            <div class="field action">
                                 <label>&nbsp;</label>
                                 <button type="submit" class="btnx primary">
                                     <i class="fa fa-print"></i>

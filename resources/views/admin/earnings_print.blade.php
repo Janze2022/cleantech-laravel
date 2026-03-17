@@ -8,6 +8,7 @@
     $printRows = collect($printRows ?? []);
     $totals = $totals ?? [
         'providers_count' => 0,
+        'entry_count' => 0,
         'gross_amount' => 0,
         'remitted_amount' => 0,
         'outstanding_amount' => 0,
@@ -119,6 +120,12 @@
     border:1px solid rgba(255,255,255,.1);
     background: rgba(2,6,23,.92);
     color:#fff;
+    color-scheme:dark;
+}
+
+.print-control select option{
+    background:#07111f;
+    color:#f8fafc;
 }
 
 .print-summary{
@@ -338,13 +345,13 @@
 
             <div class="print-summary">
                 <div class="summary-box">
-                    <div class="summary-label">Providers</div>
-                    <div class="summary-value">{{ number_format((int) ($totals['providers_count'] ?? 0)) }}</div>
+                    <div class="summary-label">Entries</div>
+                    <div class="summary-value">{{ number_format((int) ($totals['entry_count'] ?? 0)) }}</div>
                 </div>
 
                 <div class="summary-box">
-                    <div class="summary-label">Bookings</div>
-                    <div class="summary-value">{{ number_format((int) ($totals['total_bookings'] ?? 0)) }}</div>
+                    <div class="summary-label">Providers</div>
+                    <div class="summary-value">{{ number_format((int) ($totals['providers_count'] ?? 0)) }}</div>
                 </div>
 
                 <div class="summary-box">
@@ -368,37 +375,41 @@
                 <table class="print-table">
                     <thead>
                         <tr>
+                            <th>Earned day</th>
                             <th>Provider</th>
-                            <th>Days</th>
                             <th>Bookings</th>
                             <th>Gross</th>
                             <th>Remitted</th>
                             <th>Outstanding</th>
+                            <th>Recorded on</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($printRows as $row)
-                            @php
-                                $statusText = (float) $row->outstanding_amount > 0
-                                    ? ((float) $row->remitted_amount > 0 ? 'Partial / Outstanding' : 'Outstanding')
-                                    : 'Fully Remitted';
-                            @endphp
                             <tr>
+                                <td>{{ \Carbon\Carbon::parse($row->remit_date)->format('M d, Y') }}</td>
                                 <td class="provider-col">
                                     <strong>{{ $row->provider_name }}</strong>
                                     @if(!empty($row->provider_phone))
                                         <span>{{ $row->provider_phone }}</span>
                                     @endif
+                                    <span>{{ $row->service_names !== '' ? $row->service_names : 'Service list unavailable' }}</span>
                                 </td>
-                                <td>{{ number_format((int) $row->total_days) }}</td>
                                 <td>{{ number_format((int) $row->total_bookings) }}</td>
                                 <td>PHP {{ number_format((float) $row->gross_amount, 2) }}</td>
-                                <td>PHP {{ number_format((float) $row->remitted_amount, 2) }}</td>
-                                <td>PHP {{ number_format((float) $row->outstanding_amount, 2) }}</td>
+                                <td>PHP {{ number_format($row->is_remitted ? (float) $row->gross_amount : 0, 2) }}</td>
+                                <td>PHP {{ number_format(!$row->is_remitted ? (float) $row->gross_amount : 0, 2) }}</td>
                                 <td>
-                                    <span class="status-text {{ (float) $row->outstanding_amount > 0 ? 'warn' : 'good' }}">
-                                        {{ $statusText }}
+                                    @if($row->is_remitted && !empty($row->remitted_at))
+                                        {{ \Carbon\Carbon::parse($row->remitted_at)->format('M d, Y h:i A') }}
+                                    @else
+                                        Waiting for payment
+                                    @endif
+                                </td>
+                                <td>
+                                    <span class="status-text {{ $row->is_remitted ? 'good' : 'warn' }}">
+                                        {{ $row->is_remitted ? 'Remitted' : 'Outstanding' }}
                                     </span>
                                 </td>
                             </tr>
@@ -407,19 +418,19 @@
                     <tfoot>
                         <tr>
                             <th>Total</th>
-                            <th>{{ number_format((int) ($period === 'monthly' ? $printRows->sum('total_days') : $printRows->count())) }}</th>
+                            <th>{{ number_format((int) ($totals['providers_count'] ?? 0)) }} provider{{ (int) ($totals['providers_count'] ?? 0) === 1 ? '' : 's' }}</th>
                             <th>{{ number_format((int) ($totals['total_bookings'] ?? 0)) }}</th>
                             <th>PHP {{ number_format((float) ($totals['gross_amount'] ?? 0), 2) }}</th>
                             <th>PHP {{ number_format((float) ($totals['remitted_amount'] ?? 0), 2) }}</th>
                             <th>PHP {{ number_format((float) ($totals['outstanding_amount'] ?? 0), 2) }}</th>
+                            <th>{{ number_format((int) $printRows->where('is_remitted', true)->count()) }} remitted row{{ $printRows->where('is_remitted', true)->count() === 1 ? '' : 's' }}</th>
                             <th></th>
                         </tr>
                     </tfoot>
                 </table>
 
                 <div class="print-footer">
-                    Generated from approved provider earnings only. Daily lists show one row per provider for the selected day.
-                    Monthly lists combine all eligible earning days inside the selected month and total them per provider.
+                    Approved providers only. The print list includes earnings dated inside the selected period, plus any rows actually marked remitted inside that same period.
                 </div>
             </section>
         @endif

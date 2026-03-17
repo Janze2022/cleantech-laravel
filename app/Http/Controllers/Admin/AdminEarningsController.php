@@ -119,54 +119,26 @@ class AdminEarningsController extends Controller
             $monthStart = Carbon::createFromFormat('Y-m', $selectedMonth, $tz)->startOfMonth()->toDateString();
             $monthEnd = Carbon::createFromFormat('Y-m', $selectedMonth, $tz)->endOfMonth()->toDateString();
 
-            $rows = $this->buildLedgerCollection($monthStart, $monthEnd);
+            $rows = $this->buildPrintLedgerCollection($monthStart, $monthEnd);
 
             if ($providerId > 0) {
                 $rows = $rows->where('provider_id', $providerId)->values();
             }
 
-            $printRows = $rows->groupBy('provider_id')->map(function ($group) {
-                $first = $group->first();
-
-                return (object) [
-                    'provider_id' => (int) $first->provider_id,
-                    'provider_name' => (string) $first->provider_name,
-                    'provider_phone' => (string) $first->provider_phone,
-                    'total_days' => $group->count(),
-                    'remitted_days' => $group->where('is_remitted', true)->count(),
-                    'outstanding_days' => $group->where('is_remitted', false)->count(),
-                    'total_bookings' => (int) $group->sum('total_bookings'),
-                    'gross_amount' => (float) $group->sum('gross_amount'),
-                    'remitted_amount' => (float) $group->where('is_remitted', true)->sum('gross_amount'),
-                    'outstanding_amount' => (float) $group->where('is_remitted', false)->sum('gross_amount'),
-                ];
-            })->sortBy('provider_name')->values();
+            $printRows = $this->sortPrintRows($rows);
 
             $title = 'Monthly Remittance List';
             $subtitle = Carbon::createFromFormat('Y-m', $selectedMonth, $tz)->format('F Y');
             $selectedDate = null;
         } else {
             $selectedDate = $this->sanitizeDate($request->query('date'), $today->toDateString());
-            $rows = $this->buildLedgerCollection($selectedDate, $selectedDate);
+            $rows = $this->buildPrintLedgerCollection($selectedDate, $selectedDate);
 
             if ($providerId > 0) {
                 $rows = $rows->where('provider_id', $providerId)->values();
             }
 
-            $printRows = $rows->map(function ($row) {
-                return (object) [
-                    'provider_id' => (int) $row->provider_id,
-                    'provider_name' => (string) $row->provider_name,
-                    'provider_phone' => (string) $row->provider_phone,
-                    'total_days' => 1,
-                    'remitted_days' => $row->is_remitted ? 1 : 0,
-                    'outstanding_days' => $row->is_remitted ? 0 : 1,
-                    'total_bookings' => (int) $row->total_bookings,
-                    'gross_amount' => (float) $row->gross_amount,
-                    'remitted_amount' => $row->is_remitted ? (float) $row->gross_amount : 0.0,
-                    'outstanding_amount' => !$row->is_remitted ? (float) $row->gross_amount : 0.0,
-                ];
-            })->sortBy('provider_name')->values();
+            $printRows = $this->sortPrintRows($rows);
 
             $title = 'Daily Remittance List';
             $subtitle = Carbon::parse($selectedDate, $tz)->format('F d, Y');
@@ -174,10 +146,11 @@ class AdminEarningsController extends Controller
         }
 
         $totals = [
-            'providers_count' => $printRows->count(),
+            'providers_count' => $printRows->pluck('provider_id')->unique()->count(),
+            'entry_count' => $printRows->count(),
             'gross_amount' => round((float) $printRows->sum('gross_amount'), 2),
-            'remitted_amount' => round((float) $printRows->sum('remitted_amount'), 2),
-            'outstanding_amount' => round((float) $printRows->sum('outstanding_amount'), 2),
+            'remitted_amount' => round((float) $printRows->where('is_remitted', true)->sum('gross_amount'), 2),
+            'outstanding_amount' => round((float) $printRows->where('is_remitted', false)->sum('gross_amount'), 2),
             'total_bookings' => (int) $printRows->sum('total_bookings'),
         ];
 
@@ -335,7 +308,78 @@ class AdminEarningsController extends Controller
                 ->selectRaw('NULL as remitted_at');
         }
 
-        return $query->get()->map(function ($row) {
+        return $this->normalizeLedgerRows($query->get());
+    }
+
+    private function buildPrintLedgerCollection(string $dateFrom, string $dateTo): Collection
+    {
+        if (!Schema::hasTable('provider_remittances')) {
+            return $this->buildLedgerCollection($dateFrom, $dateTo);
+        }
+
+        $providerNameExpr = $this->providerNameExpression('sp');
+
+        $query = DB::table('bookings as b')
+            ->join('service_providers as sp', 'sp.id', '=', 'b.provider_id')
+            ->leftJoin('provider_remittances as pr', function ($join) {
+                $join->on('pr.provider_id', '=', 'b.provider_id')
+                    ->on('pr.remit_date', '=', 'b.booking_date');
+            })
+            ->whereNotNull('b.provider_id')
+            ->whereNotNull('b.booking_date')
+            ->whereRaw("LOWER(b.status) in ('paid', 'completed')")
+            ->where(function ($builder) use ($dateFrom, $dateTo) {
+                $builder
+                    ->where(function ($dateQuery) use ($dateFrom, $dateTo) {
+                        $dateQuery->whereDate('b.booking_date', '>=', $dateFrom)
+                            ->whereDate('b.booking_date', '<=', $dateTo);
+                    })
+                    ->orWhere(function ($dateQuery) use ($dateFrom, $dateTo) {
+                        $dateQuery->whereNotNull('pr.remitted_at')
+                            ->whereDate('pr.remitted_at', '>=', $dateFrom)
+                            ->whereDate('pr.remitted_at', '<=', $dateTo);
+                    });
+            })
+            ->groupBy('b.provider_id', 'b.booking_date')
+            ->selectRaw('b.provider_id')
+            ->selectRaw('b.booking_date as remit_date')
+            ->selectRaw('COUNT(*) as total_bookings')
+            ->selectRaw('SUM(COALESCE(b.price, 0)) as gross_amount')
+            ->selectRaw("COALESCE(MAX($providerNameExpr), CONCAT('Provider #', b.provider_id)) as provider_name")
+            ->selectRaw("MAX(COALESCE(pr.status, 'pending')) as remittance_status")
+            ->selectRaw('MAX(pr.recorded_amount) as recorded_amount')
+            ->selectRaw('MAX(pr.remitted_at) as remitted_at');
+
+        if (Schema::hasColumn('service_providers', 'status')) {
+            $query->whereRaw("LOWER(COALESCE(sp.status, '')) = 'approved'");
+        }
+
+        if (Schema::hasColumn('service_providers', 'phone')) {
+            $query->selectRaw("MAX(COALESCE(NULLIF(TRIM(sp.phone), ''), '')) as provider_phone");
+        } else {
+            $query->selectRaw("'' as provider_phone");
+        }
+
+        if (Schema::hasTable('services') && Schema::hasColumn('bookings', 'service_id')) {
+            $query->leftJoin('services as s', 's.id', '=', 'b.service_id');
+
+            if (Schema::hasColumn('services', 'name')) {
+                $query->selectRaw("GROUP_CONCAT(DISTINCT COALESCE(NULLIF(TRIM(s.name), ''), 'Service') ORDER BY s.name SEPARATOR ', ') as service_names");
+            } elseif (Schema::hasColumn('services', 'service_name')) {
+                $query->selectRaw("GROUP_CONCAT(DISTINCT COALESCE(NULLIF(TRIM(s.service_name), ''), 'Service') ORDER BY s.service_name SEPARATOR ', ') as service_names");
+            } else {
+                $query->selectRaw("'' as service_names");
+            }
+        } else {
+            $query->selectRaw("'' as service_names");
+        }
+
+        return $this->normalizeLedgerRows($query->get());
+    }
+
+    private function normalizeLedgerRows(Collection $rows): Collection
+    {
+        return $rows->map(function ($row) {
             $row->provider_name = trim((string) ($row->provider_name ?? '')) ?: 'Unnamed Provider';
             $row->provider_phone = trim((string) ($row->provider_phone ?? ''));
             $row->service_names = trim((string) ($row->service_names ?? ''));
@@ -348,6 +392,25 @@ class AdminEarningsController extends Controller
 
             return $row;
         });
+    }
+
+    private function sortPrintRows(Collection $rows): Collection
+    {
+        return $rows->sort(function ($a, $b) {
+            $aMoment = !empty($a->remitted_at)
+                ? Carbon::parse($a->remitted_at)->format('Y-m-d H:i:s')
+                : ((string) $a->remit_date . ' 00:00:00');
+            $bMoment = !empty($b->remitted_at)
+                ? Carbon::parse($b->remitted_at)->format('Y-m-d H:i:s')
+                : ((string) $b->remit_date . ' 00:00:00');
+
+            $momentCompare = strcmp($bMoment, $aMoment);
+            if ($momentCompare !== 0) {
+                return $momentCompare;
+            }
+
+            return strcmp((string) $a->provider_name, (string) $b->provider_name);
+        })->values();
     }
 
     private function providerOptions(): Collection
