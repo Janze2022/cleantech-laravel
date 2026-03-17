@@ -12,21 +12,13 @@
         <div class="container">
             <div class="ct-hero-shell">
                 <div class="ct-hero-main ct-reveal">
-                    <span class="ct-eyebrow">CleanTech Journal</span>
-                    <h1 class="ct-title">Short, useful reads for cleaner homes and smoother booking habits.</h1>
-                    <p class="ct-lead">This page is meant to feel light and readable, so the blog stays closer to practical tips than long technical articles. Think quick guidance, seasonal reminders, and easier service decisions.</p>
+                    <span class="ct-eyebrow">CleanTech Blog</span>
+                    <h1 class="ct-title">Short reads for cleaner homes and better booking choices.</h1>
+                    <p class="ct-lead">Helpful tips, light reading, and quick reminders that fit the actual services on CleanTech.</p>
                 </div>
 
-                <div class="ct-hero-side ct-reveal delay-1">
-                    <div>
-                        <div class="ct-side-label">Focus</div>
-                        <div class="ct-side-value">Helpful advice you can actually use this week.</div>
-                    </div>
-                    <p class="ct-side-copy">From routine upkeep to deciding when a deep clean makes sense, these topics support the actual services offered on CleanTech.</p>
-                    <div class="ct-actions">
-                        <a href="{{ route('services') }}" class="ct-button">View Services</a>
-                        <a href="{{ route('pricing') }}" class="ct-button secondary">See Pricing</a>
-                    </div>
+                <div class="ct-photo-card tall ct-reveal delay-1">
+                    <img src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1400&q=80" alt="Workspace and planning">
                 </div>
             </div>
         </div>
@@ -35,38 +27,31 @@
     <section class="ct-section">
         <div class="container">
             <div class="ct-grid three">
-                <article class="ct-blog-card featured ct-reveal">
-                    <div class="ct-blog-meta">Featured guide</div>
-                    <h3>When routine cleaning is enough and when it is time to book a deeper reset</h3>
-                    <p>A simple way to decide between general cleaning, specific area cleaning, and a full deep cleaning schedule without overbooking or overspending.</p>
-                    <div class="ct-badges">
-                        <span class="ct-badge">General cleaning</span>
-                        <span class="ct-badge">Deep cleaning</span>
+                <article class="ct-blog-card ct-reveal">
+                    <div class="ct-card-media">
+                        <img src="https://images.unsplash.com/photo-1585421514738-01798e348b17?auto=format&fit=crop&w=1400&q=80" alt="Cleaning tools">
                     </div>
+                    <div class="ct-blog-meta">Cleaning tips</div>
+                    <h3>Easy habits that keep mess from building up</h3>
+                    <p>Small routines that make weekly cleaning feel lighter.</p>
                 </article>
 
                 <article class="ct-blog-card ct-reveal delay-1">
+                    <div class="ct-card-media">
+                        <img src="https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1400&q=80" alt="Home cleaning scene">
+                    </div>
                     <div class="ct-blog-meta">Home care</div>
-                    <h3>Small habits that keep kitchens from turning into weekend projects</h3>
-                    <p>Daily wipe-downs, sink resets, and surface routines that keep grease and clutter from building up too fast.</p>
+                    <h3>When a deep clean makes more sense</h3>
+                    <p>Know when routine cleaning is no longer enough.</p>
                 </article>
 
                 <article class="ct-blog-card ct-reveal delay-2">
-                    <div class="ct-blog-meta">Booking tips</div>
-                    <h3>How to choose the right day before you tap Book Now</h3>
-                    <p>Pick service dates that line up with provider availability and give you the best chance of a smooth visit.</p>
-                </article>
-
-                <article class="ct-blog-card ct-reveal">
-                    <div class="ct-blog-meta">Space planning</div>
-                    <h3>Why specific area cleaning works well for high-traffic rooms</h3>
-                    <p>If the whole home does not need attention, targeted cleaning is often the more practical and budget-friendly choice.</p>
-                </article>
-
-                <article class="ct-blog-card ct-reveal delay-1">
-                    <div class="ct-blog-meta">Seasonal reset</div>
-                    <h3>Signs your home is due for a full deep clean</h3>
-                    <p>Look for recurring dust, neglected corners, and spaces that stay messy even after a quick routine pass.</p>
+                    <div class="ct-card-media">
+                        <img src="https://images.unsplash.com/photo-1497366412874-3415097a27e7?auto=format&fit=crop&w=1400&q=80" alt="Clean office space">
+                    </div>
+                    <div class="ct-blog-meta">Workspaces</div>
+                    <h3>Why cleaner spaces improve focus</h3>
+                    <p>A neat room or office changes how people work and feel.</p>
                 </article>
             </div>
         </div>

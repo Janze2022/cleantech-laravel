@@ -12,17 +12,13 @@
         <div class="container">
             <div class="ct-hero-shell">
                 <div class="ct-hero-main ct-reveal">
-                    <span class="ct-eyebrow">How CleanTech Works</span>
-                    <h1 class="ct-title">From service selection to provider arrival, the flow is meant to stay easy to follow.</h1>
-                    <p class="ct-lead">Instead of packing too much information into one place, this page keeps the process down to a few clear steps so customers understand what happens next at each stage.</p>
+                    <span class="ct-eyebrow">How It Works</span>
+                    <h1 class="ct-title">A simpler path from service selection to completed booking.</h1>
+                    <p class="ct-lead">CleanTech is meant to feel clear at each step, not overloaded with too many screens or too much explanation.</p>
                 </div>
 
-                <div class="ct-hero-side ct-reveal delay-1">
-                    <div>
-                        <div class="ct-side-label">Booking rhythm</div>
-                        <div class="ct-side-value">Choose, match, confirm, complete, review.</div>
-                    </div>
-                    <p class="ct-side-copy">CleanTech is structured so the booking journey stays readable on desktop and mobile, especially once provider availability is tied to a real date.</p>
+                <div class="ct-photo-card tall ct-reveal delay-1">
+                    <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1400&q=80" alt="Cleaning workflow">
                 </div>
             </div>
         </div>
@@ -33,38 +29,26 @@
             <div class="ct-step-grid">
                 <article class="ct-step ct-reveal">
                     <div class="ct-step-number">1</div>
-                    <h3>Pick the service</h3>
-                    <p>Choose between general cleaning, deep cleaning, or specific area cleaning based on what your space actually needs.</p>
+                    <h3>Choose a service</h3>
+                    <p>Pick general, deep, or specific area cleaning.</p>
                 </article>
 
                 <article class="ct-step ct-reveal delay-1">
                     <div class="ct-step-number">2</div>
-                    <h3>Choose the date</h3>
-                    <p>Select the day you want the service. Provider lists and booking slots should reflect that specific date only.</p>
+                    <h3>Select the date</h3>
+                    <p>Choose when you want the booking to happen.</p>
                 </article>
 
                 <article class="ct-step ct-reveal delay-2">
                     <div class="ct-step-number">3</div>
                     <h3>Review providers</h3>
-                    <p>See which approved providers are available, compare ratings, and check the service option that fits the job.</p>
+                    <p>Check who is available for that exact day.</p>
                 </article>
 
                 <article class="ct-step ct-reveal">
                     <div class="ct-step-number">4</div>
-                    <h3>Confirm the booking</h3>
-                    <p>Submit the booking details, address, and schedule after checking that everything matches your request.</p>
-                </article>
-
-                <article class="ct-step ct-reveal delay-1">
-                    <div class="ct-step-number">5</div>
-                    <h3>Track progress</h3>
-                    <p>Use your dashboard and bookings pages to monitor status updates, schedule details, and completed jobs.</p>
-                </article>
-
-                <article class="ct-step ct-reveal delay-2">
-                    <div class="ct-step-number">6</div>
-                    <h3>Leave a review</h3>
-                    <p>After completion, rate the provider and leave useful feedback that helps future customers make better decisions.</p>
+                    <h3>Confirm and track</h3>
+                    <p>Submit the booking and monitor updates from your dashboard.</p>
                 </article>
             </div>
         </div>

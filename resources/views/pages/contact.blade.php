@@ -12,24 +12,13 @@
         <div class="container">
             <div class="ct-hero-shell">
                 <div class="ct-hero-main ct-reveal">
-                    <span class="ct-eyebrow">Contact CleanTech</span>
-                    <h1 class="ct-title">Reach out quickly for booking questions, provider concerns, or general help.</h1>
-                    <p class="ct-lead">This contact page now opens a real email draft to your actual support address, so messages no longer feel like a dead-end form.</p>
+                    <span class="ct-eyebrow">Contact Us</span>
+                    <h1 class="ct-title">Need help with booking, service details, or provider concerns?</h1>
+                    <p class="ct-lead">Send a quick message and CleanTech will open an email draft to the actual support address.</p>
                 </div>
 
-                <div class="ct-hero-side ct-reveal delay-1">
-                    <div>
-                        <div class="ct-side-label">Primary email</div>
-                        <div class="ct-side-value">
-                            <a href="mailto:janzedoysabas@gmail.com" class="ct-inline-link">janzedoysabas@gmail.com</a>
-                        </div>
-                    </div>
-
-                    <p class="ct-side-copy">For the fastest route, use the quick email draft below or send directly through your mail app.</p>
-
-                    <div class="ct-actions">
-                        <a href="mailto:janzedoysabas@gmail.com" class="ct-button">Email CleanTech</a>
-                    </div>
+                <div class="ct-photo-card tall ct-reveal delay-1">
+                    <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1400&q=80" alt="Customer support conversation">
                 </div>
             </div>
         </div>
@@ -39,37 +28,27 @@
         <div class="container">
             <div class="ct-contact-grid">
                 <article class="ct-card ct-contact-card ct-reveal">
-                    <div class="ct-kicker">Contact details</div>
-                    <h3>Ways to reach the team</h3>
-
+                    <div class="ct-kicker">Direct contact</div>
+                    <h3>Reach CleanTech</h3>
                     <div class="ct-contact-list">
                         <div class="ct-contact-line">
                             <strong>Email</strong>
                             <a href="mailto:janzedoysabas@gmail.com" class="ct-inline-link">janzedoysabas@gmail.com</a>
                         </div>
-
                         <div class="ct-contact-line">
                             <strong>Phone</strong>
                             <span class="ct-muted">09944564055</span>
                         </div>
-
                         <div class="ct-contact-line">
                             <strong>Location</strong>
                             <span class="ct-muted">Butuan City, Philippines</span>
-                        </div>
-
-                        <div class="ct-contact-line">
-                            <strong>Support hours</strong>
-                            <span class="ct-muted">Monday to Saturday, 8:00 AM to 6:00 PM</span>
                         </div>
                     </div>
                 </article>
 
                 <article class="ct-card ct-contact-card ct-reveal delay-1">
-                    <div class="ct-kicker">Open email draft</div>
+                    <div class="ct-kicker">Email draft</div>
                     <h3>Send a message</h3>
-                    <p class="ct-muted">Fill this out and tap the button below. CleanTech will open your email app with the details already prepared for <a href="mailto:janzedoysabas@gmail.com" class="ct-inline-link">janzedoysabas@gmail.com</a>.</p>
-
                     <form id="contactMailForm" class="ct-form-grid">
                         <div>
                             <input type="text" class="ct-input" id="contactName" placeholder="Your name">
@@ -89,14 +68,13 @@
                             </select>
                         </div>
                         <div class="full">
-                            <textarea class="ct-textarea" id="contactMessage" rows="6" placeholder="Tell us what you need help with."></textarea>
+                            <textarea class="ct-textarea" id="contactMessage" rows="5" placeholder="Your message"></textarea>
                         </div>
                         <div class="full">
                             <button type="submit" class="ct-button">Open Email Draft</button>
                         </div>
                     </form>
-
-                    <p class="ct-note">If your mail app does not open automatically, you can still email directly using the address above.</p>
+                    <p class="ct-note">This opens your mail app and sends the draft to `janzedoysabas@gmail.com`.</p>
                 </article>
             </div>
         </div>
@@ -108,7 +86,6 @@
 <script>
 (function () {
     const form = document.getElementById('contactMailForm');
-
     if (!form) {
         return;
     }
