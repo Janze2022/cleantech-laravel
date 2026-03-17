@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class AdminProviderController extends Controller
 {
@@ -80,63 +79,31 @@ class AdminProviderController extends Controller
             ->select('id', 'id_image')
             ->first();
 
-        abort_if(!$provider, 404, 'Provider not found.');
-        abort_if(empty($provider->id_image), 404, 'Document not found.');
+        abort_if(!$provider || !$provider->id_image, 404, 'Document not found.');
 
-        $path = $this->normalizeStoredFilePath((string) $provider->id_image);
+        $path = ltrim($provider->id_image, '/');
 
-        abort_if(!$path, 404, 'Invalid file path.');
-
-        if (!Storage::disk('public')->exists($path)) {
-            abort(404, 'File not found in storage: ' . $path);
+        if (Storage::disk('public')->exists($path)) {
+            $disk = Storage::disk('public');
+        } else {
+            abort(404, 'Document not found.');
         }
 
-        $absolutePath = Storage::disk('public')->path($path);
+        $mime = $disk->mimeType($path) ?: 'application/octet-stream';
+        $stream = $disk->readStream($path);
 
-        if (!is_file($absolutePath)) {
-            abort(404, 'Resolved file is invalid.');
-        }
+        abort_if(!$stream, 404, 'Document not found.');
 
-        $mime = Storage::disk('public')->mimeType($path) ?: mime_content_type($absolutePath) ?: 'application/octet-stream';
-
-        return response()->file($absolutePath, [
+        return response()->stream(function () use ($stream) {
+            fpassthru($stream);
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }, 200, [
             'Content-Type' => $mime,
-            'Content-Disposition' => 'inline; filename="' . basename($absolutePath) . '"',
-            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
-            'Pragma' => 'no-cache',
-            'Expires' => '0',
+            'Content-Disposition' => 'inline; filename="' . basename($path) . '"',
             'X-Content-Type-Options' => 'nosniff',
         ]);
-    }
-
-    private function normalizeStoredFilePath(string $rawPath): ?string
-    {
-        $path = trim($rawPath);
-
-        if ($path === '') {
-            return null;
-        }
-
-        $path = str_replace('\\', '/', $path);
-
-        if (filter_var($path, FILTER_VALIDATE_URL)) {
-            $parsedPath = parse_url($path, PHP_URL_PATH);
-            $path = $parsedPath ?: '';
-        }
-
-        $path = ltrim($path, '/');
-
-        if (Str::startsWith($path, 'storage/')) {
-            $path = Str::after($path, 'storage/');
-        }
-
-        if (Str::startsWith($path, 'public/')) {
-            $path = Str::after($path, 'public/');
-        }
-
-        $path = preg_replace('#/+#', '/', $path);
-
-        return $path !== '' ? $path : null;
     }
 
     private function updateStatus($id, $status)

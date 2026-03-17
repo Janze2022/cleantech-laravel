@@ -589,15 +589,14 @@
 }
 
 .doc-thumb{
-    display:block;
+    display:inline-block;
     max-width:100%;
-    margin-bottom:12px;
 }
 .doc-thumb img{
     max-height:260px;
+    cursor:pointer;
     border-color:rgba(255,255,255,.10)!important;
     background:#0f172a;
-    object-fit:contain;
 }
 
 .doc-box{
@@ -621,10 +620,6 @@
 
 .print-approved-wrap{
     display:none;
-}
-
-.preview-modal-body{
-    min-height:240px;
 }
 
 @media (max-width: 1200px){
@@ -809,7 +804,8 @@
         <div class="head">
             <div>
                 <h4>Service Providers</h4>
-                <div class="head-sub"></div>
+                <div class="head-sub">
+                </div>
             </div>
         </div>
 
@@ -884,8 +880,6 @@
                                     ? $rawStatus
                                     : 'pending';
 
-                                $normalizedStatus = $st === 'unapproved' ? 'pending' : $st;
-
                                 $stClass = match($st) {
                                     'approved' => 'approved',
                                     'rejected' => 'rejected',
@@ -916,8 +910,8 @@
                                 $locationDisplay = collect([$p->city, $p->province])->filter()->implode(', ');
                             @endphp
 
-                            <tr class="provider-row provider-row-desktop"
-                                data-status="{{ $normalizedStatus }}"
+                            <tr class="provider-row"
+                                data-status="{{ $st === 'unapproved' ? 'pending' : $st }}"
                                 data-search="{{ strtolower(trim($fullName.' '.$p->email.' '.$p->city.' '.$p->province.' '.$p->id_type.' '.$statusLabel)) }}">
                                 <td class="namecell">
                                     <div class="provider-main-name">{{ $fullName ?: '—' }}</div>
@@ -967,7 +961,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr id="noProviderDesktopRow">
+                            <tr class="no-provider-row">
                                 <td colspan="7" class="text-center text-white-50 py-5">No providers found.</td>
                             </tr>
                         @endforelse
@@ -982,8 +976,6 @@
                         $st = in_array($rawStatus, ['pending', 'approved', 'rejected', 'suspended', 'unapproved'])
                             ? $rawStatus
                             : 'pending';
-
-                        $normalizedStatus = $st === 'unapproved' ? 'pending' : $st;
 
                         $stClass = match($st) {
                             'approved' => 'approved',
@@ -1015,8 +1007,8 @@
                         $locationDisplay = collect([$p->city, $p->province])->filter()->implode(', ');
                     @endphp
 
-                    <div class="provider-item provider-row provider-row-mobile"
-                         data-status="{{ $normalizedStatus }}"
+                    <div class="provider-item provider-row"
+                         data-status="{{ $st === 'unapproved' ? 'pending' : $st }}"
                          data-search="{{ strtolower(trim($fullName.' '.$p->email.' '.$p->city.' '.$p->province.' '.$p->id_type.' '.$statusLabel)) }}">
                         <div class="provider-top">
                             <div style="min-width:0;">
@@ -1067,7 +1059,7 @@
                         </div>
                     </div>
                 @empty
-                    <div id="noProviderMobileRow" class="provider-item text-center text-white-50 py-4">No providers found.</div>
+                    <div class="provider-item text-center text-white-50 py-4">No providers found.</div>
                 @endforelse
             </div>
 
@@ -1131,15 +1123,10 @@
 @foreach($providers as $p)
     @php
         $docUrl = $p->id_image ? route('admin.providers.document', $p->id) : null;
-        $rawDocName = trim((string) ($p->id_image ?? ''));
-        $docExt = $rawDocName !== ''
-            ? strtolower(pathinfo(parse_url($rawDocName, PHP_URL_PATH) ?? $rawDocName, PATHINFO_EXTENSION))
-            : null;
-
-        $imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif'];
-        $isImage = $docExt && in_array($docExt, $imageExts, true);
+        $docExt = $p->id_image ? strtolower(pathinfo($p->id_image, PATHINFO_EXTENSION)) : null;
+        $imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+        $isImage = $docExt && in_array($docExt, $imageExts);
         $isPdf = $docExt === 'pdf';
-        $isPossiblyUnsupportedImage = in_array($docExt, ['heic', 'heif'], true);
 
         $fullName = trim(
             ($p->first_name ?? '') . ' ' .
@@ -1357,89 +1344,43 @@
                             <div class="section-mini-title">Uploaded ID Document</div>
 
                             @if($p->id_image && $docUrl)
-
                                 @if($isImage)
-                                    <div class="doc-box">
-                                        <div class="doc-thumb">
-                                            <img
-                                                src="{{ $docUrl }}"
-                                                alt="Uploaded ID Document"
-                                                class="img-fluid rounded border"
-                                            >
-                                        </div>
-
-                                        <div class="doc-actions">
-                                            <button
-                                                type="button"
-                                                class="btn btn-outline-secondary btnx"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#documentPreviewModal"
-                                                data-doc-url="{{ $docUrl }}"
-                                                data-doc-type="image">
-                                                Preview Image
-                                            </button>
-
-                                            <a href="{{ $docUrl }}"
-                                               target="_blank"
-                                               class="btn btn-outline-info btnx">
-                                                Open Image
-                                            </a>
-
-                                            <span class="file-note">Image document uploaded</span>
-                                        </div>
+                                    <div class="doc-thumb">
+                                        <img
+                                            src="{{ $docUrl }}"
+                                            alt="Uploaded ID Document"
+                                            class="img-fluid rounded border"
+                                            data-doc-url="{{ $docUrl }}"
+                                            data-doc-type="image"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#documentPreviewModal"
+                                        >
                                     </div>
-
-                                @elseif($isPossiblyUnsupportedImage)
-                                    <div class="doc-box">
-                                        <div class="doc-actions">
-                                            <a href="{{ $docUrl }}"
-                                               target="_blank"
-                                               class="btn btn-outline-info btnx">
-                                                Open File
-                                            </a>
-
-                                            <span class="file-note">
-                                                This image format ({{ strtoupper($docExt) }}) may not preview in-browser. Open it in a new tab or convert it to JPG/PNG on upload.
-                                            </span>
-                                        </div>
-                                    </div>
-
                                 @elseif($isPdf)
                                     <div class="doc-box">
                                         <div class="doc-actions">
-                                            <button
-                                                type="button"
-                                                class="btn btn-outline-secondary btnx"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#documentPreviewModal"
-                                                data-doc-url="{{ $docUrl }}"
-                                                data-doc-type="pdf">
-                                                Preview PDF
-                                            </button>
-
                                             <a href="{{ $docUrl }}"
                                                target="_blank"
                                                class="btn btn-outline-info btnx">
                                                 Open PDF
                                             </a>
 
-                                            <span class="file-note">PDF document uploaded</span>
-                                        </div>
-                                    </div>
-
-                                @else
-                                    <div class="doc-box">
-                                        <div class="doc-actions">
                                             <button
                                                 type="button"
                                                 class="btn btn-outline-secondary btnx"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#documentPreviewModal"
                                                 data-doc-url="{{ $docUrl }}"
-                                                data-doc-type="file">
-                                                Try Preview
+                                                data-doc-type="pdf"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#documentPreviewModal">
+                                                Preview PDF
                                             </button>
 
+                                            <span class="file-note">PDF document uploaded</span>
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="doc-box">
+                                        <div class="doc-actions">
                                             <a href="{{ $docUrl }}"
                                                target="_blank"
                                                class="btn btn-outline-info btnx">
@@ -1452,7 +1393,6 @@
                                         </div>
                                     </div>
                                 @endif
-
                             @else
                                 <div class="text-white-50">No document uploaded</div>
                             @endif
@@ -1474,7 +1414,7 @@
                 <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <div class="text-center preview-modal-body">
+            <div class="text-center">
                 <img
                     id="previewImage"
                     class="img-fluid rounded d-none"
@@ -1500,125 +1440,75 @@
 </div>
 
 <script>
-(function () {
-    const providerSearch = document.getElementById('providerSearch');
-    const statusFilter = document.getElementById('statusFilter');
-    const noResultsMessage = document.getElementById('noResultsMessage');
-    const noProviderDesktopRow = document.getElementById('noProviderDesktopRow');
-    const noProviderMobileRow = document.getElementById('noProviderMobileRow');
+document.addEventListener('click', function (e) {
+    const trigger = e.target.closest('[data-doc-url]');
+    if (!trigger) return;
 
-    function getActiveRows() {
-        const isMobile = window.innerWidth <= 768;
-        return document.querySelectorAll(isMobile ? '.provider-row-mobile' : '.provider-row-desktop');
+    const url = trigger.dataset.docUrl || '';
+    const type = trigger.dataset.docType || '';
+
+    const previewImage = document.getElementById('previewImage');
+    const previewPdf = document.getElementById('previewPdf');
+    const previewFallback = document.getElementById('previewFallback');
+    const previewFallbackLink = document.getElementById('previewFallbackLink');
+
+    previewImage.classList.add('d-none');
+    previewPdf.classList.add('d-none');
+    previewFallback.classList.add('d-none');
+
+    previewImage.removeAttribute('src');
+    previewPdf.removeAttribute('src');
+    previewFallbackLink.setAttribute('href', url);
+
+    if (type === 'image') {
+        previewImage.src = url;
+        previewImage.classList.remove('d-none');
+    } else if (type === 'pdf') {
+        previewPdf.src = url;
+        previewPdf.classList.remove('d-none');
+    } else {
+        previewFallback.classList.remove('d-none');
     }
+});
 
-    function applyProviderFilters() {
-        const searchValue = (providerSearch?.value || '').toLowerCase().trim();
-        const selectedStatus = (statusFilter?.value || 'all').toLowerCase();
+const providerSearch = document.getElementById('providerSearch');
+const statusFilter = document.getElementById('statusFilter');
+const noResultsMessage = document.getElementById('noResultsMessage');
 
-        const desktopRows = document.querySelectorAll('.provider-row-desktop');
-        const mobileRows = document.querySelectorAll('.provider-row-mobile');
+function applyProviderFilters() {
+    const searchValue = (providerSearch?.value || '').toLowerCase().trim();
+    const selectedStatus = (statusFilter?.value || 'all').toLowerCase();
 
-        let desktopVisible = 0;
-        let mobileVisible = 0;
+    let visibleCount = 0;
 
-        desktopRows.forEach(function (row) {
-            const rowSearch = (row.dataset.search || '').toLowerCase();
-            const rowStatus = (row.dataset.status || '').toLowerCase();
+    document.querySelectorAll('.provider-row').forEach(function (row) {
+        const rowSearch = (row.dataset.search || '').toLowerCase();
+        const rowStatus = (row.dataset.status || '').toLowerCase();
 
-            const matchSearch = !searchValue || rowSearch.includes(searchValue);
-            const matchStatus = selectedStatus === 'all' || rowStatus === selectedStatus;
-            const isVisible = matchSearch && matchStatus;
+        const matchSearch = !searchValue || rowSearch.includes(searchValue);
+        const matchStatus = selectedStatus === 'all' || rowStatus === selectedStatus;
 
-            row.style.display = isVisible ? '' : 'none';
-            if (isVisible) desktopVisible++;
-        });
-
-        mobileRows.forEach(function (row) {
-            const rowSearch = (row.dataset.search || '').toLowerCase();
-            const rowStatus = (row.dataset.status || '').toLowerCase();
-
-            const matchSearch = !searchValue || rowSearch.includes(searchValue);
-            const matchStatus = selectedStatus === 'all' || rowStatus === selectedStatus;
-            const isVisible = matchSearch && matchStatus;
-
-            row.style.display = isVisible ? '' : 'none';
-            if (isVisible) mobileVisible++;
-        });
-
-        if (noProviderDesktopRow) {
-            noProviderDesktopRow.style.display = desktopRows.length === 0 ? '' : 'none';
+        if (matchSearch && matchStatus) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
         }
-
-        if (noProviderMobileRow) {
-            noProviderMobileRow.style.display = mobileRows.length === 0 ? '' : 'none';
-        }
-
-        const isMobile = window.innerWidth <= 768;
-        const visibleCount = isMobile ? mobileVisible : desktopVisible;
-
-        if (noResultsMessage) {
-            const hasRealRows = isMobile ? mobileRows.length > 0 : desktopRows.length > 0;
-            noResultsMessage.style.display = hasRealRows && visibleCount === 0 ? 'block' : 'none';
-        }
-    }
-
-    providerSearch?.addEventListener('input', applyProviderFilters);
-    statusFilter?.addEventListener('change', applyProviderFilters);
-    window.addEventListener('resize', applyProviderFilters);
-
-    document.getElementById('printApprovedBtn')?.addEventListener('click', function () {
-        window.print();
     });
 
-    const documentPreviewModal = document.getElementById('documentPreviewModal');
-
-    if (documentPreviewModal) {
-        documentPreviewModal.addEventListener('show.bs.modal', function (event) {
-            const trigger = event.relatedTarget;
-            const url = trigger?.getAttribute('data-doc-url') || '';
-            const type = trigger?.getAttribute('data-doc-type') || '';
-
-            const previewImage = document.getElementById('previewImage');
-            const previewPdf = document.getElementById('previewPdf');
-            const previewFallback = document.getElementById('previewFallback');
-            const previewFallbackLink = document.getElementById('previewFallbackLink');
-
-            previewImage.classList.add('d-none');
-            previewPdf.classList.add('d-none');
-            previewFallback.classList.add('d-none');
-
-            previewImage.removeAttribute('src');
-            previewPdf.removeAttribute('src');
-            previewFallbackLink.setAttribute('href', url);
-
-            if (type === 'image') {
-                previewImage.setAttribute('src', url);
-                previewImage.classList.remove('d-none');
-            } else if (type === 'pdf') {
-                previewPdf.setAttribute('src', url);
-                previewPdf.classList.remove('d-none');
-            } else {
-                previewFallback.classList.remove('d-none');
-            }
-        });
-
-        documentPreviewModal.addEventListener('hidden.bs.modal', function () {
-            const previewImage = document.getElementById('previewImage');
-            const previewPdf = document.getElementById('previewPdf');
-            const previewFallback = document.getElementById('previewFallback');
-
-            previewImage.classList.add('d-none');
-            previewPdf.classList.add('d-none');
-            previewFallback.classList.add('d-none');
-
-            previewImage.removeAttribute('src');
-            previewPdf.removeAttribute('src');
-        });
+    if (noResultsMessage) {
+        noResultsMessage.style.display = visibleCount === 0 ? 'block' : 'none';
     }
+}
 
-    applyProviderFilters();
-})();
+providerSearch?.addEventListener('input', applyProviderFilters);
+statusFilter?.addEventListener('change', applyProviderFilters);
+
+document.getElementById('printApprovedBtn')?.addEventListener('click', function () {
+    window.print();
+});
+
+applyProviderFilters();
 </script>
 
 @endsection
