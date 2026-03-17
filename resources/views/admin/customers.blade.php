@@ -262,6 +262,7 @@
                                   action="{{ route('admin.customers.delete', $u->id) }}"
                                   onsubmit="return confirm('Delete this account?')">
                                 @csrf
+                                @method('DELETE')
                                 <input type="hidden" name="role" value="{{ $role }}">
                                 <button type="submit" class="btn btn-outline-danger btn-sm btnx">Delete</button>
                             </form>

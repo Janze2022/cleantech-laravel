@@ -56,9 +56,9 @@ class AdminCustomerController extends Controller
         }
 
         if ($role === 'provider') {
-            [$first, $last] = explode(' ', $request->name, 2);
-            $data['first_name'] = $first;
-            $data['last_name'] = $last ?? '';
+            $parts = explode(' ', $request->name, 2);
+            $data['first_name'] = $parts[0] ?? '';
+            $data['last_name'] = $parts[1] ?? '';
         } else {
             $data['name'] = $request->name;
         }
@@ -76,26 +76,32 @@ class AdminCustomerController extends Controller
         return back()->with('success','User updated successfully.');
     }
 
-    public function delete(Request $request, $id)
+    // ✅ FIXED METHOD NAME (IMPORTANT)
+    public function destroy(Request $request, $id)
     {
-        if ($request->role === 'admin') {
-            return back()->with('error','Admins cannot be deleted.');
+        try {
+            if ($request->role === 'admin') {
+                return back()->with('error','Admins cannot be deleted.');
+            }
+
+            $table = $request->role === 'provider'
+                ? 'service_providers'
+                : 'customers';
+
+            DB::table($table)->where('id', $id)->delete();
+
+            DB::table('admin_logs')->insert([
+                'admin_id' => session('admin_id'),
+                'action' => "Deleted {$request->role} account",
+                'target_table' => $table,
+                'target_id' => $id,
+                'created_at' => now(),
+            ]);
+
+            return back()->with('success','Account deleted.');
+
+        } catch (\Exception $e) {
+            return back()->with('error','Delete failed: '.$e->getMessage());
         }
-
-        $table = $request->role === 'provider'
-            ? 'service_providers'
-            : 'customers';
-
-        DB::table($table)->where('id', $id)->delete();
-
-        DB::table('admin_logs')->insert([
-            'admin_id' => session('admin_id'),
-            'action' => "Deleted {$request->role} account",
-            'target_table' => $table,
-            'target_id' => $id,
-            'created_at' => now(),
-        ]);
-
-        return back()->with('success','Account deleted.');
     }
 }
