@@ -50,15 +50,15 @@
     filter: saturate(.9) contrast(.95) brightness(.55);
 }
 .auth-slide.one{
-    background-image:url('https://images.unsplash.com/photo-1581578731548-c64695cc6952');
+    background-image:url('{{ asset('images/scene-cleaning.svg') }}');
     animation-delay:0s;
 }
 .auth-slide.two{
-    background-image:url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c');
+    background-image:url('{{ asset('images/scene-home.svg') }}');
     animation-delay:6s;
 }
 .auth-slide.three{
-    background-image:url('https://images.unsplash.com/photo-1584622650111-993a426fbf0a');
+    background-image:url('{{ asset('images/scene-office.svg') }}');
     animation-delay:12s;
 }
 

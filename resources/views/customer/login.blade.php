@@ -31,15 +31,15 @@
 }
 
 .auth-slide.slide-1 {
-    background-image: url('https://www.360precisioncleaning.com/wp-content/uploads/2021/10/cleaning-services.jpeg');
+    background-image: url('{{ asset('images/scene-cleaning.svg') }}');
     animation-delay: 0s;
 }
 .auth-slide.slide-2 {
-    background-image: url('https://www.rappler.com/tachyon/2022/01/shutterstock-cleaning-supplies.jpg');
+    background-image: url('{{ asset('images/scene-verification.svg') }}');
     animation-delay: 6s;
 }
 .auth-slide.slide-3 {
-    background-image: url('https://www.phclean.net/wp-content/uploads/2025/11/65956e0c7a284e01e1b6b5fc_What20are20the20benefits20of20a20professional20cleaner.jpg');
+    background-image: url('{{ asset('images/scene-office.svg') }}');
     animation-delay: 12s;
 }
 

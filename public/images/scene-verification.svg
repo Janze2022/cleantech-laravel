@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Verification</title>
+  <desc id="desc">Abstract verification illustration.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#312e81"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect x="240" y="150" width="500" height="600" rx="34" fill="#eef2ff" opacity="0.95"/>
+  <rect x="325" y="245" width="320" height="68" rx="18" fill="#c7d2fe"/>
+  <rect x="325" y="350" width="320" height="68" rx="18" fill="#ddd6fe"/>
+  <rect x="325" y="455" width="220" height="68" rx="18" fill="#a5f3fc"/>
+  <circle cx="1060" cy="360" r="170" fill="#e0f2fe" opacity="0.95"/>
+  <path d="m980 360 58 58 124-142" fill="none" stroke="#16a34a" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="1270" cy="170" r="110" fill="#22c55e" opacity="0.18"/>
+  <text x="240" y="825" fill="#f8fafc" font-size="66" font-family="Segoe UI, Arial, sans-serif" font-weight="700">Secure Verification</text>
+  <text x="240" y="872" fill="#c4b5fd" font-size="30" font-family="Segoe UI, Arial, sans-serif">Local fallback art for login, reset, and OTP pages</text>
+</svg>

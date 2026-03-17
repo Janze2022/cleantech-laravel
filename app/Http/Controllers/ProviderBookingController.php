@@ -326,7 +326,11 @@ class ProviderBookingController extends Controller
             ->selectRaw("
                 YEAR(b.booking_date) as yr,
                 MONTH(b.booking_date) as mon,
-                DATE_FORMAT(MIN(b.booking_date), '%b %Y') as label,
+                CONCAT(
+                    ELT(MONTH(b.booking_date), 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'),
+                    ' ',
+                    YEAR(b.booking_date)
+                ) as label,
                 SUM(b.price) as amount
             ")
             ->get();

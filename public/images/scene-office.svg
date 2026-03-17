@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Office Cleaning</title>
+  <desc id="desc">Abstract office cleaning illustration.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="45%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect x="150" y="190" width="540" height="420" rx="28" fill="#eff6ff" opacity="0.92"/>
+  <rect x="210" y="255" width="180" height="220" rx="18" fill="#bfdbfe"/>
+  <rect x="425" y="255" width="200" height="28" rx="14" fill="#2563eb"/>
+  <rect x="425" y="320" width="160" height="28" rx="14" fill="#60a5fa"/>
+  <rect x="425" y="385" width="130" height="28" rx="14" fill="#93c5fd"/>
+  <rect x="760" y="145" width="670" height="610" rx="32" fill="#082f49" opacity="0.48"/>
+  <rect x="855" y="220" width="210" height="300" rx="22" fill="#ecfeff"/>
+  <rect x="1100" y="220" width="210" height="300" rx="22" fill="#dbeafe"/>
+  <path d="M974 560v120m-45-20h90" stroke="#67e8f9" stroke-width="22" stroke-linecap="round"/>
+  <path d="M1210 560v120m-45-20h90" stroke="#22c55e" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="1330" cy="170" r="120" fill="#38bdf8" opacity="0.18"/>
+  <circle cx="1285" cy="175" r="44" fill="#f8fafc"/>
+  <text x="150" y="800" fill="#f8fafc" font-size="68" font-family="Segoe UI, Arial, sans-serif" font-weight="700">Office Ready</text>
+  <text x="150" y="850" fill="#bfdbfe" font-size="30" font-family="Segoe UI, Arial, sans-serif">Local replacement for remote office-cleaning images</text>
+</svg>

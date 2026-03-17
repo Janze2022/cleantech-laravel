@@ -342,7 +342,7 @@
                         $dt = $r->created_at ? \Carbon\Carbon::parse($r->created_at)->format('M d, Y h:i A') : '';
 
                         $customerImage = $r->customer_profile_image ?? '';
-                        $reviewerAvatar = 'https://ui-avatars.com/api/?name=' . urlencode($nm) . '&background=0f172a&color=ffffff&size=256';
+                        $reviewerAvatar = asset('images/avatar-placeholder.svg');
 
                         if (!empty($customerImage) && file_exists(public_path('uploads/customers/' . $customerImage))) {
                             $reviewerAvatar = asset('uploads/customers/' . $customerImage) . '?v=' . time();
@@ -356,7 +356,7 @@
                                     <img
                                         src="{{ $reviewerAvatar }}"
                                         alt="Customer"
-                                        onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name={{ urlencode($nm) }}&background=0f172a&color=ffffff&size=256';"
+                                onerror="this.onerror=null;this.src='{{ asset('images/avatar-placeholder.svg') }}';"
                                     >
                                 </div>
 

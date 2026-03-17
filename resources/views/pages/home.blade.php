@@ -44,15 +44,15 @@ section {
 }
 
 .slide-1 {
-    background-image: url('https://www.bobvila.com/wp-content/uploads/2022/03/The-Best-Cleaning-Services-Options.jpg?w=1128&h=752');
+    background-image: url('{{ asset('images/scene-cleaning.svg') }}');
     animation-delay: 0s;
 }
 .slide-2 {
-    background-image: url('https://content.app-sources.com/s/34724871351514405/uploads/Images/Commercial_and_Office_Cleaning_Services_Near_Me-5581197.jpg');
+    background-image: url('{{ asset('images/scene-office.svg') }}');
     animation-delay: 6s;
 }
 .slide-3 {
-    background-image: url('https://images.unsplash.com/photo-1584622650111-993a426fbf0a');
+    background-image: url('{{ asset('images/scene-office.svg') }}');
     animation-delay: 12s;
 }
 
@@ -272,7 +272,7 @@ section {
         #0f172a 45%,
         rgba(15,23,42,.7)
     ),
-    url('https://images.unsplash.com/photo-1581578731548-c64695cc6952')
+    url('{{ asset('images/scene-cleaning.svg') }}')
     center/cover no-repeat;
 }
 
@@ -295,7 +295,7 @@ section {
             rgba(11,15,25,.75),
             rgba(11,15,25,.88)
         ),
-        url('https://images.unsplash.com/photo-1600585153490-76fb20a32601')
+        url('{{ asset('images/scene-home.svg') }}')
         center/cover no-repeat;
 }
 
@@ -346,7 +346,7 @@ section {
     <div class="row g-4">
         <div class="col-md-4">
             <div class="work-image-card">
-                <img src="https://t3.ftcdn.net/jpg/02/98/67/88/360_F_298678837_bNtbbc5QqtNZdinHQkPKddKKVq5WKlXl.jpg" alt="Book cleaning online">
+                <img src="{{ asset('images/scene-verification.svg') }}" alt="Book cleaning online">
                 <div class="work-overlay">
                     <h5>Book Online</h5>
                     <p>Select your service, date, and location in minutes.</p>
@@ -356,7 +356,7 @@ section {
 
         <div class="col-md-4">
             <div class="work-image-card">
-                <img src="https://t4.ftcdn.net/jpg/03/05/63/55/360_F_305635573_47SjydzWbcQPCTbkcfHyfD4fUY81XW9R.jpg" alt="Professional cleaner">
+                <img src="{{ asset('images/scene-cleaning.svg') }}" alt="Professional cleaner">
                 <div class="work-overlay">
                     <h5>Get Matched</h5>
                     <p>We assign a verified professional to your booking.</p>
@@ -366,7 +366,7 @@ section {
 
         <div class="col-md-4">
             <div class="work-image-card">
-                <img src="https://images.pexels.com/photos/48889/cleaning-washing-cleanup-the-ilo-48889.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500" alt="Clean home">
+                <img src="{{ asset('images/scene-home.svg') }}" alt="Clean home">
                 <div class="work-overlay">
                     <h5>Relax & Enjoy</h5>
                     <p>Come home to a clean, fresh, and peaceful space.</p>
@@ -390,7 +390,7 @@ section {
         <div class="row g-4">
             <div class="col-md-4">
                 <div class="service-tile">
-                    <img src="https://hongkongofw.com/wp-content/uploads/2023/06/deep-cleaning.jpg">
+                    <img src="{{ asset('images/service-generic.svg') }}">
                     <div class="service-body">
                         <h5>Deep Home Cleaning</h5>
                         <p>Top-to-bottom professional cleaning.</p>
@@ -400,7 +400,7 @@ section {
 
             <div class="col-md-4">
                 <div class="service-tile">
-                    <img src="https://lirp.cdn-website.com/4403d184/dms3rep/multi/opt/AdobeStock_267548289-1920w.jpeg">
+                    <img src="{{ asset('images/scene-office.svg') }}">
                     <div class="service-body">
                         <h5>Office Cleaning</h5>
                         <p>Keep your workspace spotless.</p>
@@ -410,7 +410,7 @@ section {
 
             <div class="col-md-4">
                 <div class="service-tile">
-                    <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a">
+                    <img src="{{ asset('images/scene-office.svg') }}">
                     <div class="service-body">
                         <h5>Post Construction</h5>
                         <p>Detailed cleanup after renovations.</p>

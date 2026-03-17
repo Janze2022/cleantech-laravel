@@ -10,7 +10,7 @@ body { background: #081120; color: #fff; }
     padding: 100px 0 70px;
     text-align: center;
     background: linear-gradient(rgba(8,17,32,.85), rgba(8,17,32,.95)),
-                url('https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+                url('{{ asset('images/scene-verification.svg') }}') center/cover no-repeat;
 }
 .faq-section { padding: 80px 0; }
 .faq-card {

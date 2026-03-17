@@ -32,15 +32,15 @@
 }
 
 .auth-slide.slide-1 {
-    background-image: url('https://wallpaperaccess.com/full/11606068.jpg');
+    background-image: url('{{ asset('images/scene-verification.svg') }}');
     animation-delay: 0s;
 }
 .auth-slide.slide-2 {
-    background-image: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c');
+    background-image: url('{{ asset('images/scene-home.svg') }}');
     animation-delay: 6s;
 }
 .auth-slide.slide-3 {
-    background-image: url('https://images.unsplash.com/photo-1584622650111-993a426fbf0a');
+    background-image: url('{{ asset('images/scene-office.svg') }}');
     animation-delay: 12s;
 }
 

@@ -77,12 +77,16 @@
 
         {{-- HEADER --}}
         <div class="d-flex align-items-center mb-4">
+            @php
+                $providerImageUrl = !empty($provider->profile_image)
+                    ? route('provider.image.public', ['filename' => basename($provider->profile_image)]) . '?v=' . time()
+                    : asset('images/avatar-placeholder.svg');
+            @endphp
             <img
-                src="{{ $provider->profile_image
-                    ? asset('storage/'.$provider->profile_image)
-                    : 'https://ui-avatars.com/api/?name='.$provider->first_name.'&background=22c55e&color=fff'
-                }}"
+                src="{{ $providerImageUrl }}"
                 class="profile-avatar"
+                alt="Provider avatar"
+                onerror="this.onerror=null;this.src='{{ asset('images/avatar-placeholder.svg') }}';"
             >
 
             <div class="ms-4">

@@ -5,7 +5,7 @@
 @section('content')
 
 @php
-    $profileImageUrl = 'https://ui-avatars.com/api/?name=' . urlencode($customer->name) . '&background=38bdf8&color=020617';
+    $profileImageUrl = asset('images/avatar-placeholder.svg');
 
     if (!empty($customer->profile_image) && file_exists(public_path('uploads/customers/' . $customer->profile_image))) {
         $profileImageUrl = asset('uploads/customers/' . $customer->profile_image) . '?v=' . time();
@@ -301,7 +301,7 @@
                         src="{{ $profileImageUrl }}"
                         class="avatar"
                         alt="Profile photo"
-                        onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name={{ urlencode($customer->name) }}&background=38bdf8&color=020617';"
+                onerror="this.onerror=null;this.src='{{ asset('images/avatar-placeholder.svg') }}';"
                     >
 
                     <input

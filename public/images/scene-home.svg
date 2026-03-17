@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Home Cleaning</title>
+  <desc id="desc">Abstract home cleaning illustration.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#172554"/>
+      <stop offset="55%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#166534"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <path d="M260 610 560 340l300 270v145H260z" fill="#f8fafc" opacity="0.96"/>
+  <path d="M220 610 560 300l340 310" fill="none" stroke="#bfdbfe" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="385" y="540" width="120" height="215" rx="18" fill="#dbeafe"/>
+  <rect x="585" y="465" width="145" height="120" rx="18" fill="#dbeafe"/>
+  <rect x="980" y="205" width="360" height="420" rx="36" fill="#082f49" opacity="0.42"/>
+  <circle cx="1110" cy="320" r="92" fill="#f8fafc"/>
+  <path d="M1180 385c46 18 86 60 112 126" fill="none" stroke="#86efac" stroke-width="18" stroke-linecap="round"/>
+  <path d="M1045 520c70 0 140 0 210 0" stroke="#67e8f9" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="1335" cy="145" r="95" fill="#38bdf8" opacity="0.18"/>
+  <text x="190" y="820" fill="#f8fafc" font-size="68" font-family="Segoe UI, Arial, sans-serif" font-weight="700">Fresh Home</text>
+  <text x="190" y="870" fill="#ccfbf1" font-size="30" font-family="Segoe UI, Arial, sans-serif">Local replacement for remote residential-cleaning imagery</text>
+</svg>

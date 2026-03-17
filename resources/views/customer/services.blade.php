@@ -219,11 +219,11 @@
                         $fallbackThumb = null;
 
                         if (str_contains($key, 'general')) {
-                            $fallbackThumb = 'https://scentral.ca/wp-content/uploads/2020/01/cleaning-services-1210x723-1.jpeg';
+                            $fallbackThumb = '{{ asset('images/service-generic.svg') }}';
                         } elseif (str_contains($key, 'deep')) {
-                            $fallbackThumb = 'https://thepolishedbubbleco.com/wp-content/uploads/2025/09/deep-cleaning.jpg';
+                            $fallbackThumb = '{{ asset('images/service-generic.svg') }}';
                         } elseif (str_contains($key, 'specific') || str_contains($key, 'area')) {
-                            $fallbackThumb = 'https://homemaidbetter.com/wp-content/uploads/2018/07/Deep-Cleaning.jpg';
+                            $fallbackThumb = '{{ asset('images/service-generic.svg') }}';
                         }
 
                         $img = $s->image ?? $s->service_image ?? null;
@@ -365,8 +365,7 @@
     }
 
     function fallbackAvatar(p){
-        const nm = encodeURIComponent(`${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || 'Provider');
-        return `https://ui-avatars.com/api/?name=${nm}&background=0f172a&color=ffffff&size=256`;
+        return `{{ asset('images/avatar-placeholder.svg') }}`;
     }
 
     function avatarUrl(p){

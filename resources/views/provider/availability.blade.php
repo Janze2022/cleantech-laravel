@@ -615,7 +615,7 @@
 
         <div class="filter-actions">
             @if($selectedDate || $searchQuery !== '')
-                <a href="{{ route('provider.availability.index') }}" class="btn btn-outline-light">
+                <a href="{{ route('provider.availability') }}" class="btn btn-outline-light">
                     Clear
                 </a>
             @endif

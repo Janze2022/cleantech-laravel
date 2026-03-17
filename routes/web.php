@@ -198,6 +198,62 @@ Route::prefix('admin')
     });
 /*
 |--------------------------------------------------------------------------
+| CUSTOMER — GUEST
+|--------------------------------------------------------------------------
+*/
+Route::prefix('customer')
+    ->name('customer.')
+    ->middleware('customer.guest')
+    ->group(function () {
+
+        Route::get('/register', [CustomerRegisterController::class, 'show'])
+            ->name('register');
+
+        Route::post('/register', [CustomerRegisterController::class, 'store'])
+            ->name('register.submit');
+
+        Route::get('/verify', [CustomerOtpController::class, 'show'])
+            ->name('verify');
+
+        Route::post('/verify', [CustomerOtpController::class, 'verify'])
+            ->name('verify.submit');
+
+        Route::post('/verify/resend', [CustomerOtpController::class, 'resend'])
+            ->name('otp.resend');
+
+        Route::get('/verified', fn () => view('customer.verified'))
+            ->name('verified');
+
+        Route::get('/login', [CustomerLoginController::class, 'show'])
+            ->name('login');
+
+        Route::post('/login', [CustomerLoginController::class, 'login'])
+            ->name('login.submit');
+
+        Route::get('/forgot-password', [CustomerForgotPasswordController::class, 'show'])
+            ->name('forgot');
+
+        Route::post('/forgot-password', [CustomerForgotPasswordController::class, 'sendOtp'])
+            ->name('forgot.submit');
+
+        Route::get('/forgot-password/verify', [CustomerForgotPasswordController::class, 'showVerifyOtp'])
+            ->name('forgot.verify');
+
+        Route::post('/forgot-password/verify', [CustomerForgotPasswordController::class, 'verifyOtp'])
+            ->name('forgot.verify.submit');
+
+        Route::get('/forgot-password/reset', [CustomerForgotPasswordController::class, 'showResetForm'])
+            ->name('forgot.reset');
+
+        Route::post('/forgot-password/reset', [CustomerForgotPasswordController::class, 'resetPassword'])
+            ->name('forgot.reset.submit');
+
+        Route::get('/forgot-password/success', [CustomerForgotPasswordController::class, 'success'])
+            ->name('forgot.success');
+    });
+
+/*
+|--------------------------------------------------------------------------
 | CUSTOMER — AUTHENTICATED
 |--------------------------------------------------------------------------
 */

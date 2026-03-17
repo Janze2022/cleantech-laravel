@@ -10,7 +10,7 @@ body { background: #081120; color: #fff; }
     padding: 100px 0 70px;
     text-align: center;
     background: linear-gradient(rgba(8,17,32,.85), rgba(8,17,32,.95)),
-                url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+                url('{{ asset('images/scene-office.svg') }}') center/cover no-repeat;
 }
 .blog-section { padding: 80px 0; }
 .blog-card {
@@ -46,7 +46,7 @@ body { background: #081120; color: #fff; }
         <div class="row g-4">
             <div class="col-md-4">
                 <div class="blog-card">
-                    <img src="https://images.unsplash.com/photo-1585421514738-01798e348b17?auto=format&fit=crop&w=1400&q=80" alt="">
+                    <img src="{{ asset('images/scene-cleaning.svg') }}" alt="">
                     <div class="content">
                         <div class="blog-date mb-2">Cleaning Tips</div>
                         <h4>5 Ways to Keep Your Home Fresh Every Day</h4>
@@ -57,7 +57,7 @@ body { background: #081120; color: #fff; }
 
             <div class="col-md-4">
                 <div class="blog-card">
-                    <img src="https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1400&q=80" alt="">
+                    <img src="{{ asset('images/scene-home.svg') }}" alt="">
                     <div class="content">
                         <div class="blog-date mb-2">Home Care</div>
                         <h4>When Should You Schedule a Deep Cleaning?</h4>
@@ -68,7 +68,7 @@ body { background: #081120; color: #fff; }
 
             <div class="col-md-4">
                 <div class="blog-card">
-                    <img src="https://images.unsplash.com/photo-1497366412874-3415097a27e7?auto=format&fit=crop&w=1400&q=80" alt="">
+                    <img src="{{ asset('images/scene-office.svg') }}" alt="">
                     <div class="content">
                         <div class="blog-date mb-2">Office Hygiene</div>
                         <h4>Why Clean Workspaces Improve Productivity</h4>

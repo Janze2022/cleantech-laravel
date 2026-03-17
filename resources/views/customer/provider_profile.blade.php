@@ -487,7 +487,7 @@
 
     $providerAvatar = !empty($provider->profile_image)
         ? route('provider.image.public', ['filename' => basename($provider->profile_image)]) . '?v=' . time()
-        : 'https://ui-avatars.com/api/?name=' . urlencode(trim(($provider->first_name ?? '') . ' ' . ($provider->last_name ?? '')) ?: 'Provider') . '&background=22c55e&color=fff&size=256';
+        : asset('images/avatar-placeholder.svg');
 @endphp
 
 <div class="container profile-wrap">
@@ -506,7 +506,7 @@
                     src="{{ $providerAvatar }}"
                     class="avatar"
                     alt="Provider avatar"
-                    onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name={{ urlencode(trim(($provider->first_name ?? '') . ' ' . ($provider->last_name ?? '')) ?: 'Provider') }}&background=22c55e&color=fff&size=256';"
+                    onerror="this.onerror=null;this.src='{{ asset('images/avatar-placeholder.svg') }}';"
                 >
             </div>
 
@@ -675,7 +675,7 @@
 
                             $customerImage = $rev->customer_profile_image ?? '';
 
-                            $reviewerAvatar = 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=0f172a&color=ffffff&size=256';
+                            $reviewerAvatar = asset('images/avatar-placeholder.svg');
 
                             if (!empty($customerImage) && file_exists(public_path('uploads/customers/' . $customerImage))) {
                                 $reviewerAvatar = asset('uploads/customers/' . $customerImage) . '?v=' . time();
@@ -694,7 +694,7 @@
                                         src="{{ $reviewerAvatar }}"
                                         alt="Reviewer avatar"
                                         class="reviewerAvatar"
-                                        onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name={{ urlencode($name) }}&background=0f172a&color=ffffff&size=256';"
+                                        onerror="this.onerror=null;this.src='{{ asset('images/avatar-placeholder.svg') }}';"
                                     >
 
                                     <div class="reviewerBlock">

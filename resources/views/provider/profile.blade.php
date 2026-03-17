@@ -15,9 +15,7 @@
 
         $profileImage = route('provider.profile.image', ['filename' => $filename]) . '?v=' . time();
     } else {
-        $profileImage = 'https://ui-avatars.com/api/?name=' .
-            urlencode(trim(($provider->first_name ?? '') . ' ' . ($provider->last_name ?? '')) ?: 'Provider') .
-            '&background=020617&color=38bdf8&size=256';
+        $profileImage = asset('images/avatar-placeholder.svg');
     }
 @endphp
 
@@ -237,7 +235,7 @@ textarea.form-control {
                         src="{{ $profileImage }}"
                         alt="Profile Image"
                         class="avatar"
-                        onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name={{ urlencode(trim(($provider->first_name ?? '') . ' ' . ($provider->last_name ?? '')) ?: 'Provider') }}&background=020617&color=38bdf8&size=256';"
+                        onerror="this.onerror=null;this.src='{{ asset('images/avatar-placeholder.svg') }}';"
                     >
 
                     <div class="upload-group">
