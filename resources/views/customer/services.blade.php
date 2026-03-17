@@ -812,7 +812,7 @@
         const name = `${provider.first_name ?? ''} ${provider.last_name ?? ''}`.trim() || 'Provider';
         const location = `${provider.city ?? ''}${provider.province ? ', ' + provider.province : ''}`.trim() || '-';
         const viewUrl = `{{ url('/customer/providers') }}/${provider.id}`;
-        const bookUrl = `{{ url('/customer/book') }}/${provider.id}`;
+        const bookUrl = `{{ url('/customer/book') }}/${provider.id}?date={{ $selectedDateString }}`;
         const imageUrl = avatarUrl(provider);
         const fallback = fallbackAvatar();
 

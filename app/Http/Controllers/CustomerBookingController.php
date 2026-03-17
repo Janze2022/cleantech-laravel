@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -74,8 +75,27 @@ class CustomerBookingController extends Controller
         return view('customer.provider.profile', compact('provider', 'ratingSummary', 'reviews'));
     }
 
-    public function create(int $provider)
+    public function create(Request $request, int $provider)
     {
+        $timezone = config('app.timezone') ?: 'Asia/Manila';
+        $today = Carbon::now($timezone)->startOfDay();
+        $requestedDate = trim((string) $request->query('date', ''));
+
+        try {
+            $selectedDate = $requestedDate !== ''
+                ? Carbon::createFromFormat('Y-m-d', $requestedDate, $timezone)->startOfDay()
+                : $today->copy();
+        } catch (\Throwable $exception) {
+            $selectedDate = $today->copy();
+        }
+
+        if ($selectedDate->lt($today)) {
+            $selectedDate = $today->copy();
+        }
+
+        $selectedDateString = $selectedDate->toDateString();
+        $selectedDateLabel = $selectedDate->format('F d, Y');
+
         $providerData = DB::table('service_providers')
             ->where('id', $provider)
             ->where('status', 'Approved')
@@ -108,8 +128,7 @@ class CustomerBookingController extends Controller
             ->join('service_providers as sp', 'sp.id', '=', 'pa.provider_id')
             ->where('pa.provider_id', $provider)
             ->where('pa.status', 'active')
-            ->whereDate('pa.date', '>=', now()->toDateString())
-            ->orderBy('pa.date')
+            ->whereDate('pa.date', $selectedDateString)
             ->orderBy('pa.time_start')
             ->select(
                 'pa.id',
@@ -130,7 +149,9 @@ class CustomerBookingController extends Controller
             'services',
             'optionsByService',
             'availability',
-            'specificAreaServiceId'
+            'specificAreaServiceId',
+            'selectedDateString',
+            'selectedDateLabel'
         ));
     }
 

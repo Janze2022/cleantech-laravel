@@ -18,232 +18,282 @@
 
 <style>
 :root{
-    --earn-bg:#050d1c;
-    --earn-panel:#0a162b;
-    --earn-panel-2:#0d1b34;
+    --earn-bg:#020617;
+    --earn-panel:#091427;
+    --earn-panel-2:#0c1830;
     --earn-border:rgba(255,255,255,.08);
     --earn-border-soft:rgba(255,255,255,.05);
-    --earn-text:#eef5ff;
-    --earn-muted:#93a9c4;
+    --earn-text:#f8fafc;
+    --earn-muted:#94a3b8;
     --earn-accent:#38bdf8;
     --earn-success:#22c55e;
     --earn-warn:#f59e0b;
     --earn-danger:#ef4444;
     --earn-radius:18px;
-    --earn-shadow:0 16px 34px rgba(0,0,0,.28);
+    --earn-shadow:0 12px 30px rgba(0,0,0,.28);
 }
 
-.earnings-shell{
-    max-width:1320px;
-    margin:0 auto;
-    padding:8px 2px 18px;
+.earn-wrap{
+    padding:14px 12px 22px;
     color:var(--earn-text);
 }
 
-.earnings-stack{
-    display:flex;
-    flex-direction:column;
-    gap:1rem;
+.earn-page{
+    max-width:100%;
 }
 
-.earn-panel,
-.stats-row .stat-card,
-.ledger-panel{
-    background:linear-gradient(180deg, rgba(10,22,43,.98), rgba(4,10,22,.98));
+.earn-head{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+}
+
+.earn-title{
+    margin:0;
+    font-size:2rem;
+    font-weight:950;
+    line-height:1.05;
+    letter-spacing:-.03em;
+}
+
+.earn-sub{
+    margin-top:6px;
+    color:var(--earn-muted);
+    font-size:.94rem;
+}
+
+.head-tags{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.head-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    min-height:38px;
+    padding:.5rem .85rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    color:#e2e8f0;
+    font-size:.82rem;
+    font-weight:900;
+    white-space:nowrap;
+}
+
+.head-tag.accent{
+    border-color:rgba(56,189,248,.26);
+    background:rgba(56,189,248,.10);
+    color:#e0f2fe;
+}
+
+.flash{
+    margin-bottom:12px;
+    padding:.9rem 1rem;
+    border-radius:14px;
+    border:1px solid var(--earn-border);
+    font-weight:800;
+}
+
+.flash.success{
+    background:rgba(34,197,94,.10);
+    border-color:rgba(34,197,94,.22);
+    color:#bbf7d0;
+}
+
+.flash.error{
+    background:rgba(239,68,68,.10);
+    border-color:rgba(239,68,68,.22);
+    color:#fecaca;
+}
+
+.stats{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:10px;
+    margin-bottom:12px;
+}
+
+.stat-card{
+    background:linear-gradient(180deg, rgba(12,24,48,.94), rgba(6,14,28,.98));
+    border:1px solid var(--earn-border);
+    border-radius:16px;
+    padding:14px 14px 12px;
+    box-shadow:var(--earn-shadow);
+    min-height:86px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+}
+
+.stat-k{
+    color:#8ea2c5;
+    font-size:.72rem;
+    font-weight:900;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    line-height:1.2;
+}
+
+.stat-v{
+    margin-top:8px;
+    font-size:1.45rem;
+    font-weight:950;
+    line-height:1;
+    color:#fff;
+}
+
+.stat-v.accent{ color:var(--earn-accent); }
+.stat-v.success{ color:#86efac; }
+.stat-v.warn{ color:#fdba74; }
+
+.panel{
+    background:linear-gradient(180deg, rgba(9,20,39,.97), rgba(5,13,26,.99));
     border:1px solid var(--earn-border);
     border-radius:var(--earn-radius);
     box-shadow:var(--earn-shadow);
 }
 
-.earn-panel,
-.ledger-panel{
-    padding:1rem;
+.toolbar-panel{
+    padding:14px;
+    margin-bottom:12px;
 }
 
-.hero{
+.toolbar-top{
     display:flex;
-    align-items:flex-start;
+    align-items:center;
     justify-content:space-between;
-    gap:1rem;
+    gap:10px;
     flex-wrap:wrap;
+    margin-bottom:12px;
 }
 
-.hero-copy{
-    min-width:0;
-}
-
-.hero-title{
+.toolbar-title{
     margin:0;
-    font-size:1.35rem;
+    font-size:1rem;
     font-weight:900;
-    letter-spacing:-.02em;
 }
 
-.hero-subtitle{
-    margin:.3rem 0 0;
+.toolbar-sub{
+    margin-top:4px;
     color:var(--earn-muted);
-    font-size:.86rem;
+    font-size:.84rem;
 }
 
-.hero-tags{
+.toolbar-pills{
     display:flex;
+    align-items:center;
+    gap:8px;
     flex-wrap:wrap;
-    gap:.55rem;
 }
 
-.hero-tag{
+.toolbar-pill{
     display:inline-flex;
     align-items:center;
     gap:.42rem;
-    min-height:36px;
-    padding:.48rem .75rem;
+    min-height:32px;
+    padding:.4rem .72rem;
     border-radius:999px;
-    border:1px solid var(--earn-border);
+    border:1px solid rgba(255,255,255,.08);
     background:rgba(255,255,255,.03);
-    color:rgba(255,255,255,.92);
-    font-size:.78rem;
+    color:#dbe7f5;
+    font-size:.74rem;
     font-weight:800;
-    white-space:nowrap;
 }
 
-.hero-tag.accent{
-    border-color:rgba(56,189,248,.25);
-    background:rgba(56,189,248,.1);
-}
-
-.stats-row{
+.toolbar-grid{
     display:grid;
-    grid-template-columns:repeat(4, minmax(0, 1fr));
-    gap:.85rem;
-}
-
-.stat-card{
-    padding:.9rem 1rem;
-}
-
-.stat-label{
-    color:var(--earn-muted);
-    font-size:.72rem;
-    font-weight:800;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-}
-
-.stat-value{
-    margin-top:.38rem;
-    font-size:1.3rem;
-    font-weight:900;
-    line-height:1.08;
-}
-
-.stat-value.accent{ color:var(--earn-accent); }
-.stat-value.success{ color:#86efac; }
-.stat-value.warn{ color:#fdba74; }
-
-.tool-grid{
-    display:grid;
-    grid-template-columns:minmax(0, 1.75fr) minmax(300px, .9fr);
-    gap:1rem;
+    grid-template-columns:minmax(0, 1.6fr) minmax(340px, 1fr);
+    gap:12px;
     align-items:start;
 }
 
-.tool-card{
-    background:rgba(255,255,255,.02);
+.tool-block{
     border:1px solid var(--earn-border-soft);
-    border-radius:16px;
-    padding:.95rem;
+    border-radius:14px;
+    background:rgba(255,255,255,.02);
+    padding:12px;
 }
 
-.tool-head{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:.75rem;
-    flex-wrap:wrap;
-    margin-bottom:.8rem;
-}
-
-.tool-title{
-    margin:0;
-    font-size:.96rem;
+.tool-block-title{
+    margin:0 0 10px;
+    font-size:.82rem;
     font-weight:900;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#cbd5e1;
 }
 
-.tool-note{
-    color:var(--earn-muted);
-    font-size:.79rem;
-    font-weight:700;
-}
-
-.mini-pill{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:30px;
-    padding:.35rem .62rem;
-    border-radius:999px;
-    border:1px solid var(--earn-border);
-    background:rgba(255,255,255,.03);
-    color:rgba(255,255,255,.88);
-    font-size:.72rem;
-    font-weight:800;
-    white-space:nowrap;
-}
-
-.filters-form{
+.filter-grid{
     display:grid;
-    grid-template-columns:minmax(0, 1.45fr) repeat(3, minmax(140px, .8fr)) auto auto;
-    gap:.75rem;
+    grid-template-columns:minmax(0, 1.45fr) repeat(3, minmax(120px, .8fr)) auto auto;
+    gap:10px;
     align-items:end;
 }
 
-.print-form{
+.print-grid{
     display:grid;
     grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:.75rem;
+    gap:10px;
+    align-items:end;
 }
 
 .field{
     display:flex;
     flex-direction:column;
-    gap:.35rem;
+    gap:5px;
 }
 
 .field.full{
     grid-column:1 / -1;
 }
 
-.field.action-field label{
+.field.action{
+    justify-content:flex-end;
+}
+
+.field.action label{
     opacity:0;
     pointer-events:none;
 }
 
 .field label{
-    color:var(--earn-muted);
-    font-size:.72rem;
-    font-weight:800;
-    letter-spacing:.08em;
+    color:#8ea2c5;
+    font-size:.68rem;
+    letter-spacing:.12em;
     text-transform:uppercase;
+    font-weight:900;
+    line-height:1.2;
 }
 
 .field input,
 .field select{
     width:100%;
-    min-height:42px;
-    padding:.68rem .8rem;
-    border-radius:12px;
-    border:1px solid rgba(255,255,255,.09);
-    background:#071120;
+    height:44px;
+    background:linear-gradient(180deg, rgba(2,6,23,.92), rgba(4,10,24,.98));
+    border:1px solid rgba(255,255,255,.10);
     color:var(--earn-text);
+    border-radius:12px;
+    padding:.7rem .9rem;
     outline:none;
-    font-weight:700;
-    font-size:.9rem;
+    font-size:.92rem;
+    font-weight:800;
 }
 
 .field input:focus,
 .field select:focus{
-    border-color:rgba(56,189,248,.35);
-    box-shadow:0 0 0 3px rgba(56,189,248,.08);
+    border-color:rgba(56,189,248,.55);
+    box-shadow:0 0 0 3px rgba(56,189,248,.10);
+}
+
+.field input::placeholder{
+    color:rgba(203,213,225,.48);
 }
 
 .field input::-webkit-calendar-picker-indicator{
@@ -251,481 +301,479 @@
     opacity:.82;
 }
 
-.field.action-field .btn-admin,
-.field.action-field .btn-admin-soft{
-    width:100%;
-}
-
-.action-row{
-    display:flex;
-    flex-wrap:wrap;
-    gap:.6rem;
-    margin-top:.85rem;
-}
-
-.btn-admin,
-.btn-admin-soft,
-.btn-admin-danger{
+.btnx{
+    height:44px;
     display:inline-flex;
     align-items:center;
     justify-content:center;
     gap:.45rem;
-    min-height:40px;
-    padding:.62rem .94rem;
+    padding:.7rem .95rem;
     border-radius:12px;
     border:1px solid transparent;
+    font-size:.84rem;
+    font-weight:900;
     text-decoration:none;
-    font-size:.82rem;
-    font-weight:800;
+    white-space:nowrap;
 }
 
-.btn-admin{
-    background:rgba(56,189,248,.13);
-    border-color:rgba(56,189,248,.22);
-    color:rgba(255,255,255,.95);
+.btnx.primary{
+    background:rgba(56,189,248,.12);
+    border-color:rgba(56,189,248,.26);
+    color:#e0f2fe;
 }
 
-.btn-admin-soft{
+.btnx.soft{
     background:rgba(255,255,255,.03);
-    border-color:rgba(255,255,255,.1);
-    color:rgba(255,255,255,.92);
+    border-color:rgba(255,255,255,.10);
+    color:#e2e8f0;
 }
 
-.btn-admin-danger{
+.btnx.danger{
     background:rgba(239,68,68,.12);
     border-color:rgba(239,68,68,.22);
     color:#fecaca;
 }
 
 .warning-box{
-    margin-top:.85rem;
-    padding:.8rem .9rem;
+    margin-top:12px;
+    padding:.82rem .9rem;
     border-radius:14px;
     border:1px solid rgba(245,158,11,.22);
-    background:rgba(245,158,11,.09);
+    background:rgba(245,158,11,.10);
     color:#fde68a;
     font-size:.8rem;
-    font-weight:700;
+    font-weight:800;
+}
+
+.ledger-panel{
+    padding:14px;
 }
 
 .ledger-head{
     display:flex;
-    align-items:flex-start;
+    align-items:flex-end;
     justify-content:space-between;
-    gap:.8rem;
+    gap:10px;
     flex-wrap:wrap;
-    margin-bottom:.85rem;
+    margin-bottom:12px;
 }
 
-.ledger-kicker{
-    display:flex;
-    align-items:center;
-    gap:.55rem;
-    flex-wrap:wrap;
-    margin-top:.25rem;
+.ledger-title{
+    margin:0;
+    font-size:1rem;
+    font-weight:900;
 }
 
-.ledger-count{
+.ledger-sub{
+    margin-top:4px;
     color:var(--earn-muted);
-    font-size:.8rem;
-    font-weight:700;
+    font-size:.84rem;
 }
 
-.ledger-table-wrap{
-    overflow:auto;
+.table-shell{
+    width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
 }
 
 .ledger-table{
     width:100%;
-    min-width:860px;
+    min-width:980px;
     border-collapse:collapse;
 }
 
 .ledger-table th{
-    padding:.76rem .72rem;
-    border-bottom:1px solid rgba(255,255,255,.08);
-    color:var(--earn-muted);
+    padding:.85rem .9rem;
+    background:rgba(8,17,34,.98);
+    color:#8ea2c5;
+    border-bottom:1px solid var(--earn-border);
     font-size:.72rem;
-    font-weight:800;
-    letter-spacing:.08em;
+    letter-spacing:.12em;
     text-transform:uppercase;
+    font-weight:900;
     white-space:nowrap;
+    text-align:left;
 }
 
 .ledger-table td{
-    padding:.92rem .72rem;
-    border-bottom:1px solid rgba(255,255,255,.05);
-    vertical-align:top;
+    color:rgba(248,250,252,.95);
+    border-bottom:1px solid var(--earn-border-soft);
+    padding:.9rem;
+    vertical-align:middle;
 }
 
-.ledger-row:hover{
-    background:rgba(255,255,255,.02);
-}
-
-.date-line{
-    font-size:.9rem;
-    font-weight:900;
-}
-
-.sub-line{
-    margin-top:.22rem;
-    color:var(--earn-muted);
-    font-size:.76rem;
-    font-weight:700;
-    line-height:1.4;
+.ledger-table tbody tr:hover td{
+    background:rgba(56,189,248,.05);
 }
 
 .provider-name{
-    font-size:.92rem;
+    font-size:.96rem;
     font-weight:900;
-    line-height:1.3;
+    line-height:1.2;
 }
 
-.provider-phone{
-    margin-top:.18rem;
+.provider-meta{
+    margin-top:4px;
     color:var(--earn-muted);
-    font-size:.77rem;
+    font-size:.8rem;
+    line-height:1.4;
+}
+
+.service-meta{
+    margin-top:4px;
+    color:#d6deea;
+    font-size:.82rem;
+    line-height:1.4;
+}
+
+.value-strong{
+    font-size:.96rem;
+    font-weight:950;
+    color:#fff;
+}
+
+.value-soft{
+    margin-top:4px;
+    color:var(--earn-muted);
+    font-size:.78rem;
     font-weight:700;
-}
-
-.service-summary{
-    margin-top:.24rem;
-    color:rgba(255,255,255,.74);
-    font-size:.76rem;
-    line-height:1.45;
-    max-width:260px;
-}
-
-.amount{
-    font-size:.94rem;
-    font-weight:900;
 }
 
 .status-pill{
     display:inline-flex;
     align-items:center;
-    gap:.36rem;
-    padding:.42rem .7rem;
+    gap:.38rem;
+    min-height:32px;
+    padding:.38rem .72rem;
     border-radius:999px;
-    border:1px solid rgba(255,255,255,.08);
-    font-size:.76rem;
-    font-weight:800;
+    border:1px solid rgba(255,255,255,.10);
+    font-size:.74rem;
+    font-weight:900;
     white-space:nowrap;
 }
 
 .status-pill.remitted{
-    background:rgba(34,197,94,.11);
-    border-color:rgba(34,197,94,.2);
     color:#86efac;
+    border-color:rgba(34,197,94,.28);
+    background:rgba(34,197,94,.10);
 }
 
 .status-pill.outstanding{
-    background:rgba(245,158,11,.12);
-    border-color:rgba(245,158,11,.22);
     color:#fdba74;
+    border-color:rgba(245,158,11,.28);
+    background:rgba(245,158,11,.10);
 }
 
 .actions{
     display:flex;
+    justify-content:flex-start;
+    align-items:center;
+    gap:8px;
     flex-wrap:wrap;
-    gap:.5rem;
 }
 
 .actions form{
     margin:0;
 }
 
-.mini-btn,
-.mini-btn-danger{
-    min-height:34px;
-    padding:.52rem .78rem;
-    border-radius:10px;
-    font-size:.76rem;
+.empty-state{
+    padding:34px 18px;
+    border:1px dashed rgba(255,255,255,.14);
+    border-radius:16px;
+    text-align:center;
+    color:var(--earn-muted);
     font-weight:800;
-    border:1px solid transparent;
 }
 
-.mini-btn{
-    background:rgba(56,189,248,.12);
-    border-color:rgba(56,189,248,.22);
-    color:rgba(255,255,255,.92);
-}
-
-.mini-btn-danger{
-    background:rgba(239,68,68,.12);
-    border-color:rgba(239,68,68,.22);
-    color:#fecaca;
-}
-
-.mobile-ledger{
+.mobile-list{
     display:none;
-    gap:.8rem;
 }
 
 .mobile-card{
-    padding:1rem;
+    border:1px solid var(--earn-border-soft);
+    background:rgba(255,255,255,.02);
     border-radius:16px;
-    border:1px solid rgba(255,255,255,.06);
-    background:rgba(255,255,255,.03);
+    padding:12px;
 }
 
-.mobile-card-top{
+.mobile-top{
     display:flex;
     align-items:flex-start;
     justify-content:space-between;
-    gap:.7rem;
+    gap:10px;
 }
 
-.mobile-card-grid{
+.mobile-grid{
     display:grid;
     grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:.75rem;
-    margin-top:.85rem;
+    gap:10px;
+    margin-top:12px;
 }
 
-.mobile-label{
-    color:var(--earn-muted);
-    font-size:.69rem;
-    font-weight:800;
-    letter-spacing:.08em;
+.mobile-k{
+    color:#8ea2c5;
+    font-size:.68rem;
+    letter-spacing:.12em;
     text-transform:uppercase;
+    font-weight:900;
 }
 
-.mobile-value{
-    margin-top:.18rem;
-    font-size:.84rem;
-    font-weight:700;
-    line-height:1.45;
+.mobile-v{
+    margin-top:4px;
+    color:#fff;
+    font-size:.88rem;
+    font-weight:800;
+    line-height:1.4;
+    word-break:break-word;
 }
 
-.empty-state{
-    padding:1rem;
-    border-radius:16px;
-    border:1px dashed rgba(255,255,255,.14);
-    text-align:center;
-    color:var(--earn-muted);
-    font-weight:700;
+.mobile-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:12px;
 }
 
 .pagination-wrap{
-    margin-top:.9rem;
+    margin-top:12px;
 }
 
-@media (max-width: 1199.98px){
-    .tool-grid,
-    .filters-form{
+@media (max-width: 1200px){
+    .stats{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+
+    .toolbar-grid{
         grid-template-columns:1fr;
     }
 
-    .stats-row{
+    .filter-grid{
         grid-template-columns:repeat(2, minmax(0, 1fr));
     }
 }
 
-@media (max-width: 991.98px){
-    .print-form,
-    .mobile-card-grid{
+@media (max-width: 768px){
+    .earn-wrap{
+        padding:16px 12px 22px;
+    }
+
+    .earn-title{
+        font-size:1.55rem;
+    }
+
+    .stats{
         grid-template-columns:1fr;
     }
 
-    .ledger-table-wrap{
+    .filter-grid,
+    .print-grid,
+    .mobile-grid{
+        grid-template-columns:1fr;
+    }
+
+    .table-shell{
         display:none;
     }
 
-    .mobile-ledger{
+    .mobile-list{
         display:grid;
-    }
-}
-
-@media (max-width: 767.98px){
-    .stats-row{
-        grid-template-columns:1fr;
+        gap:10px;
     }
 
-    .hero{
-        align-items:stretch;
-    }
-
-    .hero-tags{
+    .mobile-actions .btnx,
+    .mobile-actions form{
         width:100%;
     }
 
-    .action-row .btn-admin,
-    .action-row .btn-admin-soft,
-    .action-row .btn-admin-danger{
+    .mobile-actions form .btnx{
         width:100%;
     }
 }
 </style>
 
-<div class="earnings-shell">
-    <div class="earnings-stack">
+<div class="earn-wrap">
+    <div class="earn-page">
 
-        <section class="earn-panel hero">
-            <div class="hero-copy">
-                <h1 class="hero-title">Earnings</h1>
-                <p class="hero-subtitle">Track provider remittance by day.</p>
+        @if(session('success'))
+            <div class="flash success">{{ session('success') }}</div>
+        @endif
+
+        @if($errors->any())
+            <div class="flash error">
+                {{ $errors->first() }}
+            </div>
+        @endif
+
+        <div class="earn-head">
+            <div>
+                <h1 class="earn-title">Earnings</h1>
+                <div class="earn-sub">Provider remittance tracking for approved providers.</div>
             </div>
 
-            <div class="hero-tags">
-                <div class="hero-tag accent">
+            <div class="head-tags">
+                <div class="head-tag accent">
                     <i class="fa fa-circle-check"></i>
                     <span>Approved providers only</span>
                 </div>
-                <div class="hero-tag">
+                <div class="head-tag">
                     <i class="fa fa-calendar"></i>
                     <span>{{ \Carbon\Carbon::parse($dateFrom)->format('M d') }} - {{ \Carbon\Carbon::parse($dateTo)->format('M d, Y') }}</span>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <section class="stats-row">
-            <article class="stat-card">
-                <div class="stat-label">Earned</div>
-                <div class="stat-value accent">PHP {{ number_format((float) ($summary['gross_total'] ?? 0), 2) }}</div>
-            </article>
-
-            <article class="stat-card">
-                <div class="stat-label">Outstanding</div>
-                <div class="stat-value warn">PHP {{ number_format((float) ($summary['outstanding_total'] ?? 0), 2) }}</div>
-            </article>
-
-            <article class="stat-card">
-                <div class="stat-label">Received</div>
-                <div class="stat-value success">PHP {{ number_format((float) ($summary['remitted_total'] ?? 0), 2) }}</div>
-            </article>
-
-            <article class="stat-card">
-                <div class="stat-label">Providers</div>
-                <div class="stat-value">{{ number_format((int) ($summary['providers_count'] ?? 0)) }}</div>
-            </article>
-        </section>
-
-        <section class="tool-grid">
-            <div class="tool-card">
-                <div class="tool-head">
-                    <div>
-                        <h2 class="tool-title">Filter Ledger</h2>
-                        <div class="tool-note">Search provider, date, or remittance status.</div>
-                    </div>
-                    <span class="mini-pill">{{ number_format((int) ($summary['ledger_count'] ?? 0)) }} row{{ (int) ($summary['ledger_count'] ?? 0) === 1 ? '' : 's' }}</span>
-                </div>
-
-                <form method="GET" action="{{ route('admin.earnings') }}">
-                    <div class="filters-form">
-                        <div class="field">
-                            <label for="earningsSearch">Provider</label>
-                            <input id="earningsSearch" type="text" name="q" value="{{ $search }}" placeholder="Search provider name">
-                        </div>
-
-                        <div class="field">
-                            <label for="earningsDateFrom">From</label>
-                            <input id="earningsDateFrom" type="date" name="date_from" value="{{ $dateFrom }}">
-                        </div>
-
-                        <div class="field">
-                            <label for="earningsDateTo">To</label>
-                            <input id="earningsDateTo" type="date" name="date_to" value="{{ $dateTo }}">
-                        </div>
-
-                        <div class="field">
-                            <label for="earningsStatus">Status</label>
-                            <select id="earningsStatus" name="remittance">
-                                <option value="all" {{ $remittanceFilter === 'all' ? 'selected' : '' }}>All</option>
-                                <option value="outstanding" {{ $remittanceFilter === 'outstanding' ? 'selected' : '' }}>Outstanding</option>
-                                <option value="remitted" {{ $remittanceFilter === 'remitted' ? 'selected' : '' }}>Remitted</option>
-                            </select>
-                        </div>
-
-                        <div class="field action-field">
-                            <label>&nbsp;</label>
-                            <button type="submit" class="btn-admin">
-                                <i class="fa fa-search"></i>
-                                <span>Apply</span>
-                            </button>
-                        </div>
-
-                        <div class="field action-field">
-                            <label>&nbsp;</label>
-                            <a href="{{ route('admin.earnings') }}" class="btn-admin-soft">
-                                <i class="fa fa-rotate-left"></i>
-                                <span>Reset</span>
-                            </a>
-                        </div>
-                    </div>
-                </form>
-
-                @if(!$remittanceTableReady)
-                    <div class="warning-box">
-                        Remittance buttons will work after the `provider_remittances` table exists in this environment.
-                    </div>
-                @endif
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-k">Earned</div>
+                <div class="stat-v accent">PHP {{ number_format((float) ($summary['gross_total'] ?? 0), 2) }}</div>
             </div>
 
-            <div class="tool-card">
-                <div class="tool-head">
-                    <div>
-                        <h2 class="tool-title">Print List</h2>
-                        <div class="tool-note">Daily or monthly remittance summary.</div>
-                    </div>
+            <div class="stat-card">
+                <div class="stat-k">Outstanding</div>
+                <div class="stat-v warn">PHP {{ number_format((float) ($summary['outstanding_total'] ?? 0), 2) }}</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-k">Received</div>
+                <div class="stat-v success">PHP {{ number_format((float) ($summary['remitted_total'] ?? 0), 2) }}</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-k">Providers</div>
+                <div class="stat-v">{{ number_format((int) ($summary['providers_count'] ?? 0)) }}</div>
+            </div>
+        </div>
+
+        <section class="panel toolbar-panel">
+            <div class="toolbar-top">
+                <div>
+                    <h2 class="toolbar-title">Filter, Search, and Print</h2>
+                    <div class="toolbar-sub">Use the controls below to narrow the ledger or open a remittance printout.</div>
                 </div>
 
-                <form method="GET" action="{{ route('admin.earnings.print') }}" target="_blank">
-                    <div class="print-form">
-                        <div class="field">
-                            <label for="printPeriod">Type</label>
-                            <select id="printPeriod" name="period">
-                                <option value="daily">Daily</option>
-                                <option value="monthly">Monthly</option>
-                            </select>
-                        </div>
-
-                        <div class="field">
-                            <label for="printProvider">Provider</label>
-                            <select id="printProvider" name="provider_id">
-                                <option value="0">All approved providers</option>
-                                @foreach($providerOptions as $providerOption)
-                                    <option value="{{ $providerOption->id }}">{{ $providerOption->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="field full" id="printDateWrap">
-                            <label for="printDate">Date</label>
-                            <input id="printDate" type="date" name="date" value="{{ $dateTo }}">
-                        </div>
-
-                        <div class="field full" id="printMonthWrap" style="display:none;">
-                            <label for="printMonth">Month</label>
-                            <input id="printMonth" type="month" name="month" value="{{ substr($dateTo, 0, 7) }}">
-                        </div>
-                    </div>
-
-                    <div class="action-row">
-                        <button type="submit" class="btn-admin">
-                            <i class="fa fa-print"></i>
-                            <span>Open Print Page</span>
-                        </button>
-                    </div>
-                </form>
+                <div class="toolbar-pills">
+                    <span class="toolbar-pill">{{ number_format((int) ($summary['ledger_count'] ?? 0)) }} row{{ (int) ($summary['ledger_count'] ?? 0) === 1 ? '' : 's' }}</span>
+                    <span class="toolbar-pill">{{ number_format((int) ($summary['providers_count'] ?? 0)) }} provider{{ (int) ($summary['providers_count'] ?? 0) === 1 ? '' : 's' }}</span>
+                </div>
             </div>
+
+            <div class="toolbar-grid">
+                <div class="tool-block">
+                    <div class="tool-block-title">Ledger Filters</div>
+
+                    <form method="GET" action="{{ route('admin.earnings') }}">
+                        <div class="filter-grid">
+                            <div class="field">
+                                <label for="earningsSearch">Provider</label>
+                                <input id="earningsSearch" type="text" name="q" value="{{ $search }}" placeholder="Search provider name">
+                            </div>
+
+                            <div class="field">
+                                <label for="earningsDateFrom">From</label>
+                                <input id="earningsDateFrom" type="date" name="date_from" value="{{ $dateFrom }}">
+                            </div>
+
+                            <div class="field">
+                                <label for="earningsDateTo">To</label>
+                                <input id="earningsDateTo" type="date" name="date_to" value="{{ $dateTo }}">
+                            </div>
+
+                            <div class="field">
+                                <label for="earningsStatus">Status</label>
+                                <select id="earningsStatus" name="remittance">
+                                    <option value="all" {{ $remittanceFilter === 'all' ? 'selected' : '' }}>All</option>
+                                    <option value="outstanding" {{ $remittanceFilter === 'outstanding' ? 'selected' : '' }}>Outstanding</option>
+                                    <option value="remitted" {{ $remittanceFilter === 'remitted' ? 'selected' : '' }}>Remitted</option>
+                                </select>
+                            </div>
+
+                            <div class="field action">
+                                <label>&nbsp;</label>
+                                <button type="submit" class="btnx primary">
+                                    <i class="fa fa-search"></i>
+                                    <span>Apply</span>
+                                </button>
+                            </div>
+
+                            <div class="field action">
+                                <label>&nbsp;</label>
+                                <a href="{{ route('admin.earnings') }}" class="btnx soft">
+                                    <i class="fa fa-rotate-left"></i>
+                                    <span>Reset</span>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="tool-block">
+                    <div class="tool-block-title">Print List</div>
+
+                    <form method="GET" action="{{ route('admin.earnings.print') }}" target="_blank">
+                        <div class="print-grid">
+                            <div class="field">
+                                <label for="printPeriod">Type</label>
+                                <select id="printPeriod" name="period">
+                                    <option value="daily">Daily</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+                            </div>
+
+                            <div class="field">
+                                <label for="printProvider">Provider</label>
+                                <select id="printProvider" name="provider_id">
+                                    <option value="0">All approved providers</option>
+                                    @foreach($providerOptions as $providerOption)
+                                        <option value="{{ $providerOption->id }}">{{ $providerOption->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="field full" id="printDateWrap">
+                                <label for="printDate">Date</label>
+                                <input id="printDate" type="date" name="date" value="{{ $dateTo }}">
+                            </div>
+
+                            <div class="field full" id="printMonthWrap" style="display:none;">
+                                <label for="printMonth">Month</label>
+                                <input id="printMonth" type="month" name="month" value="{{ substr($dateTo, 0, 7) }}">
+                            </div>
+
+                            <div class="field full action">
+                                <label>&nbsp;</label>
+                                <button type="submit" class="btnx primary">
+                                    <i class="fa fa-print"></i>
+                                    <span>Open Print Page</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            @if(!$remittanceTableReady)
+                <div class="warning-box">
+                    Remittance actions will work after the `provider_remittances` table exists in this environment.
+                </div>
+            @endif
         </section>
 
-        <section class="ledger-panel">
+        <section class="panel ledger-panel">
             <div class="ledger-head">
                 <div>
-                    <h2 class="tool-title">Daily Ledger</h2>
-                    <div class="ledger-kicker">
-                        <span class="mini-pill">One row per provider per day</span>
-                        <span class="ledger-count">{{ number_format((int) ($summary['ledger_count'] ?? 0)) }} result{{ (int) ($summary['ledger_count'] ?? 0) === 1 ? '' : 's' }}</span>
-                    </div>
+                    <h2 class="ledger-title">Daily Ledger</h2>
+                    <div class="ledger-sub">One row per provider per earning day.</div>
+                </div>
+
+                <div class="toolbar-pills">
+                    <span class="toolbar-pill">{{ number_format((int) ($summary['ledger_count'] ?? 0)) }} result{{ (int) ($summary['ledger_count'] ?? 0) === 1 ? '' : 's' }}</span>
                 </div>
             </div>
 
             @if($ledger->count() === 0)
                 <div class="empty-state">No provider earnings matched the current filters.</div>
             @else
-                <div class="ledger-table-wrap">
+                <div class="table-shell">
                     <table class="ledger-table">
                         <thead>
                             <tr>
@@ -739,28 +787,28 @@
                         </thead>
                         <tbody>
                             @foreach($ledger as $row)
-                                <tr class="ledger-row">
+                                <tr>
                                     <td>
-                                        <div class="date-line">{{ \Carbon\Carbon::parse($row->remit_date)->format('M d, Y') }}</div>
+                                        <div class="value-strong">{{ \Carbon\Carbon::parse($row->remit_date)->format('M d, Y') }}</div>
                                     </td>
 
                                     <td>
                                         <div class="provider-name">{{ $row->provider_name }}</div>
                                         @if($row->provider_phone !== '')
-                                            <div class="provider-phone">{{ $row->provider_phone }}</div>
+                                            <div class="provider-meta">{{ $row->provider_phone }}</div>
                                         @endif
-                                        <div class="service-summary">{{ $row->service_names !== '' ? $row->service_names : 'Service list unavailable' }}</div>
+                                        <div class="service-meta">{{ $row->service_names !== '' ? $row->service_names : 'Service list unavailable' }}</div>
                                     </td>
 
                                     <td>
-                                        <div class="amount">{{ number_format((int) $row->total_bookings) }}</div>
-                                        <div class="sub-line">paid/completed jobs</div>
+                                        <div class="value-strong">{{ number_format((int) $row->total_bookings) }}</div>
+                                        <div class="value-soft">paid/completed jobs</div>
                                     </td>
 
                                     <td>
-                                        <div class="amount">PHP {{ number_format((float) $row->gross_amount, 2) }}</div>
+                                        <div class="value-strong">PHP {{ number_format((float) $row->gross_amount, 2) }}</div>
                                         @if($row->amount_changed)
-                                            <div class="sub-line" style="color:#fde68a;">Updated after remittance record</div>
+                                            <div class="value-soft" style="color:#fde68a;">Updated after remittance record</div>
                                         @endif
                                     </td>
 
@@ -769,7 +817,7 @@
                                             <i class="fa {{ $row->is_remitted ? 'fa-check-circle' : 'fa-clock' }}"></i>
                                             <span>{{ $row->is_remitted ? 'Remitted' : 'Outstanding' }}</span>
                                         </div>
-                                        <div class="sub-line">
+                                        <div class="value-soft">
                                             @if($row->is_remitted && !empty($row->remitted_at))
                                                 {{ \Carbon\Carbon::parse($row->remitted_at)->format('M d, Y h:i A') }}
                                             @else
@@ -785,14 +833,14 @@
                                                     @csrf
                                                     <input type="hidden" name="provider_id" value="{{ $row->provider_id }}">
                                                     <input type="hidden" name="remit_date" value="{{ $row->remit_date }}">
-                                                    <button type="submit" class="mini-btn-danger">Undo</button>
+                                                    <button type="submit" class="btnx danger">Undo</button>
                                                 </form>
                                             @else
                                                 <form method="POST" action="{{ route('admin.earnings.remit') }}">
                                                     @csrf
                                                     <input type="hidden" name="provider_id" value="{{ $row->provider_id }}">
                                                     <input type="hidden" name="remit_date" value="{{ $row->remit_date }}">
-                                                    <button type="submit" class="mini-btn" {{ $remittanceTableReady ? '' : 'disabled' }}>Mark Remitted</button>
+                                                    <button type="submit" class="btnx primary" {{ $remittanceTableReady ? '' : 'disabled' }}>Mark Remitted</button>
                                                 </form>
                                             @endif
                                         </div>
@@ -803,13 +851,13 @@
                     </table>
                 </div>
 
-                <div class="mobile-ledger">
+                <div class="mobile-list">
                     @foreach($ledger as $row)
                         <article class="mobile-card">
-                            <div class="mobile-card-top">
+                            <div class="mobile-top">
                                 <div>
                                     <div class="provider-name">{{ $row->provider_name }}</div>
-                                    <div class="sub-line">{{ \Carbon\Carbon::parse($row->remit_date)->format('M d, Y') }}</div>
+                                    <div class="provider-meta">{{ \Carbon\Carbon::parse($row->remit_date)->format('M d, Y') }}</div>
                                 </div>
 
                                 <div class="status-pill {{ $row->is_remitted ? 'remitted' : 'outstanding' }}">
@@ -817,42 +865,42 @@
                                 </div>
                             </div>
 
-                            <div class="mobile-card-grid">
+                            <div class="mobile-grid">
                                 <div>
-                                    <div class="mobile-label">Amount</div>
-                                    <div class="mobile-value">PHP {{ number_format((float) $row->gross_amount, 2) }}</div>
+                                    <div class="mobile-k">Amount</div>
+                                    <div class="mobile-v">PHP {{ number_format((float) $row->gross_amount, 2) }}</div>
                                 </div>
 
                                 <div>
-                                    <div class="mobile-label">Jobs</div>
-                                    <div class="mobile-value">{{ number_format((int) $row->total_bookings) }}</div>
+                                    <div class="mobile-k">Jobs</div>
+                                    <div class="mobile-v">{{ number_format((int) $row->total_bookings) }}</div>
                                 </div>
 
                                 <div>
-                                    <div class="mobile-label">Phone</div>
-                                    <div class="mobile-value">{{ $row->provider_phone !== '' ? $row->provider_phone : 'Not available' }}</div>
+                                    <div class="mobile-k">Phone</div>
+                                    <div class="mobile-v">{{ $row->provider_phone !== '' ? $row->provider_phone : 'Not available' }}</div>
                                 </div>
 
                                 <div>
-                                    <div class="mobile-label">Services</div>
-                                    <div class="mobile-value">{{ $row->service_names !== '' ? $row->service_names : 'Service list unavailable' }}</div>
+                                    <div class="mobile-k">Services</div>
+                                    <div class="mobile-v">{{ $row->service_names !== '' ? $row->service_names : 'Service list unavailable' }}</div>
                                 </div>
                             </div>
 
-                            <div class="action-row">
+                            <div class="mobile-actions">
                                 @if($row->is_remitted)
                                     <form method="POST" action="{{ route('admin.earnings.outstanding') }}">
                                         @csrf
                                         <input type="hidden" name="provider_id" value="{{ $row->provider_id }}">
                                         <input type="hidden" name="remit_date" value="{{ $row->remit_date }}">
-                                        <button type="submit" class="btn-admin-danger">Undo</button>
+                                        <button type="submit" class="btnx danger">Undo</button>
                                     </form>
                                 @else
                                     <form method="POST" action="{{ route('admin.earnings.remit') }}">
                                         @csrf
                                         <input type="hidden" name="provider_id" value="{{ $row->provider_id }}">
                                         <input type="hidden" name="remit_date" value="{{ $row->remit_date }}">
-                                        <button type="submit" class="btn-admin" {{ $remittanceTableReady ? '' : 'disabled' }}>Mark Remitted</button>
+                                        <button type="submit" class="btnx primary" {{ $remittanceTableReady ? '' : 'disabled' }}>Mark Remitted</button>
                                     </form>
                                 @endif
                             </div>
@@ -870,15 +918,21 @@
 </div>
 
 <script>
-(function(){
+(function () {
     const periodSelect = document.getElementById('printPeriod');
     const dateWrap = document.getElementById('printDateWrap');
     const monthWrap = document.getElementById('printMonthWrap');
 
     function syncPrintFields() {
         const isMonthly = periodSelect && periodSelect.value === 'monthly';
-        if (dateWrap) dateWrap.style.display = isMonthly ? 'none' : '';
-        if (monthWrap) monthWrap.style.display = isMonthly ? '' : 'none';
+
+        if (dateWrap) {
+            dateWrap.style.display = isMonthly ? 'none' : '';
+        }
+
+        if (monthWrap) {
+            monthWrap.style.display = isMonthly ? '' : 'none';
+        }
     }
 
     periodSelect?.addEventListener('change', syncPrintFields);

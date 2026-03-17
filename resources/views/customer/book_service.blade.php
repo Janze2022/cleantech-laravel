@@ -252,6 +252,7 @@
         <div class="booking-card">
             <h4>Book {{ $providerData->first_name }} {{ $providerData->last_name }}</h4>
             <p class="text-muted">{{ $providerData->city }}, {{ $providerData->province }}</p>
+            <p class="text-muted mb-4">Showing available time slots for {{ $selectedDateLabel ?? 'today' }} only.</p>
 
             @if ($errors->any())
                 <div class="alert alert-danger">
@@ -341,7 +342,7 @@
 
                 {{-- AVAILABILITY --}}
                 <div class="mb-4">
-                    <label>Available Schedule</label>
+                    <label>Available Schedule for {{ $selectedDateLabel ?? 'Today' }}</label>
 
                     <select id="slot" name="slot_id" class="form-control mb-2" required>
                         <option value="">Select available time</option>
@@ -364,6 +365,10 @@
                             </option>
                         @endforeach
                     </select>
+
+                    @if($availability->isEmpty())
+                        <small class="text-muted d-block mb-2">No active time slots for {{ $selectedDateLabel ?? 'today' }}.</small>
+                    @endif
 
                     <div class="mb-2">
                         <small class="text-muted" id="slotPreviewText">Choose a provider availability first.</small>
