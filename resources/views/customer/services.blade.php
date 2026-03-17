@@ -155,15 +155,13 @@
 
 .toolbar-grid{
     display: grid;
-    grid-template-columns: minmax(0, 1.3fr) minmax(260px, .95fr) auto;
+    grid-template-columns: minmax(0, 1.45fr) minmax(220px, .82fr) 138px 178px;
     gap: .8rem;
     align-items: end;
 }
 
-.toolbar-stack{
-    display: flex;
-    gap: .7rem;
-    align-items: end;
+.toolbar-field{
+    min-width: 0;
 }
 
 .toolbar-label{
@@ -172,6 +170,11 @@
     color: var(--services-muted);
     font-size: .88rem;
     font-weight: 700;
+}
+
+.toolbar-label-hidden{
+    opacity: 0;
+    pointer-events: none;
 }
 
 .services-input{
@@ -195,9 +198,7 @@
 }
 
 .date-form{
-    display: flex;
-    gap: .7rem;
-    align-items: end;
+    display: block;
 }
 
 .btn-accent-line,
@@ -565,11 +566,13 @@
         grid-template-columns: 1fr;
     }
 
-    .toolbar-stack,
-    .date-form,
     .service-actions,
     .provider-actions{
         flex-direction: column;
+    }
+
+    .toolbar-label-hidden{
+        display: none;
     }
 
     .services-grid{
@@ -613,7 +616,7 @@
         <section class="services-main">
             <div class="panel-shell panel-pad">
                 <div class="toolbar-grid">
-                    <div>
+                    <div class="toolbar-field">
                         <label class="toolbar-label" for="svcSearch">Search services</label>
                         <input
                             id="svcSearch"
@@ -623,9 +626,9 @@
                         >
                     </div>
 
-                    <div>
+                    <div class="toolbar-field">
                         <label class="toolbar-label" for="serviceDate">Available date</label>
-                        <form method="GET" action="{{ route('customer.services') }}" class="date-form">
+                        <form id="servicesDateForm" method="GET" action="{{ route('customer.services') }}" class="date-form">
                             <input
                                 id="serviceDate"
                                 type="date"
@@ -634,11 +637,16 @@
                                 value="{{ $selectedDateString }}"
                                 min="{{ $todayDateString }}"
                             >
-                            <button class="btn btn-accent-fill" type="submit">Apply Date</button>
                         </form>
                     </div>
 
-                    <div class="toolbar-stack">
+                    <div class="toolbar-field">
+                        <label class="toolbar-label toolbar-label-hidden" for="servicesApplyBtn">Apply</label>
+                        <button id="servicesApplyBtn" form="servicesDateForm" class="btn btn-accent-fill w-100" type="submit">Apply Date</button>
+                    </div>
+
+                    <div class="toolbar-field">
+                        <label class="toolbar-label toolbar-label-hidden" for="clearSelection">Clear</label>
                         <button id="clearSelection" class="btn btn-soft-line w-100" type="button">Clear Selection</button>
                     </div>
                 </div>
