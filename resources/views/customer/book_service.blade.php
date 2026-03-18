@@ -21,14 +21,15 @@
     --danger:#ef4444;
 }
 
-.booking-page { padding:2rem 1rem; }
+.booking-page { padding:1rem .75rem 1.5rem; }
 
 .booking-container {
-    max-width:1100px;
-    margin:auto;
+    width:min(1180px, 100%);
+    margin:0;
     display:grid;
-    grid-template-columns:340px 1fr;
-    gap:2rem;
+    grid-template-columns:280px minmax(0, 820px);
+    gap:1rem;
+    align-items:start;
 }
 
 .booking-summary {
@@ -37,7 +38,7 @@
     background:linear-gradient(180deg,#020b1f,#020617);
     border:1px solid var(--border-soft);
     border-radius:16px;
-    padding:1.5rem;
+    padding:1.15rem;
 }
 
 .summary-row {
@@ -61,7 +62,7 @@
 
 .summary-total span {
     display:block;
-    font-size:1.8rem;
+    font-size:1.55rem;
     color:var(--accent);
     font-weight:800;
     margin-top:.35rem;
@@ -71,7 +72,7 @@
     background:linear-gradient(180deg,#020b1f,#020617);
     border-radius:16px;
     border:1px solid var(--border-soft);
-    padding:2rem;
+    padding:1.35rem;
 }
 
 .form-control {
@@ -102,7 +103,7 @@
     display:flex;
     gap:1rem;
     align-items:center;
-    padding:1rem;
+    padding:.85rem;
     border:1px solid var(--border-soft);
     border-radius:12px;
     margin-bottom:1rem;
@@ -252,7 +253,7 @@
 
 .location-map{
     width:100%;
-    height:300px;
+    height:230px;
     border-radius:16px;
     overflow:hidden;
     border:1px solid var(--border-soft);
@@ -269,7 +270,7 @@
     border:1px solid rgba(255,255,255,.08);
     background:rgba(255,255,255,.03);
     border-radius:16px;
-    padding:1rem;
+    padding:.85rem;
 }
 
 .location-card-label{
@@ -283,10 +284,10 @@
 }
 
 .location-readonly{
-    min-height:50px;
+    min-height:44px;
     display:flex;
     align-items:center;
-    padding:.78rem .95rem;
+    padding:.7rem .85rem;
     border-radius:12px;
     border:1px solid rgba(255,255,255,.08);
     background:#020617;
@@ -301,43 +302,30 @@
 
 .location-meta{
     display:grid;
-    gap:.8rem;
-}
-
-.location-meta-grid{
-    display:grid;
-    grid-template-columns:minmax(0, 1.25fr) minmax(220px, .75fr);
-    gap:.8rem;
+    gap:.55rem;
 }
 
 .location-meta-card{
     border:1px solid rgba(255,255,255,.08);
     background:rgba(255,255,255,.03);
     border-radius:14px;
-    padding:.85rem .95rem;
+    padding:.8rem .9rem;
 }
 
 .location-note{
     color:var(--text-muted);
-    font-size:.86rem;
-    line-height:1.5;
+    font-size:.82rem;
+    line-height:1.45;
 }
 
 .location-status{
-    min-height:1.3rem;
-    font-size:.85rem;
+    min-height:1.2rem;
+    font-size:.82rem;
     color:var(--text-muted);
 }
 
 .location-status.error{
     color:#fca5a5;
-}
-
-.location-preview{
-    border:1px solid rgba(56,189,248,.16);
-    background:rgba(56,189,248,.08);
-    border-radius:14px;
-    padding:.8rem .9rem;
 }
 
 .location-preview-label{
@@ -356,29 +344,14 @@
 }
 
 .location-coords{
-    display:flex;
-    flex-wrap:wrap;
-    gap:.55rem;
-}
-
-.coord-pill{
-    display:inline-flex;
-    gap:.35rem;
-    align-items:center;
-    padding:.38rem .7rem;
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,.08);
-    background:#020617;
-    color:#fff;
-    font-size:.78rem;
-    font-weight:700;
+    display:none;
 }
 
 .location-helper{
-    margin-top:.35rem;
+    margin-top:.3rem;
     color:var(--text-muted);
-    font-size:.78rem;
-    line-height:1.5;
+    font-size:.74rem;
+    line-height:1.4;
 }
 
 .hidden{
@@ -388,6 +361,7 @@
 @media (max-width: 991px){
     .booking-container{
         grid-template-columns:1fr;
+        width:100%;
     }
 
     .booking-summary{
@@ -411,12 +385,12 @@
     }
 
     .location-map{
-        height:250px;
+        height:210px;
     }
 
     .location-card,
     .location-meta-card{
-        padding:.85rem;
+        padding:.75rem;
     }
 }
 </style>
@@ -453,7 +427,7 @@
         <div class="booking-card">
             <h4>Book {{ $providerData->first_name }} {{ $providerData->last_name }}</h4>
             <p class="text-muted">{{ $providerData->city }}, {{ $providerData->province }}</p>
-            <p class="text-muted mb-4">Showing available time slots for {{ $selectedDateLabel ?? 'today' }} only.</p>
+            <p class="text-muted mb-3">Available on {{ $selectedDateLabel ?? 'today' }}.</p>
 
             @if ($errors->any())
                 <div class="alert alert-danger">
@@ -530,13 +504,13 @@
                     <div class="location-shell">
                         <div class="location-top-grid">
                             <div class="location-card">
-                                <span class="location-card-label">Search address or landmark</span>
+                                <span class="location-card-label">Search place</span>
                                 <div class="location-search-wrap">
                                     <input
                                         type="text"
                                         id="locationSearch"
                                         class="form-control"
-                                        placeholder="Search a place, street, or barangay"
+                                        placeholder="Search place or barangay"
                                         autocomplete="off"
                                     >
                                     <div id="locationResults" class="location-results hidden"></div>
@@ -544,12 +518,12 @@
                             </div>
 
                             <div class="location-card">
-                                <span class="location-card-label">Detected Barangay</span>
+                                <span class="location-card-label">Barangay</span>
                                 <div id="barangayDisplay" class="location-readonly {{ old('barangay') ? '' : 'is-empty' }}">
-                                    {{ old('barangay') ?: 'Barangay will fill in automatically from the pinned location.' }}
+                                    {{ old('barangay') ?: 'Will fill in after you pin the map.' }}
                                 </div>
                                 <div class="location-helper">
-                                    This now updates automatically from the selected pin.
+                                    Filled automatically from the map pin.
                                 </div>
                             </div>
                         </div>
@@ -558,25 +532,19 @@
 
                         <div class="location-meta">
                             <div class="location-note">
-                                Search above, tap the map, or drag the pin to lock the exact service location.
+                                Search, tap the map, or drag the pin.
                             </div>
 
                             <div id="locationStatus" class="location-status">
-                                Waiting for your selected service location.
+                                Choose your service location.
                             </div>
 
-                            <div class="location-meta-grid">
-                                <div class="location-meta-card">
-                                    <div class="location-preview-label">Readable Map Address</div>
-                                    <div class="location-preview-value" id="locationPreviewText">No pinned location yet.</div>
-                                </div>
-
-                                <div class="location-meta-card">
-                                    <div class="location-preview-label">Coordinates</div>
-                                    <div class="location-coords">
-                                        <span class="coord-pill">Lat: <strong id="latitudePreview">—</strong></span>
-                                        <span class="coord-pill">Lng: <strong id="longitudePreview">—</strong></span>
-                                    </div>
+                            <div class="location-meta-card">
+                                <div class="location-preview-label">Pinned Place</div>
+                                <div class="location-preview-value" id="locationPreviewText">No pinned location yet.</div>
+                                <div class="location-coords" aria-hidden="true">
+                                    <span>Lat: <strong id="latitudePreview">—</strong></span>
+                                    <span>Lng: <strong id="longitudePreview">—</strong></span>
                                 </div>
                             </div>
                         </div>
@@ -592,13 +560,13 @@
                 </div>
 
                 <div class="mb-3">
-                    <label>House No / Street / Additional Directions</label>
-                    <textarea name="address" class="form-control" required>{{ old('address') }}</textarea>
+                    <label>House No. / Landmark</label>
+                    <textarea name="address" class="form-control" required placeholder="Example: near school, yellow gate">{{ old('address') }}</textarea>
                 </div>
 
                 {{-- AVAILABILITY --}}
                 <div class="mb-4">
-                    <label>Available Schedule for {{ $selectedDateLabel ?? 'Today' }}</label>
+                    <label>Choose Time</label>
 
                     <select id="slot" name="slot_id" class="form-control mb-2" required>
                         <option value="">Select available time</option>
@@ -1106,7 +1074,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function updateLocationPreview(lat, lng, formattedAddress) {
         latitudePreviewEl.textContent = lat ? Number(lat).toFixed(6) : '—';
         longitudePreviewEl.textContent = lng ? Number(lng).toFixed(6) : '—';
-        previewEl.textContent = formattedAddress || 'Pinned coordinates saved. Readable address will appear here.';
+        previewEl.textContent = formattedAddress || 'Your pinned place will appear here.';
     }
 
     function updateLocationFields(lat, lng, formattedAddress = '') {
@@ -1231,7 +1199,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // Keep the readable address in sync with the pinned map coordinates.
     async function reverseGeocode(lat, lng) {
         const requestId = ++activeReverseRequest;
-        setStatus('Updating readable address...', false);
+        setStatus('Checking pinned place...', false);
 
         try {
             const response = await fetch(`${reverseUrl}?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`, {
@@ -1247,7 +1215,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             if (!response.ok || !payload.result) {
-                setStatus(payload.message || 'Location pinned, but readable address is unavailable right now.', true);
+                setStatus(payload.message || 'Pin saved, but the place name is not ready yet.', true);
                 return;
             }
 
@@ -1257,9 +1225,9 @@ window.addEventListener('DOMContentLoaded', () => {
             updateLocationFields(lat, lng, formatted);
             searchEl.value = formatted || searchEl.value;
             syncAdministrativeFields(result);
-            setStatus('Pinned location updated.', false);
+            setStatus('Location saved.', false);
         } catch (error) {
-            setStatus('Location pinned, but readable address could not be updated.', true);
+            setStatus('Pin saved, but the place name could not be updated.', true);
         }
     }
 
@@ -1287,13 +1255,13 @@ window.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        setStatus('Pinned location ready.', false);
+        setStatus('Location saved.', false);
     }
 
     function renderResults(results) {
         if (!results.length) {
             clearResults();
-            setStatus('No address matches found. Try a more specific search or pin the map manually.', true);
+            setStatus('No match found. Try another search or tap the map.', true);
             return;
         }
 
@@ -1343,7 +1311,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     async function searchLocation(query) {
         const requestId = ++activeSearchRequest;
-        setStatus('Searching addresses...', false);
+        setStatus('Searching...', false);
 
         try {
             const response = await fetch(`${autocompleteUrl}?q=${encodeURIComponent(query)}`, {
@@ -1360,14 +1328,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) {
                 clearResults();
-                setStatus(payload.message || 'Unable to search locations right now.', true);
+                setStatus(payload.message || 'Search is not available right now.', true);
                 return;
             }
 
             renderResults(payload.results || []);
         } catch (error) {
             clearResults();
-            setStatus('Unable to search locations right now.', true);
+            setStatus('Search is not available right now.', true);
         }
     }
 
@@ -1396,7 +1364,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         if (query.length < 3) {
             clearResults();
-            setStatus('Type at least 3 characters or tap the map to pin the location.', false);
+            setStatus('Type 3 letters or tap the map.', false);
             return;
         }
 
