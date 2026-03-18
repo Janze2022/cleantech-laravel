@@ -203,18 +203,15 @@
 
 .location-shell{
     display:grid;
-    gap:.85rem;
+    gap:1rem;
 }
 
 .location-search-wrap{
-    position:relative;
+    display:grid;
+    gap:.65rem;
 }
 
 .location-results{
-    position:absolute;
-    inset:auto 0 0 0;
-    transform:translateY(calc(100% + 8px));
-    z-index:30;
     display:grid;
     gap:.4rem;
     padding:.65rem;
@@ -222,7 +219,7 @@
     border:1px solid var(--border-soft);
     background:#020b1f;
     box-shadow:0 24px 50px rgba(0,0,0,.42);
-    max-height:220px;
+    max-height:200px;
     overflow:auto;
 }
 
@@ -255,15 +252,69 @@
 
 .location-map{
     width:100%;
-    height:320px;
+    height:300px;
     border-radius:16px;
     overflow:hidden;
     border:1px solid var(--border-soft);
 }
 
+.location-top-grid{
+    display:grid;
+    grid-template-columns:minmax(0, 1.35fr) minmax(220px, .65fr);
+    gap:.85rem;
+    align-items:start;
+}
+
+.location-card{
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    border-radius:16px;
+    padding:1rem;
+}
+
+.location-card-label{
+    display:block;
+    margin-bottom:.45rem;
+    color:var(--text-muted);
+    font-size:.72rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    font-weight:800;
+}
+
+.location-readonly{
+    min-height:50px;
+    display:flex;
+    align-items:center;
+    padding:.78rem .95rem;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.08);
+    background:#020617;
+    color:#fff;
+    font-weight:700;
+    line-height:1.45;
+}
+
+.location-readonly.is-empty{
+    color:var(--text-muted);
+}
+
 .location-meta{
     display:grid;
-    gap:.55rem;
+    gap:.8rem;
+}
+
+.location-meta-grid{
+    display:grid;
+    grid-template-columns:minmax(0, 1.25fr) minmax(220px, .75fr);
+    gap:.8rem;
+}
+
+.location-meta-card{
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    border-radius:14px;
+    padding:.85rem .95rem;
 }
 
 .location-note{
@@ -323,6 +374,13 @@
     font-weight:700;
 }
 
+.location-helper{
+    margin-top:.35rem;
+    color:var(--text-muted);
+    font-size:.78rem;
+    line-height:1.5;
+}
+
 .hidden{
     display:none !important;
 }
@@ -347,8 +405,18 @@
         grid-template-columns:1fr;
     }
 
+    .location-top-grid,
+    .location-meta-grid{
+        grid-template-columns:1fr;
+    }
+
     .location-map{
-        height:280px;
+        height:250px;
+    }
+
+    .location-card,
+    .location-meta-card{
+        padding:.85rem;
     }
 }
 </style>
@@ -457,54 +525,67 @@
                     >
                 </div>
 
-                {{-- BARANGAY --}}
-                <div class="mb-3">
-                    <label>Barangay (Butuan City)</label>
-                    <select id="barangay" class="form-control"></select>
-
-                    <input type="hidden" name="region" id="regionInput" value="Region XIII">
-                    <input type="hidden" name="province" id="provinceInput" value="Agusan del Norte">
-                    <input type="hidden" name="city" id="cityInput" value="Butuan City">
-                    <input type="hidden" name="barangay" id="barangay_text" value="{{ old('barangay') }}">
-                </div>
-
                 <div class="mb-3">
                     <label>Pin Service Location</label>
                     <div class="location-shell">
-                        <div class="location-search-wrap">
-                            <input
-                                type="text"
-                                id="locationSearch"
-                                class="form-control"
-                                placeholder="Search address or landmark"
-                                autocomplete="off"
-                            >
-                            <div id="locationResults" class="location-results hidden"></div>
+                        <div class="location-top-grid">
+                            <div class="location-card">
+                                <span class="location-card-label">Search address or landmark</span>
+                                <div class="location-search-wrap">
+                                    <input
+                                        type="text"
+                                        id="locationSearch"
+                                        class="form-control"
+                                        placeholder="Search a place, street, or barangay"
+                                        autocomplete="off"
+                                    >
+                                    <div id="locationResults" class="location-results hidden"></div>
+                                </div>
+                            </div>
+
+                            <div class="location-card">
+                                <span class="location-card-label">Detected Barangay</span>
+                                <div id="barangayDisplay" class="location-readonly {{ old('barangay') ? '' : 'is-empty' }}">
+                                    {{ old('barangay') ?: 'Barangay will fill in automatically from the pinned location.' }}
+                                </div>
+                                <div class="location-helper">
+                                    This now updates automatically from the selected pin.
+                                </div>
+                            </div>
                         </div>
 
                         <div id="locationMap" class="location-map"></div>
 
                         <div class="location-meta">
                             <div class="location-note">
-                                Search an address, tap the map, or drag the pin to the exact service location.
+                                Search above, tap the map, or drag the pin to lock the exact service location.
                             </div>
 
                             <div id="locationStatus" class="location-status">
-                                Select a location on the map to pin the customer address.
+                                Waiting for your selected service location.
                             </div>
 
-                            <div class="location-preview">
-                                <div class="location-preview-label">Readable Map Address</div>
-                                <div class="location-preview-value" id="locationPreviewText">No pinned location yet.</div>
-                            </div>
+                            <div class="location-meta-grid">
+                                <div class="location-meta-card">
+                                    <div class="location-preview-label">Readable Map Address</div>
+                                    <div class="location-preview-value" id="locationPreviewText">No pinned location yet.</div>
+                                </div>
 
-                            <div class="location-coords">
-                                <span class="coord-pill">Lat: <strong id="latitudePreview">—</strong></span>
-                                <span class="coord-pill">Lng: <strong id="longitudePreview">—</strong></span>
+                                <div class="location-meta-card">
+                                    <div class="location-preview-label">Coordinates</div>
+                                    <div class="location-coords">
+                                        <span class="coord-pill">Lat: <strong id="latitudePreview">—</strong></span>
+                                        <span class="coord-pill">Lng: <strong id="longitudePreview">—</strong></span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
+                    <input type="hidden" name="region" id="regionInput" value="Region XIII">
+                    <input type="hidden" name="province" id="provinceInput" value="Agusan del Norte">
+                    <input type="hidden" name="city" id="cityInput" value="Butuan City">
+                    <input type="hidden" name="barangay" id="barangay_text" value="{{ old('barangay') }}">
                     <input type="hidden" name="customer_latitude" id="customerLatitude" value="{{ old('customer_latitude') }}">
                     <input type="hidden" name="customer_longitude" id="customerLongitude" value="{{ old('customer_longitude') }}">
                     <input type="hidden" name="formatted_address" id="formattedAddress" value="{{ old('formatted_address') }}">
@@ -978,39 +1059,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-/* PSGC BARANGAYS (BUTUAN ONLY) */
-fetch('https://psgc.gitlab.io/api/cities-municipalities/160202000/barangays/')
-.then(r => r.json())
-.then(d => {
-    const barangayEl = document.getElementById('barangay');
-    const barangayTextEl = document.getElementById('barangay_text');
-
-    barangayEl.innerHTML = '<option value="">Select barangay</option>';
-    d.forEach(b => {
-        barangayEl.innerHTML += `<option value="${b.code}">${b.name}</option>`;
-    });
-
-    const oldBarangayText = barangayTextEl.value;
-    if(oldBarangayText){
-        [...barangayEl.options].forEach(opt => {
-            if(opt.text === oldBarangayText) opt.selected = true;
-        });
-    }
-
-    barangayEl.addEventListener('change', () => {
-        barangayTextEl.value = barangayEl.selectedOptions[0]?.text || '';
-    });
-})
-.catch(() => {
-    const barangayEl = document.getElementById('barangay');
-    const barangayTextEl = document.getElementById('barangay_text');
-    if (barangayEl) {
-        barangayEl.innerHTML = '<option value="">Unable to load barangays, you can continue without it</option>';
-    }
-    if (barangayTextEl && !barangayTextEl.value) {
-        barangayTextEl.value = '';
-    }
-});
 </script>
 
 <script
@@ -1032,8 +1080,8 @@ fetch('https://psgc.gitlab.io/api/cities-municipalities/160202000/barangays/')
     const longitudePreviewEl = document.getElementById('longitudePreview');
     const cityInputEl = document.getElementById('cityInput');
     const provinceInputEl = document.getElementById('provinceInput');
-    const barangaySelectEl = document.getElementById('barangay');
     const barangayTextEl = document.getElementById('barangay_text');
+    const barangayDisplayEl = document.getElementById('barangayDisplay');
 
     if (!searchEl || !resultsEl || !mapEl || !statusEl || !previewEl || !window.L) {
         return;
@@ -1048,6 +1096,7 @@ fetch('https://psgc.gitlab.io/api/cities-municipalities/160202000/barangays/')
     let searchTimer = null;
     let activeSearchRequest = 0;
     let activeReverseRequest = 0;
+    let barangayCatalog = [];
 
     function setStatus(message, isError = false) {
         statusEl.textContent = message;
@@ -1067,41 +1116,60 @@ fetch('https://psgc.gitlab.io/api/cities-municipalities/160202000/barangays/')
         updateLocationPreview(lat, lng, formattedAddress);
     }
 
+    function updateBarangayDisplay(name) {
+        if (!barangayDisplayEl) {
+            return;
+        }
+
+        const value = String(name || '').trim();
+        barangayDisplayEl.textContent = value || 'Barangay will fill in automatically from the pinned location.';
+        barangayDisplayEl.classList.toggle('is-empty', value === '');
+    }
+
     function clearResults() {
         resultsEl.innerHTML = '';
         resultsEl.classList.add('hidden');
     }
 
     function syncBarangaySelection(candidate) {
-        const normalizedCandidate = String(candidate || '').trim().toLowerCase();
+        const rawCandidate = String(candidate || '').trim();
+        const normalizedCandidate = rawCandidate.toLowerCase();
 
-        if (!normalizedCandidate || !barangaySelectEl || !barangayTextEl) {
+        if (!normalizedCandidate || !barangayTextEl) {
             return;
         }
 
-        const matchedOption = [...barangaySelectEl.options].find((option) => {
-            return option.text.trim().toLowerCase() === normalizedCandidate;
+        if (!barangayCatalog.length) {
+            barangayTextEl.value = rawCandidate;
+            updateBarangayDisplay(rawCandidate);
+            return;
+        }
+
+        const matchedOption = barangayCatalog.find((name) => {
+            return String(name).trim().toLowerCase() === normalizedCandidate;
         });
 
         if (!matchedOption) {
+            barangayTextEl.value = rawCandidate;
+            updateBarangayDisplay(rawCandidate);
             return;
         }
 
-        matchedOption.selected = true;
-        barangayTextEl.value = matchedOption.text;
+        barangayTextEl.value = matchedOption;
+        updateBarangayDisplay(matchedOption);
     }
 
     function syncBarangayFromFormattedAddress(formattedAddress) {
         const normalizedAddress = String(formattedAddress || '').trim().toLowerCase();
 
-        if (!normalizedAddress || !barangaySelectEl || !barangayTextEl) {
+        if (!normalizedAddress || !barangayTextEl || !barangayCatalog.length) {
             return;
         }
 
-        const matchedOption = [...barangaySelectEl.options].find((option) => {
-            const optionText = option.text.trim().toLowerCase();
+        const matchedOption = barangayCatalog.find((name) => {
+            const optionText = String(name).trim().toLowerCase();
 
-            if (!optionText || optionText === 'select barangay') {
+            if (!optionText) {
                 return false;
             }
 
@@ -1112,8 +1180,8 @@ fetch('https://psgc.gitlab.io/api/cities-municipalities/160202000/barangays/')
             return;
         }
 
-        matchedOption.selected = true;
-        barangayTextEl.value = matchedOption.text;
+        barangayTextEl.value = matchedOption;
+        updateBarangayDisplay(matchedOption);
     }
 
     function syncAdministrativeFields(result) {
@@ -1343,9 +1411,31 @@ fetch('https://psgc.gitlab.io/api/cities-municipalities/160202000/barangays/')
         }
     });
 
+    fetch('https://psgc.gitlab.io/api/cities-municipalities/160202000/barangays/')
+        .then((response) => response.json())
+        .then((rows) => {
+            barangayCatalog = Array.isArray(rows)
+                ? rows.map((row) => String(row.name || '').trim()).filter(Boolean)
+                : [];
+
+            if (barangayTextEl?.value) {
+                updateBarangayDisplay(barangayTextEl.value);
+                syncBarangaySelection(barangayTextEl.value);
+            }
+        })
+        .catch(() => {
+            barangayCatalog = [];
+
+            if (barangayTextEl?.value) {
+                updateBarangayDisplay(barangayTextEl.value);
+            }
+        });
+
     const oldLatitude = Number(OLD_CUSTOMER_LATITUDE || 0);
     const oldLongitude = Number(OLD_CUSTOMER_LONGITUDE || 0);
     const oldFormattedAddress = String(OLD_FORMATTED_ADDRESS || '').trim();
+
+    updateBarangayDisplay(barangayTextEl?.value || '');
 
     if (oldLatitude && oldLongitude) {
         searchEl.value = oldFormattedAddress;
