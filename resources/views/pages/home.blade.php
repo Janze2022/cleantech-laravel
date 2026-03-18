@@ -466,10 +466,11 @@ section {
 }
 
 .assistant-panel-body{
-    padding: 1rem;
+    padding: .9rem;
     display: flex;
     flex-direction: column;
-    gap: .9rem;
+    gap: .7rem;
+    flex: 1;
     min-height: 0;
 }
 
@@ -477,9 +478,11 @@ section {
     display: flex;
     flex-direction: column;
     gap: .8rem;
-    max-height: 360px;
+    min-height: 240px;
+    max-height: min(52vh, 380px);
+    flex: 1;
     overflow-y: auto;
-    padding-right: .2rem;
+    padding-right: .1rem;
 }
 
 .assistant-msg{
@@ -546,8 +549,16 @@ section {
 
 .assistant-chip-list{
     display: flex;
-    flex-wrap: wrap;
-    gap: .55rem;
+    flex-wrap: nowrap;
+    gap: .5rem;
+    overflow-x: auto;
+    padding-bottom: .1rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.assistant-chip-list::-webkit-scrollbar{
+    display: none;
 }
 
 .assistant-chip{
@@ -555,9 +566,11 @@ section {
     background: rgba(255,255,255,.03);
     color: #dbeafe;
     border-radius: 999px;
-    padding: .48rem .8rem;
-    font-size: .8rem;
+    padding: .42rem .72rem;
+    font-size: .75rem;
     font-weight: 700;
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .assistant-chip:hover{
@@ -627,12 +640,53 @@ section {
         bottom: calc(100% + 10px);
     }
 
+    .assistant-panel-body{
+        padding: .8rem;
+        gap: .65rem;
+    }
+
+    .assistant-messages{
+        max-height: min(46vh, 320px);
+        padding-right: 0;
+    }
+
+    .assistant-chip-list{
+        order: 3;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: .45rem;
+        padding-bottom: .15rem;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .assistant-chip-list::-webkit-scrollbar{
+        display: none;
+    }
+
+    .assistant-chip{
+        flex: 0 0 auto;
+        white-space: nowrap;
+        font-size: .72rem;
+        padding: .38rem .68rem;
+    }
+
     .assistant-form{
-        grid-template-columns: 1fr;
+        order: 2;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: .5rem;
+    }
+
+    .assistant-input{
+        min-height: 44px;
+        padding: .78rem .85rem;
+        font-size: .88rem;
     }
 
     .assistant-send{
-        width: 100%;
+        width: auto;
+        min-width: 84px;
+        padding: .75rem .9rem;
     }
 }
 </style>
