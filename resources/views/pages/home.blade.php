@@ -567,12 +567,6 @@ section {
     padding: .8rem 1rem;
 }
 
-.assistant-note{
-    color: #94a3b8;
-    font-size: .76rem;
-    line-height: 1.45;
-}
-
 @media (max-width: 575px){
     .home-assistant{
         right: 14px;
@@ -800,9 +794,6 @@ section {
                 <button type="submit" class="assistant-send">Send</button>
             </form>
 
-            <div class="assistant-note">
-                Free built-in site assistant. It answers from your CleanTech pages and booking flow, so no API key is needed.
-            </div>
         </div>
     </div>
 </div>
