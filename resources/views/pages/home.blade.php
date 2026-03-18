@@ -317,6 +317,289 @@ section {
     padding: 3.5rem 2rem;
     box-shadow: 0 30px 70px rgba(37,99,235,.55);
 }
+
+/* =========================
+   HOME ASSISTANT
+========================= */
+.home-assistant{
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 1200;
+}
+
+.assistant-launcher{
+    border: none;
+    border-radius: 999px;
+    padding: .92rem 1.2rem;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: .7rem;
+    font-weight: 700;
+    box-shadow: 0 22px 42px rgba(37,99,235,.36);
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.assistant-launcher:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 26px 50px rgba(37,99,235,.48);
+}
+
+.assistant-launcher-badge{
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.16);
+}
+
+.assistant-launcher-badge svg,
+.assistant-panel-close svg{
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+}
+
+.assistant-launcher-copy{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.1;
+}
+
+.assistant-launcher-copy small{
+    color: rgba(255,255,255,.75);
+    font-size: .72rem;
+    font-weight: 600;
+}
+
+.assistant-panel{
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 14px);
+    width: min(390px, calc(100vw - 28px));
+    max-height: min(76vh, 720px);
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.08);
+    background: linear-gradient(180deg, rgba(15,23,42,.98), rgba(2,6,23,.98));
+    box-shadow: 0 30px 80px rgba(0,0,0,.58);
+    display: none;
+    flex-direction: column;
+    transform: translateY(12px) scale(.98);
+    opacity: 0;
+    transform-origin: bottom right;
+    transition: opacity .22s ease, transform .22s ease;
+}
+
+.assistant-panel.open{
+    display: flex;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.assistant-panel-top{
+    padding: 1rem 1rem .95rem;
+    background:
+        radial-gradient(circle at top left, rgba(56,189,248,.26), transparent 45%),
+        linear-gradient(135deg, rgba(37,99,235,.25), rgba(79,70,229,.18));
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.assistant-panel-title{
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}
+
+.assistant-panel-icon{
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: rgba(255,255,255,.09);
+    border: 1px solid rgba(255,255,255,.14);
+    color: #fff;
+}
+
+.assistant-panel-icon svg{
+    width: 19px;
+    height: 19px;
+    stroke: currentColor;
+}
+
+.assistant-panel-title h3{
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.assistant-panel-title p{
+    margin: .12rem 0 0;
+    color: #cbd5f5;
+    font-size: .83rem;
+}
+
+.assistant-panel-close{
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.04);
+    color: #e5e7eb;
+    display: grid;
+    place-items: center;
+}
+
+.assistant-panel-close:hover{
+    background: rgba(255,255,255,.09);
+}
+
+.assistant-panel-body{
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .9rem;
+    min-height: 0;
+}
+
+.assistant-messages{
+    display: flex;
+    flex-direction: column;
+    gap: .8rem;
+    max-height: 360px;
+    overflow-y: auto;
+    padding-right: .2rem;
+}
+
+.assistant-msg{
+    max-width: 88%;
+    padding: .85rem .95rem;
+    border-radius: 18px;
+    line-height: 1.55;
+    font-size: .92rem;
+    box-shadow: 0 12px 30px rgba(0,0,0,.18);
+}
+
+.assistant-msg a{
+    color: #7dd3fc;
+    font-weight: 700;
+}
+
+.assistant-msg.bot{
+    align-self: flex-start;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.07);
+    color: #e5e7eb;
+}
+
+.assistant-msg.user{
+    align-self: flex-end;
+    background: linear-gradient(135deg, rgba(37,99,235,.26), rgba(79,70,229,.24));
+    border: 1px solid rgba(56,189,248,.18);
+    color: #fff;
+}
+
+.assistant-chip-list{
+    display: flex;
+    flex-wrap: wrap;
+    gap: .55rem;
+}
+
+.assistant-chip{
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.03);
+    color: #dbeafe;
+    border-radius: 999px;
+    padding: .48rem .8rem;
+    font-size: .8rem;
+    font-weight: 700;
+}
+
+.assistant-chip:hover{
+    background: rgba(56,189,248,.10);
+    border-color: rgba(56,189,248,.18);
+    color: #fff;
+}
+
+.assistant-form{
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .65rem;
+}
+
+.assistant-input{
+    min-height: 48px;
+    border-radius: 15px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.03);
+    color: #fff;
+    padding: .85rem .95rem;
+}
+
+.assistant-input::placeholder{
+    color: rgba(255,255,255,.38);
+}
+
+.assistant-input:focus{
+    outline: none;
+    border-color: rgba(56,189,248,.3);
+    box-shadow: 0 0 0 .2rem rgba(56,189,248,.10);
+}
+
+.assistant-send{
+    min-width: 104px;
+    border: none;
+    border-radius: 15px;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #fff;
+    font-weight: 800;
+    padding: .8rem 1rem;
+}
+
+.assistant-note{
+    color: #94a3b8;
+    font-size: .76rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 575px){
+    .home-assistant{
+        right: 14px;
+        bottom: 14px;
+        left: 14px;
+    }
+
+    .assistant-launcher{
+        width: 100%;
+        justify-content: center;
+    }
+
+    .assistant-panel{
+        right: 0;
+        left: 0;
+        width: 100%;
+        bottom: calc(100% + 10px);
+    }
+
+    .assistant-form{
+        grid-template-columns: 1fr;
+    }
+
+    .assistant-send{
+        width: 100%;
+    }
+}
 </style>
 
 <!-- HERO -->
@@ -451,5 +734,249 @@ section {
         <a href="{{ route('customer.register') }}" class="btn btn-light btn-lg">Get Started</a>
     </div>
 </section>
+
+<div class="home-assistant" id="homeAssistant">
+    <button type="button" class="assistant-launcher" id="assistantLauncher" aria-expanded="false" aria-controls="assistantPanel">
+        <span class="assistant-launcher-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 9h10"></path>
+                <path d="M7 13h7"></path>
+                <path d="M12 3C7.03 3 3 6.58 3 11c0 2.22 1.02 4.23 2.69 5.68L5 21l4.76-2.05A11.06 11.06 0 0 0 12 19c4.97 0 9-3.58 9-8s-4.03-8-9-8Z"></path>
+            </svg>
+        </span>
+        <span class="assistant-launcher-copy">
+            Need help?
+            <small>Ask the CleanTech assistant</small>
+        </span>
+    </button>
+
+    <div class="assistant-panel" id="assistantPanel" aria-live="polite">
+        <div class="assistant-panel-top">
+            <div class="assistant-panel-title">
+                <div class="assistant-panel-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 8V4"></path>
+                        <path d="M9 2h6"></path>
+                        <rect x="4" y="8" width="16" height="11" rx="4"></rect>
+                        <path d="M9 13h.01"></path>
+                        <path d="M15 13h.01"></path>
+                        <path d="M8 19v2"></path>
+                        <path d="M16 19v2"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3>CleanTech Assistant</h3>
+                    <p>Quick answers for booking, services, providers, and support.</p>
+                </div>
+            </div>
+
+            <button type="button" class="assistant-panel-close" id="assistantClose" aria-label="Close assistant">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 6L6 18"></path>
+                    <path d="M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="assistant-panel-body">
+            <div class="assistant-messages" id="assistantMessages"></div>
+
+            <div class="assistant-chip-list">
+                <button type="button" class="assistant-chip" data-question="How do I book a service?">How to book</button>
+                <button type="button" class="assistant-chip" data-question="What services do you offer?">Services</button>
+                <button type="button" class="assistant-chip" data-question="How do I become a provider?">Become a provider</button>
+                <button type="button" class="assistant-chip" data-question="How does pricing work?">Pricing</button>
+                <button type="button" class="assistant-chip" data-question="How can I contact CleanTech?">Contact</button>
+            </div>
+
+            <form class="assistant-form" id="assistantForm">
+                <input
+                    type="text"
+                    class="assistant-input"
+                    id="assistantInput"
+                    placeholder="Ask about booking, services, providers, or support"
+                    autocomplete="off"
+                >
+                <button type="submit" class="assistant-send">Send</button>
+            </form>
+
+            <div class="assistant-note">
+                Free built-in site assistant. It answers from your CleanTech pages and booking flow, so no API key is needed.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const launcher = document.getElementById('assistantLauncher');
+    const panel = document.getElementById('assistantPanel');
+    const closeButton = document.getElementById('assistantClose');
+    const messages = document.getElementById('assistantMessages');
+    const form = document.getElementById('assistantForm');
+    const input = document.getElementById('assistantInput');
+    const chips = document.querySelectorAll('.assistant-chip');
+
+    if (!launcher || !panel || !messages || !form || !input) {
+        return;
+    }
+
+    const routes = {
+        register: @json(route('customer.register')),
+        services: @json(route('services')),
+        customerLogin: @json(route('customer.login')),
+        providerSignup: @json(route('provider.pre_register.terms')),
+        pricing: @json(route('pricing')),
+        faq: @json(route('faq')),
+        contact: @json(route('contact')),
+        email: 'mailto:janzedoysabas@gmail.com',
+    };
+
+    const intents = [
+        {
+            keywords: ['book', 'booking', 'reserve', 'schedule', 'appointment'],
+            answer: `To book a service, create a customer account, sign in, choose a service, and view the providers available for your selected date. <a href="${routes.register}">Start here</a>.`
+        },
+        {
+            keywords: ['service', 'services', 'cleaning', 'deep', 'general', 'area'],
+            answer: `CleanTech helps customers find available providers for services like general cleaning, deep cleaning, and specific-area cleaning. You can explore the full service overview on the <a href="${routes.services}">Services page</a>.`
+        },
+        {
+            keywords: ['provider', 'become', 'signup', 'sign up', 'register provider', 'apply'],
+            answer: `If you want to become a provider, use the provider sign-up flow, submit your details, and wait for approval before you start accepting bookings. <a href="${routes.providerSignup}">Become a provider</a>.`
+        },
+        {
+            keywords: ['price', 'pricing', 'cost', 'rate', 'rates', 'fee', 'fees'],
+            answer: `Pricing depends on the service, selected option, and available provider. You can check the public overview on the <a href="${routes.pricing}">Pricing page</a>, then log in to book the option that fits your schedule.`
+        },
+        {
+            keywords: ['contact', 'email', 'support', 'help', 'phone'],
+            answer: `You can reach CleanTech through the <a href="${routes.contact}">Contact page</a> or email directly at <a href="${routes.email}">janzedoysabas@gmail.com</a>.`
+        },
+        {
+            keywords: ['faq', 'question', 'questions', 'approved', 'verified'],
+            answer: `The <a href="${routes.faq}">FAQ page</a> covers common questions, including provider approval and how the platform works.`
+        },
+        {
+            keywords: ['login', 'sign in', 'account'],
+            answer: `Customers can sign in from <a href="${routes.customerLogin}">Customer Login</a>. If you are joining as a provider, start from <a href="${routes.providerSignup}">Provider Registration</a>.`
+        },
+    ];
+
+    function addMessage(content, role) {
+        const bubble = document.createElement('div');
+        bubble.className = `assistant-msg ${role}`;
+        bubble.innerHTML = content;
+        messages.appendChild(bubble);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    function getReply(question) {
+        const text = String(question || '').trim().toLowerCase();
+
+        if (!text) {
+            return 'Ask me about booking, services, pricing, provider sign-up, or contact details.';
+        }
+
+        if (['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening'].includes(text)) {
+            return 'Hello. I can help with booking, services, provider sign-up, pricing, or support.';
+        }
+
+        let bestMatch = null;
+        let bestScore = 0;
+
+        intents.forEach((intent) => {
+            const score = intent.keywords.reduce((total, keyword) => total + (text.includes(keyword) ? 1 : 0), 0);
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = intent;
+            }
+        });
+
+        if (bestMatch && bestScore > 0) {
+            return bestMatch.answer;
+        }
+
+        return `I can help with booking, services, provider sign-up, pricing, and contact details. You can also check the <a href="${routes.faq}">FAQ</a> or email <a href="${routes.email}">janzedoysabas@gmail.com</a>.`;
+    }
+
+    function openAssistant() {
+        panel.hidden = false;
+        requestAnimationFrame(() => panel.classList.add('open'));
+        launcher.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeAssistant() {
+        panel.classList.remove('open');
+        launcher.setAttribute('aria-expanded', 'false');
+        setTimeout(() => {
+            if (!panel.classList.contains('open')) {
+                panel.hidden = true;
+            }
+        }, 220);
+    }
+
+    function handleQuestion(question) {
+        const cleaned = String(question || '').trim();
+
+        if (!cleaned) {
+            return;
+        }
+
+        addMessage(cleaned, 'user');
+        addMessage(getReply(cleaned), 'bot');
+    }
+
+    addMessage('Hello. I’m the CleanTech assistant. Ask me about booking, services, provider sign-up, pricing, or support.', 'bot');
+
+    launcher.addEventListener('click', () => {
+        if (panel.classList.contains('open')) {
+            closeAssistant();
+            return;
+        }
+
+        openAssistant();
+        input.focus();
+    });
+
+    closeButton?.addEventListener('click', () => {
+        closeAssistant();
+    });
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const question = input.value;
+        handleQuestion(question);
+        input.value = '';
+        input.focus();
+    });
+
+    chips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+            openAssistant();
+            handleQuestion(chip.dataset.question || chip.textContent || '');
+        });
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!panel.classList.contains('open')) {
+            return;
+        }
+
+        const assistantRoot = document.getElementById('homeAssistant');
+
+        if (assistantRoot && !assistantRoot.contains(event.target)) {
+            closeAssistant();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeAssistant();
+        }
+    });
+})();
+</script>
 
 @endsection
