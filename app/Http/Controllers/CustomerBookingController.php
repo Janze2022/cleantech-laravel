@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\GeoapifyService;
 use Carbon\Carbon;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -179,6 +180,17 @@ class CustomerBookingController extends Controller
             return response()->json([
                 'results' => $results,
             ]);
+        } catch (RequestException $exception) {
+            report($exception);
+
+            $status = $exception->response?->status();
+
+            return response()->json([
+                'results' => [],
+                'message' => in_array($status, [401, 403], true)
+                    ? 'Geoapify rejected the API key. Please check GEOAPIFY_API_KEY in Laravel Cloud.'
+                    : 'Unable to search addresses right now.',
+            ], 502);
         } catch (\Throwable $exception) {
             report($exception);
 
@@ -217,6 +229,16 @@ class CustomerBookingController extends Controller
             return response()->json([
                 'result' => $result,
             ]);
+        } catch (RequestException $exception) {
+            report($exception);
+
+            $status = $exception->response?->status();
+
+            return response()->json([
+                'message' => in_array($status, [401, 403], true)
+                    ? 'Geoapify rejected the API key. Please check GEOAPIFY_API_KEY in Laravel Cloud.'
+                    : 'Unable to reverse geocode that location right now.',
+            ], 502);
         } catch (\Throwable $exception) {
             report($exception);
 

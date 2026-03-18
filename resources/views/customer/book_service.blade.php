@@ -1091,6 +1091,31 @@ fetch('https://psgc.gitlab.io/api/cities-municipalities/160202000/barangays/')
         barangayTextEl.value = matchedOption.text;
     }
 
+    function syncBarangayFromFormattedAddress(formattedAddress) {
+        const normalizedAddress = String(formattedAddress || '').trim().toLowerCase();
+
+        if (!normalizedAddress || !barangaySelectEl || !barangayTextEl) {
+            return;
+        }
+
+        const matchedOption = [...barangaySelectEl.options].find((option) => {
+            const optionText = option.text.trim().toLowerCase();
+
+            if (!optionText || optionText === 'select barangay') {
+                return false;
+            }
+
+            return normalizedAddress.includes(optionText);
+        });
+
+        if (!matchedOption) {
+            return;
+        }
+
+        matchedOption.selected = true;
+        barangayTextEl.value = matchedOption.text;
+    }
+
     function syncAdministrativeFields(result) {
         if (cityInputEl && result.city) {
             cityInputEl.value = result.city;
@@ -1100,7 +1125,18 @@ fetch('https://psgc.gitlab.io/api/cities-municipalities/160202000/barangays/')
             provinceInputEl.value = result.state;
         }
 
-        syncBarangaySelection(result.suburb || result.district || result.county || '');
+        syncBarangaySelection(
+            result.suburb
+            || result.district
+            || result.neighbourhood
+            || result.quarter
+            || result.hamlet
+            || result.village
+            || result.county
+            || ''
+        );
+
+        syncBarangayFromFormattedAddress(result.formatted || '');
     }
 
     function ensureMarker(lat, lng) {
