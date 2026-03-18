@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\GeoapifyService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -34,6 +36,20 @@ class ProviderBookingController extends Controller
     private function tableHasColumns(string $table, array $columns): bool
     {
         return Schema::hasTable($table) && Schema::hasColumns($table, $columns);
+    }
+
+    private function providerLocationTableAvailable(): bool
+    {
+        return $this->tableHasColumns('booking_provider_locations', [
+            'booking_id',
+            'provider_id',
+            'latitude',
+            'longitude',
+            'formatted_address',
+            'is_tracking',
+            'tracked_at',
+            'stopped_at',
+        ]);
     }
 
     private function filledString($value): ?string
@@ -85,6 +101,11 @@ class ProviderBookingController extends Controller
     private function historyStatusKeys(): array
     {
         return ['completed', 'cancelled'];
+    }
+
+    private function trackingStatusKeys(): array
+    {
+        return ['confirmed', 'in_progress', 'paid'];
     }
 
     private function bookingAreasSubquery()
@@ -211,6 +232,61 @@ class ProviderBookingController extends Controller
         $this->applyBookingsOrder($query, ['created_at', 'booking_date', 'id']);
 
         return $query->get();
+    }
+
+    private function selectBookingLocationColumn(string $column)
+    {
+        return Schema::hasColumn('bookings', $column)
+            ? DB::raw("b.{$column} as {$column}")
+            : DB::raw("NULL as {$column}");
+    }
+
+    private function bookingByReference(string $reference, int $providerId)
+    {
+        return DB::table('bookings')
+            ->where('provider_id', $providerId)
+            ->where('reference_code', $reference)
+            ->first([
+                'id',
+                'provider_id',
+                'reference_code',
+                'status',
+                Schema::hasColumn('bookings', 'customer_latitude')
+                    ? 'customer_latitude'
+                    : DB::raw('NULL as customer_latitude'),
+                Schema::hasColumn('bookings', 'customer_longitude')
+                    ? 'customer_longitude'
+                    : DB::raw('NULL as customer_longitude'),
+                Schema::hasColumn('bookings', 'formatted_address')
+                    ? 'formatted_address'
+                    : DB::raw('NULL as formatted_address'),
+                'address',
+            ]);
+    }
+
+    private function latestProviderLocation(int $bookingId): ?object
+    {
+        if (!$this->providerLocationTableAvailable()) {
+            return null;
+        }
+
+        return DB::table('booking_provider_locations')
+            ->where('booking_id', $bookingId)
+            ->select(
+                'latitude',
+                'longitude',
+                'formatted_address',
+                'is_tracking',
+                'tracked_at',
+                'updated_at',
+                'stopped_at'
+            )
+            ->first();
+    }
+
+    private function bookingCanTrack(?string $status): bool
+    {
+        return in_array($this->normalizeStatusKey($status), $this->trackingStatusKeys(), true);
     }
 
     private function displayText($value, string $fallback = '-'): string
@@ -579,7 +655,10 @@ class ProviderBookingController extends Controller
                         $this->columnOrDefault('bookings', 'address', 'b'),
                         $this->columnOrDefault('bookings', 'contact_phone', 'b'),
                         $this->columnOrDefault('bookings', 'created_at', 'b'),
-                        $this->columnOrDefault('bookings', 'updated_at', 'b')
+                        $this->columnOrDefault('bookings', 'updated_at', 'b'),
+                        $this->selectBookingLocationColumn('customer_latitude'),
+                        $this->selectBookingLocationColumn('customer_longitude'),
+                        $this->selectBookingLocationColumn('formatted_address')
                     )
                     ->limit(1)
                     ->get()
@@ -598,8 +677,89 @@ class ProviderBookingController extends Controller
         $booking->customer_phone = $booking->phone;
         $booking->service_name = $booking->service;
         $booking->option_label = $booking->option ?? '';
+        $booking->tracking_enabled = $this->bookingCanTrack($booking->status_key ?? $booking->status);
+        $booking->provider_location = $booking->id ? $this->latestProviderLocation((int) $booking->id) : null;
 
         return view('provider.bookings.show', compact('booking'));
+    }
+
+    public function updateLocation(Request $request, string $reference, GeoapifyService $geoapify): JsonResponse
+    {
+        $providerId = $this->providerId();
+
+        $payload = $request->validate([
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        $booking = $this->bookingByReference($reference, $providerId);
+        abort_if(!$booking, 404);
+
+        if (!$this->bookingCanTrack($booking->status ?? null) || !$this->providerLocationTableAvailable()) {
+            return response()->json([
+                'message' => 'Live tracking is not available for this booking right now.',
+            ], 422);
+        }
+
+        $formattedAddress = null;
+        if ($geoapify->configured()) {
+            try {
+                $reverse = $geoapify->reverseGeocode(
+                    (float) $payload['latitude'],
+                    (float) $payload['longitude']
+                );
+
+                $formattedAddress = $reverse['formatted'] ?? null;
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        DB::table('booking_provider_locations')->updateOrInsert(
+            ['booking_id' => $booking->id],
+            [
+                'provider_id' => $providerId,
+                'latitude' => $payload['latitude'],
+                'longitude' => $payload['longitude'],
+                'formatted_address' => $formattedAddress,
+                'is_tracking' => true,
+                'tracked_at' => now(),
+                'stopped_at' => null,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+
+        return response()->json([
+            'ok' => true,
+            'location' => [
+                'latitude' => (float) $payload['latitude'],
+                'longitude' => (float) $payload['longitude'],
+                'formatted_address' => $formattedAddress,
+                'tracked_at' => now()->toDateTimeString(),
+            ],
+        ]);
+    }
+
+    public function stopLocationTracking(string $reference): JsonResponse
+    {
+        $providerId = $this->providerId();
+        $booking = $this->bookingByReference($reference, $providerId);
+        abort_if(!$booking, 404);
+
+        if ($this->providerLocationTableAvailable()) {
+            DB::table('booking_provider_locations')
+                ->where('booking_id', $booking->id)
+                ->update([
+                    'is_tracking' => false,
+                    'stopped_at' => now(),
+                    'updated_at' => now(),
+                ]);
+        }
+
+        return response()->json([
+            'ok' => true,
+        ]);
     }
 
     public function updateStatus(Request $request, string $reference)
@@ -650,6 +810,17 @@ class ProviderBookingController extends Controller
             DB::table('bookings')
                 ->where('id', $booking->id)
                 ->update($update);
+
+            // Close live tracking once the booking leaves its active tracking states.
+            if (!$this->bookingCanTrack($next) && $this->providerLocationTableAvailable()) {
+                DB::table('booking_provider_locations')
+                    ->where('booking_id', $booking->id)
+                    ->update([
+                        'is_tracking' => false,
+                        'stopped_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+            }
 
             $statusLabel = match ($next) {
                 'confirmed'   => 'Confirmed',

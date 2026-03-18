@@ -184,6 +184,12 @@
     max-width:190px;
 }
 
+.action-stack{
+    display:grid;
+    gap:.55rem;
+    max-width:190px;
+}
+
 .update-form select{
     width:100%;
     background:#020617;
@@ -198,6 +204,19 @@
     border-radius:10px;
     padding:.65rem .9rem;
     background:linear-gradient(180deg,#0ea5e9,#38bdf8);
+    color:#fff;
+    font-weight:900;
+}
+
+.btn-view{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    text-decoration:none;
+    border-radius:10px;
+    padding:.65rem .9rem;
+    border:1px solid rgba(56,189,248,.24);
+    background:rgba(56,189,248,.10);
     color:#fff;
     font-weight:900;
 }
@@ -339,20 +358,26 @@
                                     </span>
                                 </td>
                                 <td>
-                                    @if(empty($nextOptions[$current]))
-                                        <div class="no-action">No further actions.</div>
-                                    @else
-                                        <form method="POST" action="{{ route('provider.bookings.status', $b->reference_code) }}" class="update-form">
-                                            @csrf
-                                            <select name="status" required>
-                                                <option value="">Select status</option>
-                                                @foreach($nextOptions[$current] as $value => $label)
-                                                    <option value="{{ $value }}">{{ $label }}</option>
-                                                @endforeach
-                                            </select>
-                                            <button class="btn-update" type="submit">Update</button>
-                                        </form>
-                                    @endif
+                                    <div class="action-stack">
+                                        @if(empty($nextOptions[$current]))
+                                            <div class="no-action">No further actions.</div>
+                                        @else
+                                            <form method="POST" action="{{ route('provider.bookings.status', $b->reference_code) }}" class="update-form">
+                                                @csrf
+                                                <select name="status" required>
+                                                    <option value="">Select status</option>
+                                                    @foreach($nextOptions[$current] as $value => $label)
+                                                        <option value="{{ $value }}">{{ $label }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <button class="btn-update" type="submit">Update</button>
+                                            </form>
+                                        @endif
+
+                                        @if(\Illuminate\Support\Facades\Route::has('provider.bookings.show'))
+                                            <a class="btn-view" href="{{ route('provider.bookings.show', $b->reference_code) }}">Open Details</a>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -410,20 +435,26 @@
                         </div>
 
                         <div class="card-actions">
-                            @if(empty($nextOptions[$current]))
-                                <div class="no-action">No further actions.</div>
-                            @else
-                                <form method="POST" action="{{ route('provider.bookings.status', $b->reference_code) }}" class="update-form">
-                                    @csrf
-                                    <select name="status" required>
-                                        <option value="">Select status</option>
-                                        @foreach($nextOptions[$current] as $value => $label)
-                                            <option value="{{ $value }}">{{ $label }}</option>
-                                        @endforeach
-                                    </select>
-                                    <button class="btn-update" type="submit">Update</button>
-                                </form>
-                            @endif
+                            <div class="action-stack" style="max-width:none;">
+                                @if(empty($nextOptions[$current]))
+                                    <div class="no-action">No further actions.</div>
+                                @else
+                                    <form method="POST" action="{{ route('provider.bookings.status', $b->reference_code) }}" class="update-form">
+                                        @csrf
+                                        <select name="status" required>
+                                            <option value="">Select status</option>
+                                            @foreach($nextOptions[$current] as $value => $label)
+                                                <option value="{{ $value }}">{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                        <button class="btn-update" type="submit">Update</button>
+                                    </form>
+                                @endif
+
+                                @if(\Illuminate\Support\Facades\Route::has('provider.bookings.show'))
+                                    <a class="btn-view" href="{{ route('provider.bookings.show', $b->reference_code) }}">Open Details</a>
+                                @endif
+                            </div>
                         </div>
                     </div>
                 @endforeach

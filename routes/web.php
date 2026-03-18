@@ -297,6 +297,12 @@ Route::prefix('customer')
         Route::get('/providers/{provider}', [ServicesController::class, 'provider'])
             ->name('providers.show');
 
+        Route::get('/booking-location/autocomplete', [CustomerBookingController::class, 'autocompleteAddress'])
+            ->name('booking.location.autocomplete');
+
+        Route::get('/booking-location/reverse', [CustomerBookingController::class, 'reverseGeocode'])
+            ->name('booking.location.reverse');
+
         // BOOKING
         Route::get('/book/{provider}', [CustomerBookingController::class, 'create'])
             ->name('book.service');
@@ -314,6 +320,9 @@ Route::prefix('customer')
         // BOOKING DETAILS
         Route::get('/bookings/{reference}', [CustomerBookingController::class, 'show'])
             ->name('bookings.show');
+
+        Route::get('/bookings/{reference}/tracking', [CustomerBookingController::class, 'tracking'])
+            ->name('bookings.tracking');
 
         Route::post('/bookings/{reference}/cancel', [CustomerBookingController::class, 'cancel'])
             ->name('bookings.cancel');
@@ -462,6 +471,12 @@ Route::prefix('provider')
 
         Route::post('/bookings/{reference}/status', [ProviderBookingController::class, 'updateStatus'])
             ->name('bookings.status');
+
+        Route::post('/bookings/{reference}/location', [ProviderBookingController::class, 'updateLocation'])
+            ->name('bookings.location.update');
+
+        Route::post('/bookings/{reference}/location/stop', [ProviderBookingController::class, 'stopLocationTracking'])
+            ->name('bookings.location.stop');
 
         Route::get('/bookings/history', [ProviderBookingController::class, 'history'])
             ->name('bookings.history');

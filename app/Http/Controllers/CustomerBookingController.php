@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\GeoapifyService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -155,6 +157,75 @@ class CustomerBookingController extends Controller
         ));
     }
 
+    public function autocompleteAddress(Request $request, GeoapifyService $geoapify): JsonResponse
+    {
+        $request->validate([
+            'q' => ['required', 'string', 'min:2', 'max:160'],
+        ]);
+
+        if (!$geoapify->configured()) {
+            return response()->json([
+                'results' => [],
+                'message' => 'Map search is not configured right now.',
+            ], 503);
+        }
+
+        try {
+            $results = $geoapify->autocomplete((string) $request->query('q'), 6, [
+                'filter' => 'countrycode:ph',
+                'bias' => 'proximity:125.5436,8.9475',
+            ]);
+
+            return response()->json([
+                'results' => $results,
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'results' => [],
+                'message' => 'Unable to search addresses right now.',
+            ], 502);
+        }
+    }
+
+    public function reverseGeocode(Request $request, GeoapifyService $geoapify): JsonResponse
+    {
+        $request->validate([
+            'lat' => ['required', 'numeric', 'between:-90,90'],
+            'lng' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        if (!$geoapify->configured()) {
+            return response()->json([
+                'message' => 'Map reverse geocoding is not configured right now.',
+            ], 503);
+        }
+
+        try {
+            $result = $geoapify->reverseGeocode(
+                (float) $request->query('lat'),
+                (float) $request->query('lng')
+            );
+
+            if (!$result) {
+                return response()->json([
+                    'message' => 'No readable address was found for that pin.',
+                ], 404);
+            }
+
+            return response()->json([
+                'result' => $result,
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Unable to reverse geocode that location right now.',
+            ], 502);
+        }
+    }
+
     public function store(Request $request)
     {
         if (!session()->has('user_id')) {
@@ -177,6 +248,9 @@ class CustomerBookingController extends Controller
             'province' => ['nullable', 'string', 'max:100'],
             'city'     => ['nullable', 'string', 'max:100'],
             'barangay' => ['nullable', 'string', 'max:100'],
+            'formatted_address' => ['nullable', 'string', 'max:500'],
+            'customer_latitude' => ['required', 'numeric', 'between:-90,90'],
+            'customer_longitude' => ['required', 'numeric', 'between:-180,180'],
         ]);
 
         $serviceId = (int) $data['service_id'];
@@ -300,24 +374,30 @@ class CustomerBookingController extends Controller
                     ->withInput();
             }
 
-            $fullAddress = trim(implode(', ', array_filter([
-                $data['address'] ?? null,
-                $data['barangay'] ?? null,
-                $data['city'] ?? null,
-                $data['province'] ?? null,
-                $data['region'] ?? null,
-            ])));
+            $manualAddress = trim((string) ($data['address'] ?? ''));
+            $formattedAddress = trim((string) ($data['formatted_address'] ?? ''));
+
+            $fullAddress = $this->buildBookingAddress(
+                $manualAddress,
+                $formattedAddress,
+                [
+                    $data['barangay'] ?? null,
+                    $data['city'] ?? null,
+                    $data['province'] ?? null,
+                    $data['region'] ?? null,
+                ]
+            );
 
             $reference = 'CT-' . strtoupper(uniqid());
 
-            $bookingId = DB::table('bookings')->insertGetId([
+            $bookingInsert = [
                 'reference_code'       => $reference,
                 'customer_id'          => session('user_id'),
                 'provider_id'          => $data['provider_id'],
                 'service_id'           => $serviceId,
                 'service_option_id'    => $primaryOptionId,
                 'contact_phone'        => $data['phone'],
-                'address'              => $fullAddress ?: $data['address'],
+                'address'              => $fullAddress ?: $manualAddress,
                 'booking_date'         => $slotDate,
                 'requested_start_time' => $preferred,
                 'time_start'           => $slotStart,
@@ -326,7 +406,21 @@ class CustomerBookingController extends Controller
                 'status'               => 'confirmed',
                 'created_at'           => now(),
                 'updated_at'           => now(),
-            ]);
+            ];
+
+            if (Schema::hasColumn('bookings', 'formatted_address')) {
+                $bookingInsert['formatted_address'] = $formattedAddress !== '' ? $formattedAddress : null;
+            }
+
+            if (Schema::hasColumn('bookings', 'customer_latitude')) {
+                $bookingInsert['customer_latitude'] = $data['customer_latitude'] ?? null;
+            }
+
+            if (Schema::hasColumn('bookings', 'customer_longitude')) {
+                $bookingInsert['customer_longitude'] = $data['customer_longitude'] ?? null;
+            }
+
+            $bookingId = DB::table('bookings')->insertGetId($bookingInsert);
 
             // Notify provider about new booking
             if (
@@ -488,6 +582,7 @@ class CustomerBookingController extends Controller
             ->where('b.reference_code', $reference)
             ->select(
                 'b.reference_code',
+                'b.provider_id',
                 'b.booking_date',
                 'b.requested_start_time',
                 'b.time_start',
@@ -502,13 +597,91 @@ class CustomerBookingController extends Controller
                 DB::raw("TRIM(CONCAT(COALESCE(p.first_name, ''), ' ', COALESCE(p.last_name, ''))) as provider_name"),
                 'p.phone as provider_phone',
                 'p.city as provider_city',
-                'p.province as provider_province'
+                'p.province as provider_province',
+                $this->selectBookingLocationColumn('customer_latitude'),
+                $this->selectBookingLocationColumn('customer_longitude'),
+                $this->selectBookingLocationColumn('formatted_address')
             )
             ->first();
 
         abort_if(!$booking, 404);
 
         return view('customer.bookings.show', compact('booking'));
+    }
+
+    public function tracking(string $reference, GeoapifyService $geoapify): JsonResponse
+    {
+        $customerId = (int) session('user_id');
+
+        $booking = DB::table('bookings')
+            ->where('customer_id', $customerId)
+            ->where('reference_code', $reference)
+            ->first([
+                'id',
+                'reference_code',
+                'status',
+                'provider_id',
+                $this->rawBookingLocationColumn('customer_latitude'),
+                $this->rawBookingLocationColumn('customer_longitude'),
+                $this->rawBookingLocationColumn('formatted_address'),
+                'address',
+            ]);
+
+        abort_if(!$booking, 404);
+
+        $providerLocation = null;
+        if ($this->providerLocationTableAvailable()) {
+            $providerLocation = DB::table('booking_provider_locations')
+                ->where('booking_id', $booking->id)
+                ->select(
+                    'latitude',
+                    'longitude',
+                    'formatted_address',
+                    'is_tracking',
+                    'tracked_at',
+                    'updated_at'
+                )
+                ->first();
+        }
+
+        $route = null;
+        if (
+            $geoapify->configured() &&
+            !empty($booking->customer_latitude) &&
+            !empty($booking->customer_longitude) &&
+            !empty($providerLocation?->latitude) &&
+            !empty($providerLocation?->longitude)
+        ) {
+            try {
+                $route = $geoapify->route(
+                    (float) $providerLocation->latitude,
+                    (float) $providerLocation->longitude,
+                    (float) $booking->customer_latitude,
+                    (float) $booking->customer_longitude
+                );
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        return response()->json([
+            'booking' => [
+                'reference_code' => $booking->reference_code,
+                'status' => $booking->status,
+                'address' => $booking->address,
+                'formatted_address' => $booking->formatted_address ?? null,
+                'customer_latitude' => $booking->customer_latitude ?? null,
+                'customer_longitude' => $booking->customer_longitude ?? null,
+            ],
+            'provider_location' => $providerLocation ? [
+                'latitude' => $providerLocation->latitude,
+                'longitude' => $providerLocation->longitude,
+                'formatted_address' => $providerLocation->formatted_address,
+                'is_tracking' => (bool) $providerLocation->is_tracking,
+                'tracked_at' => $providerLocation->tracked_at ?? $providerLocation->updated_at,
+            ] : null,
+            'route' => $route,
+        ]);
     }
 
     public function cancel(Request $request, string $reference)
@@ -616,6 +789,53 @@ class CustomerBookingController extends Controller
         }
 
         return $time;
+    }
+
+    private function buildBookingAddress(string $manualAddress, string $formattedAddress, array $fallbackParts = []): string
+    {
+        $manualAddress = trim($manualAddress);
+        $formattedAddress = trim($formattedAddress);
+        $fallbackAddress = trim(implode(', ', array_filter(array_map('trim', $fallbackParts))));
+
+        if ($formattedAddress === '') {
+            return trim(implode(', ', array_filter([$manualAddress, $fallbackAddress])));
+        }
+
+        if ($manualAddress === '') {
+            return $formattedAddress;
+        }
+
+        if (stripos($formattedAddress, $manualAddress) !== false) {
+            return $formattedAddress;
+        }
+
+        return trim($manualAddress . ', ' . $formattedAddress);
+    }
+
+    private function selectBookingLocationColumn(string $column)
+    {
+        return Schema::hasColumn('bookings', $column)
+            ? DB::raw("b.{$column} as {$column}")
+            : DB::raw("NULL as {$column}");
+    }
+
+    private function rawBookingLocationColumn(string $column)
+    {
+        return Schema::hasColumn('bookings', $column)
+            ? $column
+            : DB::raw("NULL as {$column}");
+    }
+
+    private function providerLocationTableAvailable(): bool
+    {
+        return Schema::hasTable('booking_provider_locations')
+            && Schema::hasColumns('booking_provider_locations', [
+                'booking_id',
+                'latitude',
+                'longitude',
+                'formatted_address',
+                'is_tracking',
+            ]);
     }
 
     private function normalizeStatus(string $status): string

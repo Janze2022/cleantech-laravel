@@ -4,6 +4,13 @@
 
 @section('content')
 
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+>
+
 <style>
 :root {
     --bg-main:#020617;
@@ -194,6 +201,128 @@
     color:var(--text-muted);
 }
 
+.location-shell{
+    display:grid;
+    gap:.85rem;
+}
+
+.location-search-wrap{
+    position:relative;
+}
+
+.location-results{
+    position:absolute;
+    inset:auto 0 0 0;
+    transform:translateY(calc(100% + 8px));
+    z-index:30;
+    display:grid;
+    gap:.4rem;
+    padding:.65rem;
+    border-radius:14px;
+    border:1px solid var(--border-soft);
+    background:#020b1f;
+    box-shadow:0 24px 50px rgba(0,0,0,.42);
+    max-height:220px;
+    overflow:auto;
+}
+
+.location-result-btn{
+    width:100%;
+    text-align:left;
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:12px;
+    padding:.7rem .8rem;
+    background:rgba(255,255,255,.03);
+    color:#fff;
+}
+
+.location-result-btn:hover{
+    background:rgba(56,189,248,.10);
+    border-color:rgba(56,189,248,.22);
+}
+
+.location-result-main{
+    display:block;
+    font-weight:700;
+}
+
+.location-result-sub{
+    display:block;
+    font-size:.82rem;
+    color:var(--text-muted);
+    margin-top:.2rem;
+}
+
+.location-map{
+    width:100%;
+    height:320px;
+    border-radius:16px;
+    overflow:hidden;
+    border:1px solid var(--border-soft);
+}
+
+.location-meta{
+    display:grid;
+    gap:.55rem;
+}
+
+.location-note{
+    color:var(--text-muted);
+    font-size:.86rem;
+    line-height:1.5;
+}
+
+.location-status{
+    min-height:1.3rem;
+    font-size:.85rem;
+    color:var(--text-muted);
+}
+
+.location-status.error{
+    color:#fca5a5;
+}
+
+.location-preview{
+    border:1px solid rgba(56,189,248,.16);
+    background:rgba(56,189,248,.08);
+    border-radius:14px;
+    padding:.8rem .9rem;
+}
+
+.location-preview-label{
+    font-size:.72rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:rgba(56,189,248,.95);
+    font-weight:800;
+}
+
+.location-preview-value{
+    margin-top:.3rem;
+    color:#fff;
+    font-weight:700;
+    word-break:break-word;
+}
+
+.location-coords{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.55rem;
+}
+
+.coord-pill{
+    display:inline-flex;
+    gap:.35rem;
+    align-items:center;
+    padding:.38rem .7rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.08);
+    background:#020617;
+    color:#fff;
+    font-size:.78rem;
+    font-weight:700;
+}
+
 .hidden{
     display:none !important;
 }
@@ -216,6 +345,10 @@
 @media (max-width: 768px){
     .option-check-grid{
         grid-template-columns:1fr;
+    }
+
+    .location-map{
+        height:280px;
     }
 }
 </style>
@@ -329,14 +462,56 @@
                     <label>Barangay (Butuan City)</label>
                     <select id="barangay" class="form-control"></select>
 
-                    <input type="hidden" name="region" value="Region XIII">
-                    <input type="hidden" name="province" value="Agusan del Norte">
-                    <input type="hidden" name="city" value="Butuan City">
+                    <input type="hidden" name="region" id="regionInput" value="Region XIII">
+                    <input type="hidden" name="province" id="provinceInput" value="Agusan del Norte">
+                    <input type="hidden" name="city" id="cityInput" value="Butuan City">
                     <input type="hidden" name="barangay" id="barangay_text" value="{{ old('barangay') }}">
                 </div>
 
                 <div class="mb-3">
-                    <label>House No / Street</label>
+                    <label>Pin Service Location</label>
+                    <div class="location-shell">
+                        <div class="location-search-wrap">
+                            <input
+                                type="text"
+                                id="locationSearch"
+                                class="form-control"
+                                placeholder="Search address or landmark"
+                                autocomplete="off"
+                            >
+                            <div id="locationResults" class="location-results hidden"></div>
+                        </div>
+
+                        <div id="locationMap" class="location-map"></div>
+
+                        <div class="location-meta">
+                            <div class="location-note">
+                                Search an address, tap the map, or drag the pin to the exact service location.
+                            </div>
+
+                            <div id="locationStatus" class="location-status">
+                                Select a location on the map to pin the customer address.
+                            </div>
+
+                            <div class="location-preview">
+                                <div class="location-preview-label">Readable Map Address</div>
+                                <div class="location-preview-value" id="locationPreviewText">No pinned location yet.</div>
+                            </div>
+
+                            <div class="location-coords">
+                                <span class="coord-pill">Lat: <strong id="latitudePreview">—</strong></span>
+                                <span class="coord-pill">Lng: <strong id="longitudePreview">—</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="customer_latitude" id="customerLatitude" value="{{ old('customer_latitude') }}">
+                    <input type="hidden" name="customer_longitude" id="customerLongitude" value="{{ old('customer_longitude') }}">
+                    <input type="hidden" name="formatted_address" id="formattedAddress" value="{{ old('formatted_address') }}">
+                </div>
+
+                <div class="mb-3">
+                    <label>House No / Street / Additional Directions</label>
                     <textarea name="address" class="form-control" required>{{ old('address') }}</textarea>
                 </div>
 
@@ -406,6 +581,9 @@ const OLD_SERVICE_ID = @json(old('service_id'));
 const OLD_OPTION_ID  = @json(old('service_option_id'));
 const OLD_MULTI_OPTION_IDS = @json(old('service_option_ids', []));
 const OLD_PREFERRED_START = @json(old('preferred_start_time') ? substr(old('preferred_start_time'), 0, 5) : '');
+const OLD_CUSTOMER_LATITUDE = @json(old('customer_latitude'));
+const OLD_CUSTOMER_LONGITUDE = @json(old('customer_longitude'));
+const OLD_FORMATTED_ADDRESS = @json(old('formatted_address'));
 
 const SPECIFIC_AREA_SERVICE_ID = @json($specificAreaServiceId);
 
@@ -748,6 +926,16 @@ preferredStartEl.addEventListener('change', () => {
 });
 
 bookingForm.addEventListener('submit', function(e){
+    const locationLatEl = document.getElementById('customerLatitude');
+    const locationLngEl = document.getElementById('customerLongitude');
+
+    if(!locationLatEl?.value || !locationLngEl?.value){
+        e.preventDefault();
+        alert('Please pin the service location on the map before confirming the booking.');
+        document.getElementById('locationMap')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+
     if(Number(serviceEl.value) === SPECIFIC_AREA_SERVICE_ID){
         const checked = getCheckedMultiOptions();
         if(!checked.length){
@@ -823,6 +1011,319 @@ fetch('https://psgc.gitlab.io/api/cities-municipalities/160202000/barangays/')
         barangayTextEl.value = '';
     }
 });
+</script>
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+<script>
+(() => {
+    const searchEl = document.getElementById('locationSearch');
+    const resultsEl = document.getElementById('locationResults');
+    const mapEl = document.getElementById('locationMap');
+    const statusEl = document.getElementById('locationStatus');
+    const previewEl = document.getElementById('locationPreviewText');
+    const latitudeEl = document.getElementById('customerLatitude');
+    const longitudeEl = document.getElementById('customerLongitude');
+    const formattedAddressEl = document.getElementById('formattedAddress');
+    const latitudePreviewEl = document.getElementById('latitudePreview');
+    const longitudePreviewEl = document.getElementById('longitudePreview');
+    const cityInputEl = document.getElementById('cityInput');
+    const provinceInputEl = document.getElementById('provinceInput');
+    const barangaySelectEl = document.getElementById('barangay');
+    const barangayTextEl = document.getElementById('barangay_text');
+
+    if (!searchEl || !resultsEl || !mapEl || !statusEl || !previewEl || !window.L) {
+        return;
+    }
+
+    const autocompleteUrl = @json(route('customer.booking.location.autocomplete'));
+    const reverseUrl = @json(route('customer.booking.location.reverse'));
+    const defaultCenter = [8.9475, 125.5436];
+
+    let map = null;
+    let marker = null;
+    let searchTimer = null;
+    let activeSearchRequest = 0;
+    let activeReverseRequest = 0;
+
+    function setStatus(message, isError = false) {
+        statusEl.textContent = message;
+        statusEl.classList.toggle('error', isError);
+    }
+
+    function updateLocationPreview(lat, lng, formattedAddress) {
+        latitudePreviewEl.textContent = lat ? Number(lat).toFixed(6) : '—';
+        longitudePreviewEl.textContent = lng ? Number(lng).toFixed(6) : '—';
+        previewEl.textContent = formattedAddress || 'Pinned coordinates saved. Readable address will appear here.';
+    }
+
+    function updateLocationFields(lat, lng, formattedAddress = '') {
+        latitudeEl.value = lat ? Number(lat).toFixed(7) : '';
+        longitudeEl.value = lng ? Number(lng).toFixed(7) : '';
+        formattedAddressEl.value = formattedAddress || '';
+        updateLocationPreview(lat, lng, formattedAddress);
+    }
+
+    function clearResults() {
+        resultsEl.innerHTML = '';
+        resultsEl.classList.add('hidden');
+    }
+
+    function syncBarangaySelection(candidate) {
+        const normalizedCandidate = String(candidate || '').trim().toLowerCase();
+
+        if (!normalizedCandidate || !barangaySelectEl || !barangayTextEl) {
+            return;
+        }
+
+        const matchedOption = [...barangaySelectEl.options].find((option) => {
+            return option.text.trim().toLowerCase() === normalizedCandidate;
+        });
+
+        if (!matchedOption) {
+            return;
+        }
+
+        matchedOption.selected = true;
+        barangayTextEl.value = matchedOption.text;
+    }
+
+    function syncAdministrativeFields(result) {
+        if (cityInputEl && result.city) {
+            cityInputEl.value = result.city;
+        }
+
+        if (provinceInputEl && result.state) {
+            provinceInputEl.value = result.state;
+        }
+
+        syncBarangaySelection(result.suburb || result.district || result.county || '');
+    }
+
+    function ensureMarker(lat, lng) {
+        if (!marker) {
+            marker = L.marker([lat, lng], {
+                draggable: true,
+            }).addTo(map);
+
+            marker.on('dragend', () => {
+                const next = marker.getLatLng();
+                applyPinnedLocation({
+                    latitude: next.lat,
+                    longitude: next.lng,
+                    center: false,
+                });
+            });
+
+            return;
+        }
+
+        marker.setLatLng([lat, lng]);
+    }
+
+    // Keep the readable address in sync with the pinned map coordinates.
+    async function reverseGeocode(lat, lng) {
+        const requestId = ++activeReverseRequest;
+        setStatus('Updating readable address...', false);
+
+        try {
+            const response = await fetch(`${reverseUrl}?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`, {
+                headers: {
+                    Accept: 'application/json',
+                },
+            });
+
+            const payload = await response.json();
+
+            if (requestId !== activeReverseRequest) {
+                return;
+            }
+
+            if (!response.ok || !payload.result) {
+                setStatus(payload.message || 'Location pinned, but readable address is unavailable right now.', true);
+                return;
+            }
+
+            const result = payload.result;
+            const formatted = result.formatted || formattedAddressEl.value;
+
+            updateLocationFields(lat, lng, formatted);
+            searchEl.value = formatted || searchEl.value;
+            syncAdministrativeFields(result);
+            setStatus('Pinned location updated.', false);
+        } catch (error) {
+            setStatus('Location pinned, but readable address could not be updated.', true);
+        }
+    }
+
+    function applyPinnedLocation({
+        latitude,
+        longitude,
+        formattedAddress = '',
+        center = true,
+        skipReverse = false,
+        adminResult = null,
+    }) {
+        updateLocationFields(latitude, longitude, formattedAddress);
+        ensureMarker(latitude, longitude);
+
+        if (center) {
+            map.setView([latitude, longitude], Math.max(map.getZoom(), 16));
+        }
+
+        if (adminResult) {
+            syncAdministrativeFields(adminResult);
+        }
+
+        if (!skipReverse) {
+            reverseGeocode(latitude, longitude);
+            return;
+        }
+
+        setStatus('Pinned location ready.', false);
+    }
+
+    function renderResults(results) {
+        if (!results.length) {
+            clearResults();
+            setStatus('No address matches found. Try a more specific search or pin the map manually.', true);
+            return;
+        }
+
+        resultsEl.innerHTML = '';
+
+        results.forEach((result, index) => {
+            const formatted = result.formatted || 'Selected result';
+            const sub = [result.city, result.state, result.country].filter(Boolean).join(', ');
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'location-result-btn';
+            button.dataset.index = String(index);
+
+            const main = document.createElement('span');
+            main.className = 'location-result-main';
+            main.textContent = formatted;
+
+            const subText = document.createElement('span');
+            subText.className = 'location-result-sub';
+            subText.textContent = sub || 'Tap to use this result';
+
+            button.appendChild(main);
+            button.appendChild(subText);
+            resultsEl.appendChild(button);
+        });
+
+        resultsEl.classList.remove('hidden');
+
+        resultsEl.querySelectorAll('.location-result-btn').forEach((button, index) => {
+            button.addEventListener('click', () => {
+                const result = results[index];
+
+                clearResults();
+                searchEl.value = result.formatted || '';
+                applyPinnedLocation({
+                    latitude: Number(result.latitude),
+                    longitude: Number(result.longitude),
+                    formattedAddress: result.formatted || '',
+                    center: true,
+                    skipReverse: false,
+                    adminResult: result,
+                });
+            });
+        });
+    }
+
+    async function searchLocation(query) {
+        const requestId = ++activeSearchRequest;
+        setStatus('Searching addresses...', false);
+
+        try {
+            const response = await fetch(`${autocompleteUrl}?q=${encodeURIComponent(query)}`, {
+                headers: {
+                    Accept: 'application/json',
+                },
+            });
+
+            const payload = await response.json();
+
+            if (requestId !== activeSearchRequest) {
+                return;
+            }
+
+            if (!response.ok) {
+                clearResults();
+                setStatus(payload.message || 'Unable to search locations right now.', true);
+                return;
+            }
+
+            renderResults(payload.results || []);
+        } catch (error) {
+            clearResults();
+            setStatus('Unable to search locations right now.', true);
+        }
+    }
+
+    map = L.map(mapEl, {
+        zoomControl: true,
+    }).setView(defaultCenter, 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
+
+    map.on('click', (event) => {
+        clearResults();
+        applyPinnedLocation({
+            latitude: event.latlng.lat,
+            longitude: event.latlng.lng,
+            center: false,
+        });
+    });
+
+    searchEl.addEventListener('input', () => {
+        const query = searchEl.value.trim();
+
+        clearTimeout(searchTimer);
+
+        if (query.length < 3) {
+            clearResults();
+            setStatus('Type at least 3 characters or tap the map to pin the location.', false);
+            return;
+        }
+
+        searchTimer = setTimeout(() => {
+            searchLocation(query);
+        }, 320);
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!resultsEl.contains(event.target) && event.target !== searchEl) {
+            clearResults();
+        }
+    });
+
+    const oldLatitude = Number(OLD_CUSTOMER_LATITUDE || 0);
+    const oldLongitude = Number(OLD_CUSTOMER_LONGITUDE || 0);
+    const oldFormattedAddress = String(OLD_FORMATTED_ADDRESS || '').trim();
+
+    if (oldLatitude && oldLongitude) {
+        searchEl.value = oldFormattedAddress;
+        applyPinnedLocation({
+            latitude: oldLatitude,
+            longitude: oldLongitude,
+            formattedAddress: oldFormattedAddress,
+            center: true,
+            skipReverse: oldFormattedAddress !== '',
+        });
+    } else {
+        updateLocationPreview('', '', '');
+    }
+})();
 </script>
 
 @endsection

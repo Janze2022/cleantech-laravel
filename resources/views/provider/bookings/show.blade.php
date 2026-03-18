@@ -4,6 +4,13 @@
 
 @section('content')
 
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+>
+
 @php
     use Illuminate\Support\Facades\DB;
 
@@ -123,6 +130,15 @@
     $badgeClass = 'warn';
     if (in_array($stLower, ['completed','paid'])) $badgeClass = 'good';
     if (in_array($stLower, ['cancelled','canceled'])) $badgeClass = 'bad';
+
+    $customerLatitude = is_numeric($booking->customer_latitude ?? null) ? (float) $booking->customer_latitude : null;
+    $customerLongitude = is_numeric($booking->customer_longitude ?? null) ? (float) $booking->customer_longitude : null;
+    $customerPinnedAddress = trim((string) ($booking->formatted_address ?? $address ?? ''));
+
+    $providerLocationRow = $booking->provider_location ?? null;
+    $providerLatitude = is_numeric($providerLocationRow->latitude ?? null) ? (float) $providerLocationRow->latitude : null;
+    $providerLongitude = is_numeric($providerLocationRow->longitude ?? null) ? (float) $providerLocationRow->longitude : null;
+    $providerTrackedAddress = trim((string) ($providerLocationRow->formatted_address ?? ''));
 @endphp
 
 <style>
@@ -325,7 +341,90 @@
     background: linear-gradient(180deg,#0ea5e9,#38bdf8);
     color:#02101b;
 }
+.btnx.ghost{
+    background: rgba(255,255,255,.03);
+}
 .btnx:hover{ filter: brightness(1.05); }
+
+.tracking-card{
+    margin-top: 12px;
+}
+
+.tracking-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
+.tracking-head-copy{
+    display:grid;
+    gap:.35rem;
+}
+
+.tracking-head-copy .small{
+    color: var(--muted);
+}
+
+.tracking-controls{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.tracking-map{
+    margin-top: 12px;
+    width: 100%;
+    height: 340px;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.08);
+}
+
+.tracking-meta-grid{
+    margin-top: 12px;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.tracking-meta-box{
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(2,6,23,.24);
+    border-radius: 16px;
+    padding: 12px;
+}
+
+.tracking-meta-box .k{
+    font-size:.72rem;
+}
+
+.tracking-meta-value{
+    margin-top: .45rem;
+    color: rgba(255,255,255,.94);
+    font-weight: 800;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.tracking-meta-sub{
+    margin-top: .45rem;
+    color: var(--muted);
+    font-size: .84rem;
+    font-weight: 700;
+}
+
+.tracking-status{
+    min-height: 1.25rem;
+    color: var(--muted);
+    font-size: .84rem;
+    font-weight: 700;
+}
+
+.tracking-status.error{
+    color: #fca5a5;
+}
 
 @media (max-width: 992px){
     .grid{ grid-template-columns: 1fr; }
@@ -335,6 +434,15 @@
     .pill{ width:100%; justify-content:center; }
     .kvGrid{ grid-template-columns: 1fr; }
     .btnx{ width:100%; }
+    .tracking-controls{
+        width:100%;
+    }
+    .tracking-map{
+        height: 280px;
+    }
+    .tracking-meta-grid{
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 
@@ -447,9 +555,387 @@
                 </div>
 
             </div>
+
+            <div class="card tracking-card">
+                <div class="tracking-head">
+                    <div class="tracking-head-copy">
+                        <div class="k">Live Tracking</div>
+                        <div id="providerTrackingStatusText" class="tracking-status">
+                            @if($booking->tracking_enabled)
+                                Start tracking when you are on the way so the customer can follow your live location.
+                            @else
+                                Live tracking is only available while this booking is still active.
+                            @endif
+                        </div>
+                    </div>
+
+                    @if($booking->tracking_enabled)
+                        <div class="tracking-controls">
+                            <button type="button" class="btnx primary" id="startTrackingBtn">Start Tracking</button>
+                            <button type="button" class="btnx ghost" id="stopTrackingBtn">Stop Tracking</button>
+                        </div>
+                    @endif
+                </div>
+
+                <div id="providerTrackingMap" class="tracking-map"></div>
+
+                <div class="tracking-meta-grid">
+                    <div class="tracking-meta-box">
+                        <div class="k">Customer Pin</div>
+                        <div class="tracking-meta-value" id="customerLocationText">
+                            {{ $customerPinnedAddress !== '' ? $customerPinnedAddress : 'Customer pin is not available for this booking yet.' }}
+                        </div>
+                        <div class="tracking-meta-sub" id="customerCoordsText">
+                            @if($customerLatitude !== null && $customerLongitude !== null)
+                                {{ number_format($customerLatitude, 6) }}, {{ number_format($customerLongitude, 6) }}
+                            @else
+                                No saved customer coordinates yet.
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="tracking-meta-box">
+                        <div class="k">Your Latest Shared Location</div>
+                        <div class="tracking-meta-value" id="providerLocationText">
+                            {{ $providerTrackedAddress !== '' ? $providerTrackedAddress : 'No live provider location has been shared yet.' }}
+                        </div>
+                        <div class="tracking-meta-sub" id="providerTrackingMeta">
+                            @if($providerLatitude !== null && $providerLongitude !== null)
+                                {{ number_format($providerLatitude, 6) }}, {{ number_format($providerLongitude, 6) }}
+                            @else
+                                Waiting for the first provider location update.
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
 </div>
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+<script>
+(() => {
+    const mapEl = document.getElementById('providerTrackingMap');
+
+    if (!mapEl || !window.L) {
+        return;
+    }
+
+    const trackingState = {
+        bookingReference: @json($booking->reference_code),
+        enabled: @json((bool) $booking->tracking_enabled),
+        updateUrl: @json(route('provider.bookings.location.update', $booking->reference_code)),
+        stopUrl: @json(route('provider.bookings.location.stop', $booking->reference_code)),
+        csrf: @json(csrf_token()),
+        customer: {
+            latitude: @json($customerLatitude),
+            longitude: @json($customerLongitude),
+            address: @json($customerPinnedAddress),
+        },
+        provider: {
+            latitude: @json($providerLatitude),
+            longitude: @json($providerLongitude),
+            address: @json($providerTrackedAddress),
+            isTracking: @json((bool) ($providerLocationRow->is_tracking ?? false)),
+            trackedAt: @json($providerLocationRow->tracked_at ?? $providerLocationRow->updated_at ?? null),
+        },
+    };
+
+    const statusEl = document.getElementById('providerTrackingStatusText');
+    const startBtn = document.getElementById('startTrackingBtn');
+    const stopBtn = document.getElementById('stopTrackingBtn');
+    const customerLocationTextEl = document.getElementById('customerLocationText');
+    const customerCoordsTextEl = document.getElementById('customerCoordsText');
+    const providerLocationTextEl = document.getElementById('providerLocationText');
+    const providerTrackingMetaEl = document.getElementById('providerTrackingMeta');
+
+    const defaultCenter = [8.9475, 125.5436];
+    const storageKey = `provider-live-tracking:${trackingState.bookingReference}`;
+
+    let map = null;
+    let customerMarker = null;
+    let providerMarker = null;
+    let trackingInterval = null;
+    let sendingLocation = false;
+    let trackingActive = false;
+
+    function setStatus(message, isError = false) {
+        if (!statusEl) {
+            return;
+        }
+
+        statusEl.textContent = message;
+        statusEl.classList.toggle('error', isError);
+    }
+
+    function formatCoordinatePair(latitude, longitude) {
+        if (latitude === null || longitude === null || latitude === '' || longitude === '') {
+            return null;
+        }
+
+        return `${Number(latitude).toFixed(6)}, ${Number(longitude).toFixed(6)}`;
+    }
+
+    // Keep a single customer marker and a single provider marker on the map.
+    function ensureMarker(existingMarker, latitude, longitude, options) {
+        if (latitude === null || longitude === null || latitude === '' || longitude === '') {
+            return existingMarker;
+        }
+
+        if (!existingMarker) {
+            return L.circleMarker([latitude, longitude], options).addTo(map);
+        }
+
+        existingMarker.setLatLng([latitude, longitude]);
+        return existingMarker;
+    }
+
+    function fitToKnownPoints() {
+        const points = [];
+
+        if (customerMarker) {
+            points.push(customerMarker.getLatLng());
+        }
+
+        if (providerMarker) {
+            points.push(providerMarker.getLatLng());
+        }
+
+        if (points.length >= 2) {
+            map.fitBounds(L.latLngBounds(points), {
+                padding: [32, 32],
+                maxZoom: 16,
+            });
+            return;
+        }
+
+        if (points.length === 1) {
+            map.setView(points[0], 15);
+            return;
+        }
+
+        map.setView(defaultCenter, 13);
+    }
+
+    function updateCustomerCard() {
+        if (customerLocationTextEl) {
+            customerLocationTextEl.textContent = trackingState.customer.address || 'Customer pin is not available for this booking yet.';
+        }
+
+        if (customerCoordsTextEl) {
+            customerCoordsTextEl.textContent = formatCoordinatePair(
+                trackingState.customer.latitude,
+                trackingState.customer.longitude
+            ) || 'No saved customer coordinates yet.';
+        }
+    }
+
+    function updateProviderCard() {
+        if (providerLocationTextEl) {
+            providerLocationTextEl.textContent = trackingState.provider.address || 'No live provider location has been shared yet.';
+        }
+
+        if (providerTrackingMetaEl) {
+            const coords = formatCoordinatePair(trackingState.provider.latitude, trackingState.provider.longitude);
+            const trackedAt = trackingState.provider.trackedAt ? `Updated ${trackingState.provider.trackedAt}` : 'Waiting for the first provider location update.';
+            providerTrackingMetaEl.textContent = coords ? `${coords} | ${trackedAt}` : trackedAt;
+        }
+    }
+
+    function syncButtonState() {
+        if (startBtn) {
+            startBtn.disabled = trackingActive;
+        }
+
+        if (stopBtn) {
+            stopBtn.disabled = !trackingActive;
+        }
+    }
+
+    // Browser geolocation is sampled on an interval and pushed to the booking-specific endpoint.
+    async function sendCurrentLocation() {
+        if (!trackingActive || sendingLocation) {
+            return;
+        }
+
+        if (!navigator.geolocation) {
+            setStatus('This browser does not support live location sharing.', true);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            sendingLocation = true;
+
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+
+            try {
+                const response = await fetch(trackingState.updateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': trackingState.csrf,
+                    },
+                    body: JSON.stringify({
+                        latitude,
+                        longitude,
+                    }),
+                });
+
+                const payload = await response.json();
+
+                if (!response.ok) {
+                    if (response.status === 422) {
+                        trackingActive = false;
+                        localStorage.removeItem(storageKey);
+
+                        if (trackingInterval) {
+                            window.clearInterval(trackingInterval);
+                            trackingInterval = null;
+                        }
+
+                        syncButtonState();
+                    }
+
+                    throw new Error(payload.message || 'Unable to share location right now.');
+                }
+
+                trackingState.provider.latitude = payload.location?.latitude ?? latitude;
+                trackingState.provider.longitude = payload.location?.longitude ?? longitude;
+                trackingState.provider.address = payload.location?.formatted_address || trackingState.provider.address;
+                trackingState.provider.trackedAt = payload.location?.tracked_at || null;
+                trackingState.provider.isTracking = true;
+
+                providerMarker = ensureMarker(providerMarker, latitude, longitude, {
+                    radius: 9,
+                    color: '#38bdf8',
+                    fillColor: '#38bdf8',
+                    fillOpacity: 0.9,
+                    weight: 2,
+                });
+
+                updateProviderCard();
+                fitToKnownPoints();
+                setStatus('Live tracking is active. Your latest location was shared successfully.');
+            } catch (error) {
+                setStatus(error.message || 'Unable to share location right now.', true);
+            } finally {
+                sendingLocation = false;
+            }
+        }, () => {
+            setStatus('Location access was blocked. Please allow browser location permissions to continue tracking.', true);
+        }, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 3000,
+        });
+    }
+
+    function startTracking() {
+        if (!trackingState.enabled || trackingActive) {
+            return;
+        }
+
+        trackingActive = true;
+        localStorage.setItem(storageKey, '1');
+        syncButtonState();
+        setStatus('Starting live tracking...');
+        sendCurrentLocation();
+        trackingInterval = window.setInterval(sendCurrentLocation, 8000);
+    }
+
+    async function stopTracking() {
+        if (!trackingActive) {
+            return;
+        }
+
+        trackingActive = false;
+        localStorage.removeItem(storageKey);
+
+        if (trackingInterval) {
+            window.clearInterval(trackingInterval);
+            trackingInterval = null;
+        }
+
+        syncButtonState();
+        trackingState.provider.isTracking = false;
+
+        try {
+            await fetch(trackingState.stopUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': trackingState.csrf,
+                },
+            });
+        } catch (error) {
+            // Keep the local stop state even if the stop request cannot be confirmed.
+        }
+
+        setStatus('Live tracking stopped. You can start it again any time while the booking is active.');
+    }
+
+    map = L.map(mapEl, {
+        zoomControl: true,
+    }).setView(defaultCenter, 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
+
+    if (trackingState.customer.latitude !== null && trackingState.customer.longitude !== null) {
+        customerMarker = ensureMarker(customerMarker, trackingState.customer.latitude, trackingState.customer.longitude, {
+            radius: 9,
+            color: '#22c55e',
+            fillColor: '#22c55e',
+            fillOpacity: 0.9,
+            weight: 2,
+        });
+    }
+
+    if (trackingState.provider.latitude !== null && trackingState.provider.longitude !== null) {
+        providerMarker = ensureMarker(providerMarker, trackingState.provider.latitude, trackingState.provider.longitude, {
+            radius: 9,
+            color: '#38bdf8',
+            fillColor: '#38bdf8',
+            fillOpacity: 0.9,
+            weight: 2,
+        });
+    }
+
+    updateCustomerCard();
+    updateProviderCard();
+    fitToKnownPoints();
+    syncButtonState();
+
+    if (trackingState.enabled) {
+        const shouldResume = trackingState.provider.isTracking || localStorage.getItem(storageKey) === '1';
+        setStatus('Start tracking when you are on the way so the customer can follow your live location.');
+
+        if (shouldResume) {
+            startTracking();
+        }
+    } else {
+        setStatus('Live tracking is only available while this booking is still active.');
+    }
+
+    startBtn?.addEventListener('click', startTracking);
+    stopBtn?.addEventListener('click', stopTracking);
+
+    window.addEventListener('beforeunload', () => {
+        if (trackingInterval) {
+            window.clearInterval(trackingInterval);
+        }
+    });
+})();
+</script>
 
 @endsection
