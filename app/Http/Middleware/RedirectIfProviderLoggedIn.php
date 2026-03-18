@@ -9,7 +9,7 @@ class RedirectIfProviderLoggedIn
 {
     public function handle(Request $request, Closure $next)
     {
-        if (session()->has('provider_id')) {
+        if (session()->has('provider_id') && session('role') === 'provider') {
             return redirect()->route('provider.dashboard');
         }
 

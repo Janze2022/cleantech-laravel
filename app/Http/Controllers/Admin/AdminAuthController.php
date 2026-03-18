@@ -9,6 +9,19 @@ use Illuminate\Support\Facades\Hash;
 
 class AdminAuthController extends Controller
 {
+    protected function clearRoleSessions(Request $request): void
+    {
+        $request->session()->forget([
+            'user_id',
+            'provider_id',
+            'admin_id',
+            'name',
+            'role',
+            'admin_name',
+            'admin_email',
+        ]);
+    }
+
     public function showLogin()
     {
         return view('admin.login');
@@ -17,7 +30,7 @@ class AdminAuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email'    => 'required|email',
+            'email' => 'required|email',
             'password' => 'required',
         ]);
 
@@ -29,14 +42,25 @@ class AdminAuthController extends Controller
             return back()->withErrors(['email' => 'Invalid admin credentials']);
         }
 
-        session(['admin_id' => $admin->id]);
+        $this->clearRoleSessions($request);
+        $request->session()->regenerate();
+
+        $request->session()->put([
+            'admin_id' => $admin->id,
+            'admin_name' => $admin->name ?? 'Admin',
+            'admin_email' => $admin->email,
+            'role' => 'admin',
+        ]);
 
         return redirect()->route('admin.dashboard');
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
-        session()->forget('admin_id');
+        $this->clearRoleSessions($request);
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return redirect()->route('admin.login');
     }
 }

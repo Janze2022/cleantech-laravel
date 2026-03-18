@@ -361,27 +361,14 @@
 
 .service-actions{
     display: flex;
-    gap: .7rem;
     margin-top: auto;
 }
 
-.service-select-btn,
 .service-view-btn{
     min-height: 46px;
     border-radius: 14px;
     font-weight: 900;
     flex: 1;
-}
-
-.service-select-btn{
-    border: 1px solid rgba(255,255,255,.10);
-    background: rgba(255,255,255,.03);
-    color: rgba(255,255,255,.88);
-}
-
-.service-select-btn:hover{
-    background: rgba(255,255,255,.06);
-    color: rgba(255,255,255,.94);
 }
 
 .service-view-btn{
@@ -702,7 +689,6 @@
                                 <div>
                                     <h2 class="service-name">{{ $serviceName }}</h2>
                                 </div>
-                                <span class="service-pill accent">Select</span>
                             </div>
 
                             <p class="service-desc">
@@ -716,7 +702,6 @@
                             </div>
 
                             <div class="service-actions">
-                                <button class="btn service-select-btn btn-select-service" type="button">Select Service</button>
                                 <button class="btn service-view-btn btn-view-providers" type="button">View Providers</button>
                             </div>
                         </div>
@@ -933,10 +918,9 @@
         }
 
         const viewButton = event.target.closest('.btn-view-providers');
-        const selectButton = event.target.closest('.btn-select-service');
         const shouldScroll = Boolean(viewButton);
 
-        if (viewButton || selectButton || event.target === card || !event.target.closest('button')) {
+        if (viewButton || event.target === card || !event.target.closest('button')) {
             setSelectedService(card, shouldScroll);
         }
     });

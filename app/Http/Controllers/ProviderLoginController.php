@@ -8,8 +8,21 @@ use Illuminate\Support\Facades\Hash;
 
 class ProviderLoginController extends Controller
 {
+    protected function clearRoleSessions(Request $request): void
+    {
+        $request->session()->forget([
+            'user_id',
+            'provider_id',
+            'admin_id',
+            'name',
+            'role',
+            'admin_name',
+            'admin_email',
+        ]);
+    }
+
     /**
-     * Show provider login form
+     * Show provider login form.
      */
     public function show()
     {
@@ -17,12 +30,12 @@ class ProviderLoginController extends Controller
     }
 
     /**
-     * Handle provider login
+     * Handle provider login.
      */
     public function login(Request $request)
     {
         $request->validate([
-            'email'    => 'required|email',
+            'email' => 'required|email',
             'password' => 'required',
         ]);
 
@@ -32,18 +45,19 @@ class ProviderLoginController extends Controller
 
         if (!$provider || !Hash::check($request->password, $provider->password)) {
             return back()->withErrors([
-                'email' => 'Invalid credentials'
+                'email' => 'Invalid credentials',
             ])->withInput();
         }
 
-        // ✅ Set provider session
-        session([
+        $this->clearRoleSessions($request);
+        $request->session()->regenerate();
+
+        $request->session()->put([
             'provider_id' => $provider->id,
-            'name'        => $provider->first_name,
-            'role'        => 'provider',
+            'name' => $provider->first_name,
+            'role' => 'provider',
         ]);
 
-        // 🔒 Redirect based on approval status
         if ($provider->status !== 'Approved') {
             return redirect()->route('provider.pending');
         }

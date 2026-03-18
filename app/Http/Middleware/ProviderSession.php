@@ -11,7 +11,7 @@ class ProviderSession
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (!session()->has('provider_id')) {
+        if (!session()->has('provider_id') || session('role') !== 'provider') {
             return redirect()->route('provider.login');
         }
 
