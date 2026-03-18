@@ -21,28 +21,90 @@
     --danger:#ef4444;
 }
 
-.booking-page { padding:1rem .75rem 1.5rem; }
+.booking-page {
+    padding:.7rem .7rem 1rem;
+    display:flex;
+    justify-content:center;
+}
 
 .booking-container {
-    width:min(1180px, 100%);
-    margin:0;
+    width:min(980px, 100%);
+    margin:0 auto;
     display:grid;
-    grid-template-columns:280px minmax(0, 820px);
-    gap:1rem;
+    grid-template-columns:minmax(0, 1fr);
+    gap:.8rem;
     align-items:start;
 }
 
 .booking-summary {
-    position:sticky;
-    top:96px;
     background:linear-gradient(180deg,#020b1f,#020617);
     border:1px solid var(--border-soft);
     border-radius:16px;
-    padding:1.15rem;
+    padding:.85rem .95rem;
+}
+
+.booking-summary-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.75rem;
+    margin-bottom:.7rem;
+}
+
+.booking-summary-head h6{
+    margin:0;
+    color:#fff;
+    font-weight:900;
+}
+
+.booking-summary-note{
+    color:var(--text-muted);
+    font-size:.78rem;
+}
+
+.booking-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:.65rem;
+}
+
+.summary-card{
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+    padding:.72rem .8rem;
+    min-height:82px;
+}
+
+.summary-card.total-card{
+    background:rgba(56,189,248,.10);
+    border-color:rgba(56,189,248,.22);
+}
+
+.summary-card-label{
+    color:var(--text-muted);
+    font-size:.7rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    font-weight:800;
+}
+
+.summary-card-value{
+    margin-top:.28rem;
+    color:#fff;
+    font-size:.98rem;
+    font-weight:800;
+    line-height:1.35;
+    word-break:break-word;
+}
+
+.summary-card.total-card .summary-card-value{
+    color:var(--accent);
+    font-size:1.16rem;
 }
 
 .summary-row {
-    display:flex;
+    display:none;
     justify-content:space-between;
     color:var(--text-muted);
     margin-bottom:.5rem;
@@ -54,6 +116,7 @@
 }
 
 .summary-total {
+    display:none;
     margin-top:1rem;
     padding-top:1rem;
     border-top:1px solid var(--border-soft);
@@ -62,23 +125,62 @@
 
 .summary-total span {
     display:block;
-    font-size:1.55rem;
+    font-size:1.15rem;
     color:var(--accent);
     font-weight:800;
-    margin-top:.35rem;
+    margin-top:.15rem;
 }
 
 .booking-card {
     background:linear-gradient(180deg,#020b1f,#020617);
     border-radius:16px;
     border:1px solid var(--border-soft);
-    padding:1.35rem;
+    padding:1rem 1.05rem;
+}
+
+.booking-card-header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:.8rem;
+    margin-bottom:1rem;
+}
+
+.booking-card-title{
+    margin:0;
+    color:#fff;
+    font-size:1.35rem;
+    font-weight:900;
+}
+
+.booking-card-subtitle{
+    margin:.25rem 0 0;
+    color:var(--text-muted);
+}
+
+.booking-date-chip{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:.5rem .75rem;
+    border-radius:999px;
+    border:1px solid rgba(56,189,248,.22);
+    background:rgba(56,189,248,.10);
+    color:#e0f2fe;
+    font-size:.82rem;
+    font-weight:800;
+    text-align:center;
 }
 
 .form-control {
     background:#020617;
     border:1px solid var(--border-soft);
     color:#fff;
+    scrollbar-color:rgba(56,189,248,.45) #020617;
+}
+
+.form-control::placeholder{
+    color:rgba(255,255,255,.32);
 }
 
 .form-control:focus {
@@ -91,6 +193,35 @@
 .form-control option {
     background:#020617;
     color:#fff;
+}
+
+.form-control:disabled,
+select.form-control:disabled{
+    background:#020617 !important;
+    color:rgba(255,255,255,.8) !important;
+    opacity:1 !important;
+    -webkit-text-fill-color:rgba(255,255,255,.8);
+}
+
+select.form-control{
+    color-scheme:dark;
+    appearance:none;
+    -webkit-appearance:none;
+    -moz-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23e2e8f0' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right .85rem center;
+    background-size:12px;
+    padding-right:2.4rem;
+}
+
+select.form-control::-ms-expand{
+    display:none;
+}
+
+textarea.form-control{
+    min-height:74px;
+    resize:vertical;
 }
 
 .btn-primary {
@@ -204,7 +335,7 @@
 
 .location-shell{
     display:grid;
-    gap:1rem;
+    gap:.8rem;
 }
 
 .location-search-wrap{
@@ -253,16 +384,17 @@
 
 .location-map{
     width:100%;
-    height:230px;
+    height:238px;
     border-radius:16px;
     overflow:hidden;
     border:1px solid var(--border-soft);
 }
 
-.location-top-grid{
+.location-top-grid,
+.location-controls-grid{
     display:grid;
     grid-template-columns:minmax(0, 1.35fr) minmax(220px, .65fr);
-    gap:.85rem;
+    gap:.75rem;
     align-items:start;
 }
 
@@ -283,26 +415,10 @@
     font-weight:800;
 }
 
-.location-readonly{
-    min-height:44px;
-    display:flex;
-    align-items:center;
-    padding:.7rem .85rem;
-    border-radius:12px;
-    border:1px solid rgba(255,255,255,.08);
-    background:#020617;
-    color:#fff;
-    font-weight:700;
-    line-height:1.45;
-}
-
-.location-readonly.is-empty{
-    color:var(--text-muted);
-}
-
 .location-meta{
     display:grid;
-    gap:.55rem;
+    grid-template-columns:minmax(0, .82fr) minmax(0, 1.18fr);
+    gap:.65rem;
 }
 
 .location-meta-card{
@@ -310,6 +426,12 @@
     background:rgba(255,255,255,.03);
     border-radius:14px;
     padding:.8rem .9rem;
+}
+
+.location-meta-info{
+    display:grid;
+    gap:.45rem;
+    align-content:start;
 }
 
 .location-note{
@@ -354,23 +476,61 @@
     line-height:1.4;
 }
 
+html,
+body,
+.booking-page,
+.booking-page *{
+    scrollbar-width:thin;
+    scrollbar-color:rgba(56,189,248,.45) #020617;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.booking-page *::-webkit-scrollbar{
+    width:10px;
+    height:10px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+.booking-page *::-webkit-scrollbar-track{
+    background:#020617;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+.booking-page *::-webkit-scrollbar-thumb{
+    background:rgba(56,189,248,.32);
+    border-radius:999px;
+    border:2px solid #020617;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+.booking-page *::-webkit-scrollbar-thumb:hover{
+    background:rgba(56,189,248,.48);
+}
+
 .hidden{
     display:none !important;
 }
 
 @media (max-width: 991px){
     .booking-container{
-        grid-template-columns:1fr;
         width:100%;
     }
 
-    .booking-summary{
-        position:static;
-        order:2;
+    .booking-summary-grid{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
     }
 
-    .booking-card{
-        order:1;
+    .location-top-grid,
+    .location-controls-grid{
+        grid-template-columns:1fr;
+    }
+
+    .location-meta{
+        grid-template-columns:1fr;
     }
 }
 
@@ -379,18 +539,22 @@
         grid-template-columns:1fr;
     }
 
-    .location-top-grid,
-    .location-meta-grid{
+    .booking-summary-grid{
         grid-template-columns:1fr;
     }
 
     .location-map{
-        height:210px;
+        height:220px;
     }
 
     .location-card,
     .location-meta-card{
         padding:.75rem;
+    }
+
+    .booking-card-header{
+        flex-direction:column;
+        align-items:flex-start;
     }
 }
 </style>
@@ -400,7 +564,35 @@
 
         {{-- SUMMARY --}}
         <aside class="booking-summary">
-            <h6>Booking Summary</h6>
+            <div class="booking-summary-head">
+                <div>
+                    <h6>Quick Summary</h6>
+                    <div class="booking-summary-note">Your choices will show here.</div>
+                </div>
+                <div class="booking-date-chip">{{ $selectedDateLabel ?? 'Today' }}</div>
+            </div>
+
+            <div class="booking-summary-grid">
+                <div class="summary-card">
+                    <div class="summary-card-label">Service</div>
+                    <div class="summary-card-value" data-summary-view="service">Not set</div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-card-label" data-summary-label="option">Option</div>
+                    <div class="summary-card-value" data-summary-view="option">Not set</div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-card-label">Time</div>
+                    <div class="summary-card-value" data-summary-view="schedule">Not set</div>
+                </div>
+
+                <div class="summary-card total-card">
+                    <div class="summary-card-label">Total</div>
+                    <div class="summary-card-value" data-summary-view="total">PHP 0.00</div>
+                </div>
+            </div>
 
             <div class="summary-row">
                 <span>Service</span>
@@ -425,9 +617,13 @@
 
         {{-- FORM --}}
         <div class="booking-card">
-            <h4>Book {{ $providerData->first_name }} {{ $providerData->last_name }}</h4>
-            <p class="text-muted">{{ $providerData->city }}, {{ $providerData->province }}</p>
-            <p class="text-muted mb-3">Available on {{ $selectedDateLabel ?? 'today' }}.</p>
+            <div class="booking-card-header">
+                <div>
+                    <h4 class="booking-card-title">Book {{ $providerData->first_name }} {{ $providerData->last_name }}</h4>
+                    <p class="booking-card-subtitle">{{ $providerData->city }}, {{ $providerData->province }}</p>
+                </div>
+                <div class="booking-date-chip">Open on {{ $selectedDateLabel ?? 'today' }}</div>
+            </div>
 
             @if ($errors->any())
                 <div class="alert alert-danger">
@@ -510,7 +706,7 @@
                                         type="text"
                                         id="locationSearch"
                                         class="form-control"
-                                        placeholder="Search place or barangay"
+                                        placeholder="Search street, place, or barangay"
                                         autocomplete="off"
                                     >
                                     <div id="locationResults" class="location-results hidden"></div>
@@ -519,11 +715,14 @@
 
                             <div class="location-card">
                                 <span class="location-card-label">Barangay</span>
-                                <div id="barangayDisplay" class="location-readonly {{ old('barangay') ? '' : 'is-empty' }}">
-                                    {{ old('barangay') ?: 'Will fill in after you pin the map.' }}
-                                </div>
+                                <select id="barangay" class="form-control" required>
+                                    <option value="">Choose barangay</option>
+                                    @if(old('barangay'))
+                                        <option value="{{ old('barangay') }}" selected>{{ old('barangay') }}</option>
+                                    @endif
+                                </select>
                                 <div class="location-helper">
-                                    Filled automatically from the map pin.
+                                    The map will try to match this. You can change it anytime.
                                 </div>
                             </div>
                         </div>
@@ -531,12 +730,15 @@
                         <div id="locationMap" class="location-map"></div>
 
                         <div class="location-meta">
-                            <div class="location-note">
-                                Search, tap the map, or drag the pin.
-                            </div>
+                            <div class="location-meta-card location-meta-info">
+                                <div class="location-preview-label">How to pin</div>
+                                <div class="location-note">
+                                    Search, tap the map, or drag the pin.
+                                </div>
 
-                            <div id="locationStatus" class="location-status">
-                                Choose your service location.
+                                <div id="locationStatus" class="location-status">
+                                    Pick the exact service spot.
+                                </div>
                             </div>
 
                             <div class="location-meta-card">
@@ -657,6 +859,11 @@ const summaryServiceEl = document.getElementById('summaryService');
 const summaryOptionEl  = document.getElementById('summaryOption');
 const summaryScheduleEl = document.getElementById('summarySchedule');
 const totalPriceEl     = document.getElementById('totalPrice');
+const summaryServiceViewEls = document.querySelectorAll('[data-summary-view="service"]');
+const summaryOptionViewEls = document.querySelectorAll('[data-summary-view="option"]');
+const summaryScheduleViewEls = document.querySelectorAll('[data-summary-view="schedule"]');
+const summaryTotalViewEls = document.querySelectorAll('[data-summary-view="total"]');
+const summaryOptionLabelViewEls = document.querySelectorAll('[data-summary-label="option"]');
 
 const slotEl = document.getElementById('slot');
 const preferredStartEl = document.getElementById('preferred_start_time');
@@ -667,6 +874,28 @@ const preferredTimeHelpEl = document.getElementById('preferredTimeHelp');
 const providerPreviewEl = document.getElementById('providerPreview');
 const providerNameEl = document.getElementById('providerName');
 const providerAvatarEl = document.getElementById('providerAvatar');
+
+function syncSummaryText(primaryEl, mirrorEls, value, fallback = 'Not set'){
+    const text = String(value || '').trim() || fallback;
+
+    if(primaryEl){
+        primaryEl.textContent = text;
+    }
+
+    mirrorEls.forEach((el) => {
+        el.textContent = text;
+    });
+}
+
+function syncSummaryOptionLabel(value){
+    if(summaryOptionLabelEl){
+        summaryOptionLabelEl.textContent = value;
+    }
+
+    summaryOptionLabelViewEls.forEach((el) => {
+        el.textContent = value;
+    });
+}
 
 function peso(n){
     return '₱' + Number(n || 0).toFixed(2);
@@ -722,8 +951,8 @@ function rebuildOptions(serviceId){
         optionSingleEl.innerHTML = `<option value="">Select service first</option>`;
 
         optionLabelEl.textContent = 'Option';
-        summaryOptionLabelEl.textContent = 'Option';
-        summaryOptionEl.textContent = '—';
+        syncSummaryOptionLabel('Option');
+        syncSummaryText(summaryOptionEl, summaryOptionViewEls, '');
         updatePrice();
         return;
     }
@@ -736,7 +965,7 @@ function rebuildOptions(serviceId){
         optionSingleEl.required = false;
         optionSingleEl.innerHTML = `<option value="">Not used</option>`;
 
-        summaryOptionLabelEl.textContent = 'Areas';
+        syncSummaryOptionLabel('Areas');
 
         options.forEach(o => {
             const wrapper = document.createElement('div');
@@ -769,10 +998,10 @@ function rebuildOptions(serviceId){
 
         if(Number(serviceId) === 2){
             optionLabelEl.textContent = 'House Type';
-            summaryOptionLabelEl.textContent = 'House Type';
+            syncSummaryOptionLabel('House Type');
         } else {
             optionLabelEl.textContent = 'Option';
-            summaryOptionLabelEl.textContent = 'Option';
+            syncSummaryOptionLabel('Option');
         }
 
         optionSingleEl.innerHTML = `<option value="">Select</option>`;
@@ -798,7 +1027,7 @@ function updatePrice(){
     const sOpt = serviceEl.selectedOptions[0];
     const base = parseFloat(sOpt?.dataset.price || 0);
 
-    summaryServiceEl.textContent = sOpt?.value ? sOpt.text : '—';
+    syncSummaryText(summaryServiceEl, summaryServiceViewEls, sOpt?.value ? sOpt.text : '');
 
     if(Number(serviceEl.value) === SPECIFIC_AREA_SERVICE_ID){
         const checked = getCheckedMultiOptions();
@@ -806,18 +1035,18 @@ function updatePrice(){
 
         if(checked.length){
             const names = checked.map(cb => cb.closest('label').querySelector('.option-check-name')?.textContent || '').filter(Boolean);
-            summaryOptionEl.textContent = names.join(', ');
+            syncSummaryText(summaryOptionEl, summaryOptionViewEls, names.join(', '));
         } else {
-            summaryOptionEl.textContent = '—';
+            syncSummaryText(summaryOptionEl, summaryOptionViewEls, '');
         }
 
-        totalPriceEl.textContent = peso(base + add);
+        syncSummaryText(totalPriceEl, summaryTotalViewEls, peso(base + add), 'PHP 0.00');
     } else {
         const oOpt = optionSingleEl.selectedOptions[0];
         const add  = parseFloat(oOpt?.dataset.price || 0);
 
-        summaryOptionEl.textContent  = oOpt?.value ? oOpt.text : '—';
-        totalPriceEl.textContent     = peso(base + add);
+        syncSummaryText(summaryOptionEl, summaryOptionViewEls, oOpt?.value ? oOpt.text : '');
+        syncSummaryText(totalPriceEl, summaryTotalViewEls, peso(base + add), 'PHP 0.00');
     }
 }
 
@@ -877,7 +1106,7 @@ function rebuildPreferredStartInput(slotOption){
         preferredStartEl.removeAttribute('placeholder');
         slotPreviewTextEl.textContent = 'Choose a provider availability first.';
         preferredTimeHelpEl.textContent = "You can manually choose any time within the provider's available schedule.";
-        summaryScheduleEl.textContent = '—';
+        syncSummaryText(summaryScheduleEl, summaryScheduleViewEls, '');
         setTimeError('');
         return;
     }
@@ -910,7 +1139,7 @@ function updateScheduleSummary(){
     const slotOpt = slotEl.selectedOptions[0];
 
     if(!slotOpt || !slotOpt.value){
-        summaryScheduleEl.textContent = '—';
+        syncSummaryText(summaryScheduleEl, summaryScheduleViewEls, '');
         return;
     }
 
@@ -920,11 +1149,17 @@ function updateScheduleSummary(){
     const preferred = normalizeTimeToHHMM(preferredStartEl.value || '');
 
     if(preferred){
-        summaryScheduleEl.textContent =
-            `${date} | Preferred: ${to12Hour(preferred)} | Available: ${to12Hour(start)} – ${to12Hour(end)}`;
+        syncSummaryText(
+            summaryScheduleEl,
+            summaryScheduleViewEls,
+            `${date} | Preferred: ${to12Hour(preferred)} | Available: ${to12Hour(start)} – ${to12Hour(end)}`
+        );
     } else {
-        summaryScheduleEl.textContent =
-            `${date} | Available: ${to12Hour(start)} – ${to12Hour(end)}`;
+        syncSummaryText(
+            summaryScheduleEl,
+            summaryScheduleViewEls,
+            `${date} | Available: ${to12Hour(start)} – ${to12Hour(end)}`
+        );
     }
 }
 
@@ -1049,7 +1284,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const cityInputEl = document.getElementById('cityInput');
     const provinceInputEl = document.getElementById('provinceInput');
     const barangayTextEl = document.getElementById('barangay_text');
-    const barangayDisplayEl = document.getElementById('barangayDisplay');
+    const barangaySelectEl = document.getElementById('barangay');
 
     if (!searchEl || !resultsEl || !mapEl || !statusEl || !previewEl || !window.L) {
         return;
@@ -1084,14 +1319,74 @@ window.addEventListener('DOMContentLoaded', () => {
         updateLocationPreview(lat, lng, formattedAddress);
     }
 
-    function updateBarangayDisplay(name) {
-        if (!barangayDisplayEl) {
+    function normalizeBarangay(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function buildBarangayOptions(names) {
+        if (!barangaySelectEl) {
             return;
         }
 
+        const currentValue = String(barangayTextEl?.value || '').trim();
+        const normalizedCurrentValue = normalizeBarangay(currentValue);
+
+        barangaySelectEl.innerHTML = '<option value="">Choose barangay</option>';
+
+        names.forEach((name) => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+
+            if (normalizeBarangay(name) === normalizedCurrentValue) {
+                option.selected = true;
+            }
+
+            barangaySelectEl.appendChild(option);
+        });
+
+        if (currentValue && !names.some((name) => normalizeBarangay(name) === normalizedCurrentValue)) {
+            const fallbackOption = document.createElement('option');
+            fallbackOption.value = currentValue;
+            fallbackOption.textContent = currentValue;
+            fallbackOption.selected = true;
+            fallbackOption.dataset.custom = 'true';
+            barangaySelectEl.appendChild(fallbackOption);
+        }
+    }
+
+    function setBarangayValue(name) {
         const value = String(name || '').trim();
-        barangayDisplayEl.textContent = value || 'Barangay will fill in automatically from the pinned location.';
-        barangayDisplayEl.classList.toggle('is-empty', value === '');
+
+        if (barangayTextEl) {
+            barangayTextEl.value = value;
+        }
+
+        if (!barangaySelectEl) {
+            return;
+        }
+
+        if (!value) {
+            barangaySelectEl.value = '';
+            return;
+        }
+
+        const normalizedValue = normalizeBarangay(value);
+        const matchingOption = Array.from(barangaySelectEl.options).find((option) => {
+            return normalizeBarangay(option.value || option.textContent) === normalizedValue;
+        });
+
+        if (matchingOption) {
+            barangaySelectEl.value = matchingOption.value;
+            return;
+        }
+
+        const customOption = document.createElement('option');
+        customOption.value = value;
+        customOption.textContent = value;
+        customOption.selected = true;
+        customOption.dataset.custom = 'true';
+        barangaySelectEl.appendChild(customOption);
     }
 
     function clearResults() {
@@ -1101,30 +1396,27 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function syncBarangaySelection(candidate) {
         const rawCandidate = String(candidate || '').trim();
-        const normalizedCandidate = rawCandidate.toLowerCase();
+        const normalizedCandidate = normalizeBarangay(rawCandidate);
 
         if (!normalizedCandidate || !barangayTextEl) {
             return;
         }
 
         if (!barangayCatalog.length) {
-            barangayTextEl.value = rawCandidate;
-            updateBarangayDisplay(rawCandidate);
+            setBarangayValue(rawCandidate);
             return;
         }
 
         const matchedOption = barangayCatalog.find((name) => {
-            return String(name).trim().toLowerCase() === normalizedCandidate;
+            return normalizeBarangay(name) === normalizedCandidate;
         });
 
         if (!matchedOption) {
-            barangayTextEl.value = rawCandidate;
-            updateBarangayDisplay(rawCandidate);
+            setBarangayValue(rawCandidate);
             return;
         }
 
-        barangayTextEl.value = matchedOption;
-        updateBarangayDisplay(matchedOption);
+        setBarangayValue(matchedOption);
     }
 
     function syncBarangayFromFormattedAddress(formattedAddress) {
@@ -1148,8 +1440,7 @@ window.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        barangayTextEl.value = matchedOption;
-        updateBarangayDisplay(matchedOption);
+        setBarangayValue(matchedOption);
     }
 
     function syncAdministrativeFields(result) {
@@ -1379,6 +1670,10 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    barangaySelectEl?.addEventListener('change', () => {
+        setBarangayValue(barangaySelectEl.value || '');
+    });
+
     fetch('https://psgc.gitlab.io/api/cities-municipalities/160202000/barangays/')
         .then((response) => response.json())
         .then((rows) => {
@@ -1386,24 +1681,20 @@ window.addEventListener('DOMContentLoaded', () => {
                 ? rows.map((row) => String(row.name || '').trim()).filter(Boolean)
                 : [];
 
-            if (barangayTextEl?.value) {
-                updateBarangayDisplay(barangayTextEl.value);
-                syncBarangaySelection(barangayTextEl.value);
-            }
+            buildBarangayOptions(barangayCatalog);
+            syncBarangaySelection(barangayTextEl?.value || '');
         })
         .catch(() => {
             barangayCatalog = [];
-
-            if (barangayTextEl?.value) {
-                updateBarangayDisplay(barangayTextEl.value);
-            }
+            buildBarangayOptions([]);
+            setBarangayValue(barangayTextEl?.value || '');
         });
 
     const oldLatitude = Number(OLD_CUSTOMER_LATITUDE || 0);
     const oldLongitude = Number(OLD_CUSTOMER_LONGITUDE || 0);
     const oldFormattedAddress = String(OLD_FORMATTED_ADDRESS || '').trim();
 
-    updateBarangayDisplay(barangayTextEl?.value || '');
+    setBarangayValue(barangayTextEl?.value || '');
 
     if (oldLatitude && oldLongitude) {
         searchEl.value = oldFormattedAddress;
