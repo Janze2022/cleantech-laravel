@@ -21,6 +21,8 @@
     $isPaid = in_array($stLower, ['paid','completed']);
     $canCancel = in_array($stLower, ['pending', 'accepted', 'confirmed', 'scheduled'], true);
     $cancelLocked = in_array($stLower, ['in_progress', 'ongoing', 'active', 'paid', 'completed'], true);
+    $trackingReady = in_array($stLower, ['in_progress', 'ongoing', 'active'], true);
+    $trackingWaiting = in_array($stLower, ['pending', 'accepted', 'confirmed', 'scheduled'], true);
 
     $amount = (float)($booking->price ?? 0);
 
@@ -232,6 +234,25 @@
 
 .tracking-status.error{
     color:#fca5a5;
+}
+
+.tracking-placeholder{
+    margin-top:1rem;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(2,6,23,.28);
+    border-radius:16px;
+    padding:1rem;
+}
+
+.tracking-placeholder-title{
+    color:var(--text-strong);
+    font-weight:900;
+}
+
+.tracking-placeholder-copy{
+    margin-top:.35rem;
+    color:var(--text-muted);
+    line-height:1.5;
 }
 
 .tracking-map{
@@ -514,38 +535,54 @@
                 <div>
                     <h4>Live Provider Tracking</h4>
                     <div class="tracking-copy">
-                        Follow the provider's current location, compare it with your pinned service address,
-                        and watch the route refresh automatically.
+                        Track your provider here once the cleaning is already in progress.
                     </div>
                 </div>
-                <div id="customerTrackingStatus" class="tracking-status">
-                    Loading latest provider location...
-                </div>
+                @if($trackingReady)
+                    <div id="customerTrackingStatus" class="tracking-status">
+                        Waiting for the provider's first live update.
+                    </div>
+                @endif
             </div>
 
-            <div id="customerTrackingMap" class="tracking-map"></div>
+            @if($trackingReady)
+                <div id="customerTrackingMap" class="tracking-map"></div>
 
-            <div class="tracking-grid">
-                <div class="tracking-box">
-                    <div class="label">Your pinned location</div>
-                    <div class="value" id="customerPinnedAddressText">
-                        {{ $customerPinnedAddress !== '' ? $customerPinnedAddress : 'This booking does not have a saved map pin yet.' }}
+                <div class="tracking-grid">
+                    <div class="tracking-box">
+                        <div class="label">Your pinned location</div>
+                        <div class="value" id="customerPinnedAddressText">
+                            {{ $customerPinnedAddress !== '' ? $customerPinnedAddress : 'Your service pin is not saved yet.' }}
+                        </div>
+                        <div class="sub" id="customerPinnedCoordsText">
+                            {{ $customerLatitude !== null && $customerLongitude !== null ? 'Saved on the map for this booking.' : 'No saved map pin yet.' }}
+                        </div>
                     </div>
-                    <div class="sub" id="customerPinnedCoordsText">
-                        @if($customerLatitude !== null && $customerLongitude !== null)
-                            {{ number_format($customerLatitude, 6) }}, {{ number_format($customerLongitude, 6) }}
+
+                    <div class="tracking-box">
+                        <div class="label">Provider current location</div>
+                        <div class="value" id="providerLiveAddressText">Waiting for the provider to start live tracking.</div>
+                        <div class="sub" id="providerLiveMetaText">Live updates will appear here once the job has started.</div>
+                    </div>
+                </div>
+            @else
+                <div class="tracking-placeholder">
+                    <div class="tracking-placeholder-title">
+                        @if($trackingWaiting)
+                            Tracking will appear once the booking starts.
                         @else
-                            No saved customer coordinates yet.
+                            Live tracking is not active for this booking.
+                        @endif
+                    </div>
+                    <div class="tracking-placeholder-copy">
+                        @if($trackingWaiting)
+                            You can check back here when the provider is already on the job.
+                        @else
+                            This page will still keep your booking details here, but live map updates are no longer running.
                         @endif
                     </div>
                 </div>
-
-                <div class="tracking-box">
-                    <div class="label">Provider current location</div>
-                    <div class="value" id="providerLiveAddressText">Waiting for the provider to start live tracking.</div>
-                    <div class="sub" id="providerLiveMetaText">No live provider coordinates yet.</div>
-                </div>
-            </div>
+            @endif
         </div>
 
         <div class="actions">
@@ -709,6 +746,7 @@ function printReceipt(){
 }
 </script>
 
+@if($trackingReady)
 <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
@@ -754,14 +792,6 @@ function printReceipt(){
         statusEl.classList.toggle('error', isError);
     }
 
-    function formatCoords(latitude, longitude) {
-        if (latitude === null || longitude === null || latitude === '' || longitude === '') {
-            return null;
-        }
-
-        return `${Number(latitude).toFixed(6)}, ${Number(longitude).toFixed(6)}`;
-    }
-
     function ensureMarker(existingMarker, latitude, longitude, options) {
         if (latitude === null || longitude === null || latitude === '' || longitude === '') {
             return existingMarker;
@@ -801,29 +831,27 @@ function printReceipt(){
 
     function updateCustomerCard() {
         if (customerAddressEl) {
-            customerAddressEl.textContent = trackingConfig.customer.address || 'This booking does not have a saved map pin yet.';
+            customerAddressEl.textContent = trackingConfig.customer.address || 'Your service pin is not saved yet.';
         }
 
         if (customerCoordsEl) {
-            customerCoordsEl.textContent = formatCoords(
-                trackingConfig.customer.latitude,
-                trackingConfig.customer.longitude
-            ) || 'No saved customer coordinates yet.';
+            customerCoordsEl.textContent = (trackingConfig.customer.latitude !== null && trackingConfig.customer.longitude !== null)
+                ? 'Saved on the map for this booking.'
+                : 'No saved map pin yet.';
         }
     }
 
     function updateProviderCard(location) {
         if (!location) {
             providerAddressEl.textContent = 'Waiting for the provider to start live tracking.';
-            providerMetaEl.textContent = 'No live provider coordinates yet.';
+            providerMetaEl.textContent = 'Live updates will appear here once the job has started.';
             return;
         }
 
-        const coords = formatCoords(location.latitude, location.longitude);
         const trackedAt = location.tracked_at ? `Updated ${location.tracked_at}` : 'Latest provider pin available.';
 
         providerAddressEl.textContent = location.formatted_address || 'Provider location shared without a readable address.';
-        providerMetaEl.textContent = coords ? `${coords} | ${trackedAt}` : trackedAt;
+        providerMetaEl.textContent = trackedAt;
     }
 
     function fitToVisibleData(routeLatLngs = []) {
@@ -898,6 +926,11 @@ function printReceipt(){
 
             const booking = payload.booking || {};
             const providerLocation = payload.provider_location;
+
+            if (booking.tracking_ready === false) {
+                setStatus(payload.message || 'Live tracking starts once the provider begins the booking.');
+                return;
+            }
 
             trackingConfig.customer.latitude = booking.customer_latitude ?? trackingConfig.customer.latitude;
             trackingConfig.customer.longitude = booking.customer_longitude ?? trackingConfig.customer.longitude;
@@ -978,7 +1011,7 @@ function printReceipt(){
     fitToVisibleData();
     refreshTracking();
 
-    pollTimer = window.setInterval(refreshTracking, 8000);
+    pollTimer = window.setInterval(refreshTracking, 10000);
 
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
@@ -992,10 +1025,11 @@ function printReceipt(){
         refreshTracking();
 
         if (!pollTimer) {
-            pollTimer = window.setInterval(refreshTracking, 8000);
+            pollTimer = window.setInterval(refreshTracking, 10000);
         }
     });
 })();
 </script>
+@endif
 
 @endsection

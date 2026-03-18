@@ -71,9 +71,8 @@
     $providerProvince = trim((string)($provider->province ?? ''));
     $providerLocation = trim($providerCity . ($providerProvince ? ', '.$providerProvince : ''));
 
-    // =========================
-    // RATINGS SUMMARY + BREAKDOWN (from reviews table)
-    // =========================
+    // Keep the ratings aggregates available for compatibility,
+    // even though the snapshot panel is not shown here anymore.
     $ratingSummary = (object)['avg' => 0, 'count' => 0];
     $breakdown = collect([
         (object)['star'=>5,'cnt'=>0],
@@ -235,7 +234,7 @@
 
 .grid{
     display:grid;
-    grid-template-columns: 1.15fr .85fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
 }
 
@@ -520,37 +519,6 @@
                         @else
                             <a class="btnx primary" href="{{ url()->previous() }}">← Back</a>
                         @endif
-                    </div>
-                </div>
-
-                {{-- RIGHT: RATINGS SNAPSHOT --}}
-                <div class="card">
-                    <div class="k">My Ratings Snapshot</div>
-                    <div class="v big">{{ $fmtAvg }}</div>
-                    <div class="starline">{{ $stars((int) round($avg)) }}</div>
-                    <div class="small" style="margin-top:6px; color:var(--muted); font-weight:800;">
-                        {{ $count > 0 ? 'Based on '.$count.' review(s)' : 'No reviews yet' }}
-                    </div>
-
-                    <div class="mt-3" style="margin-top:14px;">
-                        <div class="k">Rating Breakdown</div>
-
-                        @foreach($breakdown as $b)
-                            @php
-                                $cnt = (int)($b->cnt ?? 0);
-                                $star = (int)($b->star ?? 0);
-                                $p = $percent($cnt);
-                            @endphp
-                            <div class="breakRow">
-                                <div class="small" style="min-width:72px;">{{ $star }} star</div>
-                                <div class="bar"><span style="width: {{ $p }}%;"></span></div>
-                                <div class="small" style="min-width:60px; text-align:right;">{{ $cnt }}</div>
-                            </div>
-                        @endforeach
-                    </div>
-
-                    <div class="small" style="margin-top:12px; color:var(--muted); font-weight:800;">
-                        Tip: Being on time + clear communication helps keep ratings high.
                     </div>
                 </div>
 

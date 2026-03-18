@@ -19,6 +19,12 @@ class CustomerBookingController extends Controller
         'scheduled',
     ];
 
+    private const CUSTOMER_TRACKING_ACTIVE_STATUSES = [
+        'in_progress',
+        'ongoing',
+        'active',
+    ];
+
     /**
      * PROVIDER PROFILE (Customer side)
      * URL example: /customer/providers/1
@@ -651,8 +657,11 @@ class CustomerBookingController extends Controller
 
         abort_if(!$booking, 404);
 
+        $status = $this->normalizeStatus((string) ($booking->status ?? ''));
+        $trackingReady = in_array($status, self::CUSTOMER_TRACKING_ACTIVE_STATUSES, true);
+
         $providerLocation = null;
-        if ($this->providerLocationTableAvailable()) {
+        if ($trackingReady && $this->providerLocationTableAvailable()) {
             $providerLocation = DB::table('booking_provider_locations')
                 ->where('booking_id', $booking->id)
                 ->select(
@@ -668,6 +677,7 @@ class CustomerBookingController extends Controller
 
         $route = null;
         if (
+            $trackingReady &&
             $geoapify->configured() &&
             !empty($booking->customer_latitude) &&
             !empty($booking->customer_longitude) &&
@@ -690,6 +700,7 @@ class CustomerBookingController extends Controller
             'booking' => [
                 'reference_code' => $booking->reference_code,
                 'status' => $booking->status,
+                'tracking_ready' => $trackingReady,
                 'address' => $booking->address,
                 'formatted_address' => $booking->formatted_address ?? null,
                 'customer_latitude' => $booking->customer_latitude ?? null,
@@ -703,6 +714,9 @@ class CustomerBookingController extends Controller
                 'tracked_at' => $providerLocation->tracked_at ?? $providerLocation->updated_at,
             ] : null,
             'route' => $route,
+            'message' => $trackingReady
+                ? null
+                : 'Live tracking starts once the provider begins the booking.',
         ]);
     }
 
