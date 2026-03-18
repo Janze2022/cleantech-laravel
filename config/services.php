@@ -40,10 +40,4 @@ return [
         'base_url' => env('GEOAPIFY_BASE_URL', 'https://api.geoapify.com/v1'),
     ],
 
-    'generoute' => [
-        'key' => env('GENEROUTE_API_KEY'),
-        'base_url' => env('GENEROUTE_BASE_URL', 'https://api.generoute.io'),
-        'region' => env('GENEROUTE_REGION', 'ph'),
-    ],
-
 ];

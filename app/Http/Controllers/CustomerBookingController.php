@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\GenerouteService;
 use App\Services\GeoapifyService;
 use Carbon\Carbon;
 use Illuminate\Http\Client\RequestException;
@@ -632,7 +631,7 @@ class CustomerBookingController extends Controller
         return view('customer.bookings.show', compact('booking'));
     }
 
-    public function tracking(string $reference, GeoapifyService $geoapify, GenerouteService $generoute): JsonResponse
+    public function tracking(string $reference, GeoapifyService $geoapify): JsonResponse
     {
         $customerId = (int) session('user_id');
 
@@ -669,35 +668,21 @@ class CustomerBookingController extends Controller
 
         $route = null;
         if (
+            $geoapify->configured() &&
             !empty($booking->customer_latitude) &&
             !empty($booking->customer_longitude) &&
             !empty($providerLocation?->latitude) &&
             !empty($providerLocation?->longitude)
         ) {
-            if ($geoapify->configured()) {
-                try {
-                    $route = $geoapify->route(
-                        (float) $providerLocation->latitude,
-                        (float) $providerLocation->longitude,
-                        (float) $booking->customer_latitude,
-                        (float) $booking->customer_longitude
-                    );
-                } catch (\Throwable $exception) {
-                    report($exception);
-                }
-            }
-
-            if (!$route && $generoute->configured()) {
-                try {
-                    $route = $generoute->route(
-                        (float) $providerLocation->latitude,
-                        (float) $providerLocation->longitude,
-                        (float) $booking->customer_latitude,
-                        (float) $booking->customer_longitude
-                    );
-                } catch (\Throwable $exception) {
-                    report($exception);
-                }
+            try {
+                $route = $geoapify->route(
+                    (float) $providerLocation->latitude,
+                    (float) $providerLocation->longitude,
+                    (float) $booking->customer_latitude,
+                    (float) $booking->customer_longitude
+                );
+            } catch (\Throwable $exception) {
+                report($exception);
             }
         }
 
