@@ -34,7 +34,7 @@
 
                 <details class="ct-faq-item ct-reveal delay-1">
                     <summary>Are providers approved before appearing on the platform?</summary>
-                    <p>Yes. CleanTech is designed around approved providers so customers can book with more confidence.</p>
+                    <p>Yes. Providers go through review before they appear as approved on the platform.</p>
                 </details>
 
                 <details class="ct-faq-item ct-reveal delay-2">
