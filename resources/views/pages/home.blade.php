@@ -510,6 +510,40 @@ section {
     color: #fff;
 }
 
+.assistant-msg.typing{
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    min-height: 44px;
+}
+
+.assistant-typing-dot{
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.62);
+    animation: assistantTyping 1s infinite ease-in-out;
+}
+
+.assistant-typing-dot:nth-child(2){
+    animation-delay: .15s;
+}
+
+.assistant-typing-dot:nth-child(3){
+    animation-delay: .3s;
+}
+
+@keyframes assistantTyping{
+    0%, 80%, 100%{
+        opacity: .35;
+        transform: translateY(0);
+    }
+    40%{
+        opacity: 1;
+        transform: translateY(-3px);
+    }
+}
+
 .assistant-chip-list{
     display: flex;
     flex-wrap: wrap;
@@ -571,18 +605,25 @@ section {
     .home-assistant{
         right: 14px;
         bottom: 14px;
-        left: 14px;
+        left: auto;
     }
 
     .assistant-launcher{
-        width: 100%;
+        width: 58px;
+        height: 58px;
+        padding: 0;
+        border-radius: 50%;
         justify-content: center;
+    }
+
+    .assistant-launcher-copy{
+        display: none;
     }
 
     .assistant-panel{
         right: 0;
-        left: 0;
-        width: 100%;
+        left: auto;
+        width: min(360px, calc(100vw - 18px));
         bottom: calc(100% + 10px);
     }
 
@@ -775,13 +816,7 @@ section {
         <div class="assistant-panel-body">
             <div class="assistant-messages" id="assistantMessages"></div>
 
-            <div class="assistant-chip-list">
-                <button type="button" class="assistant-chip" data-question="How do I book a service?">How to book</button>
-                <button type="button" class="assistant-chip" data-question="What services do you offer?">Services</button>
-                <button type="button" class="assistant-chip" data-question="How do I become a provider?">Become a provider</button>
-                <button type="button" class="assistant-chip" data-question="How does pricing work?">Pricing</button>
-                <button type="button" class="assistant-chip" data-question="How can I contact CleanTech?">Contact</button>
-            </div>
+            <div class="assistant-chip-list" id="assistantSuggestions"></div>
 
             <form class="assistant-form" id="assistantForm">
                 <input
@@ -806,9 +841,9 @@ section {
     const messages = document.getElementById('assistantMessages');
     const form = document.getElementById('assistantForm');
     const input = document.getElementById('assistantInput');
-    const chips = document.querySelectorAll('.assistant-chip');
+    const suggestions = document.getElementById('assistantSuggestions');
 
-    if (!launcher || !panel || !messages || !form || !input) {
+    if (!launcher || !panel || !messages || !form || !input || !suggestions) {
         return;
     }
 
@@ -823,36 +858,185 @@ section {
         email: 'mailto:janzedoysabas@gmail.com',
     };
 
+    const suggestionSets = {
+        default: [
+            'How do I book a service?',
+            'What services do you offer?',
+            'How do I become a provider?',
+            'How does pricing work?',
+            'How can I contact CleanTech?',
+        ],
+        booking: [
+            'How do I choose a provider?',
+            'How do available dates work?',
+            'Can I cancel a booking?',
+        ],
+        services: [
+            'What services do you offer?',
+            'How do I book a service?',
+            'How do available dates work?',
+        ],
+        provider: [
+            'How do I become a provider?',
+            'How does provider approval work?',
+            'How do providers receive bookings?',
+        ],
+        pricing: [
+            'How does pricing work?',
+            'Do providers set the price?',
+            'How do I book a service?',
+        ],
+        support: [
+            'How can I contact CleanTech?',
+            'Where can I read FAQs?',
+            'How do I sign in?',
+        ],
+        account: [
+            'How do I sign in?',
+            'How do I book a service?',
+            'How do I become a provider?',
+        ],
+    };
+
+    const conversation = {
+        lastIntent: 'default',
+    };
+
+    function normalizeText(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/[^\w\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
     const intents = [
         {
-            keywords: ['book', 'booking', 'reserve', 'schedule', 'appointment'],
-            answer: `To book a service, create a customer account, sign in, choose a service, and view the providers available for your selected date. <a href="${routes.register}">Start here</a>.`
+            id: 'greeting',
+            keywords: ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening'],
+            answer: () => ({
+                intentId: conversation.lastIntent || 'default',
+                message: 'Hello. I can help with booking, services, availability, provider sign-up, pricing, cancellations, or support.',
+            }),
         },
         {
-            keywords: ['service', 'services', 'cleaning', 'deep', 'general', 'area'],
-            answer: `CleanTech helps customers find available providers for services like general cleaning, deep cleaning, and specific-area cleaning. You can explore the full service overview on the <a href="${routes.services}">Services page</a>.`
+            id: 'thanks',
+            keywords: ['thank you', 'thanks', 'ty', 'salamat'],
+            answer: () => ({
+                intentId: conversation.lastIntent || 'default',
+                message: 'You are welcome. If you want, I can still help with booking steps, pricing, provider sign-up, or contact details.',
+            }),
         },
         {
-            keywords: ['provider', 'become', 'signup', 'sign up', 'register provider', 'apply'],
-            answer: `If you want to become a provider, use the provider sign-up flow, submit your details, and wait for approval before you start accepting bookings. <a href="${routes.providerSignup}">Become a provider</a>.`
+            id: 'booking',
+            keywords: ['book', 'booking', 'reserve', 'schedule', 'appointment', 'choose provider', 'pick provider'],
+            answer: () => ({
+                intentId: 'booking',
+                message: `To book a service, create a customer account, sign in, choose a service, then review the providers available for your selected date. After that, you can open a provider profile or book directly. <a href="${routes.register}">Start booking here</a>.`,
+            }),
         },
         {
-            keywords: ['price', 'pricing', 'cost', 'rate', 'rates', 'fee', 'fees'],
-            answer: `Pricing depends on the service, selected option, and available provider. You can check the public overview on the <a href="${routes.pricing}">Pricing page</a>, then log in to book the option that fits your schedule.`
+            id: 'services',
+            keywords: ['service', 'services', 'cleaning', 'deep', 'general', 'specific area', 'area cleaning'],
+            answer: () => ({
+                intentId: 'services',
+                message: `CleanTech focuses on core household cleaning options such as general cleaning, deep cleaning, and specific-area cleaning. You can browse the public overview on the <a href="${routes.services}">Services page</a>.`,
+            }),
         },
         {
-            keywords: ['contact', 'email', 'support', 'help', 'phone'],
-            answer: `You can reach CleanTech through the <a href="${routes.contact}">Contact page</a> or email directly at <a href="${routes.email}">janzedoysabas@gmail.com</a>.`
+            id: 'provider',
+            keywords: ['become provider', 'provider signup', 'provider sign up', 'register provider', 'apply provider', 'apply as provider', 'provider approval', 'approved provider', 'verified provider'],
+            answer: (question) => {
+                const normalized = normalizeText(question);
+
+                if (normalized.includes('approval') || normalized.includes('approved') || normalized.includes('verified')) {
+                    return {
+                        intentId: 'provider',
+                        message: `Providers go through review before they appear as approved on the platform. Once approved, they can manage availability and receive bookings from customers. <a href="${routes.providerSignup}">Start the provider application here</a>.`,
+                    };
+                }
+
+                return {
+                    intentId: 'provider',
+                    message: `If you want to become a provider, start with the provider sign-up flow, submit your details, and wait for approval before accepting jobs. <a href="${routes.providerSignup}">Become a provider</a>.`,
+                };
+            },
         },
         {
-            keywords: ['faq', 'question', 'questions', 'approved', 'verified'],
-            answer: `The <a href="${routes.faq}">FAQ page</a> covers common questions, including provider approval and how the platform works.`
+            id: 'pricing',
+            keywords: ['price', 'pricing', 'cost', 'rate', 'rates', 'fee', 'fees', 'how much', 'payment'],
+            answer: (question) => {
+                const normalized = normalizeText(question);
+
+                if (normalized.includes('provider') && normalized.includes('set')) {
+                    return {
+                        intentId: 'pricing',
+                        message: `The final amount depends on the service, selected option, and the available provider you choose for that date. You can review the overview on the <a href="${routes.pricing}">Pricing page</a> before booking.`,
+                    };
+                }
+
+                return {
+                    intentId: 'pricing',
+                    message: `Pricing depends on the service, selected option, and available provider. The easiest next step is to check the <a href="${routes.pricing}">Pricing page</a>, then sign in when you are ready to book.`,
+                };
+            },
         },
         {
-            keywords: ['login', 'sign in', 'account'],
-            answer: `Customers can sign in from <a href="${routes.customerLogin}">Customer Login</a>. If you are joining as a provider, start from <a href="${routes.providerSignup}">Provider Registration</a>.`
+            id: 'availability',
+            keywords: ['available', 'availability', 'time', 'slot', 'date', 'today', 'tomorrow', 'schedule date'],
+            answer: () => ({
+                intentId: 'booking',
+                message: 'Availability is based on the exact date you select. When you choose a service and date, CleanTech shows providers and time availability for that day only, so today and tomorrow are treated separately.',
+            }),
+        },
+        {
+            id: 'cancellation',
+            keywords: ['cancel', 'cancellation', 'cancel booking', 'reschedule'],
+            answer: () => ({
+                intentId: 'booking',
+                message: 'Customers can cancel eligible bookings from their booking pages before the job is already in progress. If you need more help with that, sign in and review your bookings section.',
+            }),
+        },
+        {
+            id: 'support',
+            keywords: ['contact', 'email', 'support', 'help', 'phone', 'human', 'reach', 'message'],
+            answer: () => ({
+                intentId: 'support',
+                message: `You can reach CleanTech through the <a href="${routes.contact}">Contact page</a> or email directly at <a href="${routes.email}">janzedoysabas@gmail.com</a>.`,
+            }),
+        },
+        {
+            id: 'faq',
+            keywords: ['faq', 'question', 'questions', 'how it works'],
+            answer: () => ({
+                intentId: 'support',
+                message: `The <a href="${routes.faq}">FAQ page</a> is the best place for common questions about booking, provider approval, and how CleanTech works.`,
+            }),
+        },
+        {
+            id: 'account',
+            keywords: ['login', 'sign in', 'account', 'register', 'customer login', 'customer account'],
+            answer: () => ({
+                intentId: 'account',
+                message: `Customers can sign in from <a href="${routes.customerLogin}">Customer Login</a> or create an account from <a href="${routes.register}">Customer Registration</a>. If you are joining as a provider, use <a href="${routes.providerSignup}">Provider Registration</a>.`,
+            }),
         },
     ];
+
+    function renderSuggestions(intentId) {
+        const list = suggestionSets[intentId] || suggestionSets.default;
+
+        suggestions.innerHTML = list.map((question) => {
+            return `<button type="button" class="assistant-chip" data-question="${question.replace(/"/g, '&quot;')}">${question}</button>`;
+        }).join('');
+
+        suggestions.querySelectorAll('.assistant-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                openAssistant();
+                handleQuestion(chip.dataset.question || chip.textContent || '');
+            });
+        });
+    }
 
     function addMessage(content, role) {
         const bubble = document.createElement('div');
@@ -862,22 +1046,55 @@ section {
         messages.scrollTop = messages.scrollHeight;
     }
 
-    function getReply(question) {
-        const text = String(question || '').trim().toLowerCase();
+    function addTyping() {
+        const bubble = document.createElement('div');
+        bubble.className = 'assistant-msg bot typing';
+        bubble.innerHTML = '<span class="assistant-typing-dot"></span><span class="assistant-typing-dot"></span><span class="assistant-typing-dot"></span>';
+        messages.appendChild(bubble);
+        messages.scrollTop = messages.scrollHeight;
+        return bubble;
+    }
 
-        if (!text) {
-            return 'Ask me about booking, services, pricing, provider sign-up, or contact details.';
+    function keywordScore(normalizedText, intent) {
+        return intent.keywords.reduce((score, keyword) => {
+            const normalizedKeyword = normalizeText(keyword);
+
+            if (!normalizedKeyword) {
+                return score;
+            }
+
+            if (normalizedText.includes(normalizedKeyword)) {
+                return score + (normalizedKeyword.includes(' ') ? 3 : 2);
+            }
+
+            return score;
+        }, 0);
+    }
+
+    function detectIntent(question) {
+        const normalized = normalizeText(question);
+
+        if (!normalized) {
+            return null;
         }
 
-        if (['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening'].includes(text)) {
-            return 'Hello. I can help with booking, services, provider sign-up, pricing, or support.';
+        if (normalized.includes('cancel') && normalized.includes('booking')) {
+            return intents.find((intent) => intent.id === 'cancellation') || null;
+        }
+
+        if ((normalized.includes('today') || normalized.includes('tomorrow') || normalized.includes('available')) && (normalized.includes('book') || normalized.includes('time') || normalized.includes('date'))) {
+            return intents.find((intent) => intent.id === 'availability') || null;
+        }
+
+        if (normalized.includes('how much') || normalized.includes('price') || normalized.includes('pricing')) {
+            return intents.find((intent) => intent.id === 'pricing') || null;
         }
 
         let bestMatch = null;
         let bestScore = 0;
 
         intents.forEach((intent) => {
-            const score = intent.keywords.reduce((total, keyword) => total + (text.includes(keyword) ? 1 : 0), 0);
+            const score = keywordScore(normalized, intent);
 
             if (score > bestScore) {
                 bestScore = score;
@@ -886,10 +1103,42 @@ section {
         });
 
         if (bestMatch && bestScore > 0) {
-            return bestMatch.answer;
+            return bestMatch;
         }
 
-        return `I can help with booking, services, provider sign-up, pricing, and contact details. You can also check the <a href="${routes.faq}">FAQ</a> or email <a href="${routes.email}">janzedoysabas@gmail.com</a>.`;
+        if (conversation.lastIntent === 'booking' && (normalized.includes('how much') || normalized.includes('price'))) {
+            return intents.find((intent) => intent.id === 'pricing') || null;
+        }
+
+        if (conversation.lastIntent === 'provider' && (normalized.includes('how') || normalized.includes('apply'))) {
+            return intents.find((intent) => intent.id === 'provider') || null;
+        }
+
+        return null;
+    }
+
+    function getReply(question) {
+        const normalized = normalizeText(question);
+
+        if (!normalized) {
+            return {
+                intentId: conversation.lastIntent || 'default',
+                message: 'Ask me about booking, services, availability, pricing, provider sign-up, or support.',
+            };
+        }
+
+        const matchedIntent = detectIntent(question);
+
+        if (matchedIntent) {
+            const reply = matchedIntent.answer(question);
+            conversation.lastIntent = reply.intentId || matchedIntent.id || 'default';
+            return reply;
+        }
+
+        return {
+            intentId: conversation.lastIntent || 'default',
+            message: `I do not want to guess and give you a random answer. I can help with booking, services, availability, pricing, provider sign-up, cancellations, and support. Try one of the quick suggestions below, visit the <a href="${routes.faq}">FAQ</a>, or email <a href="${routes.email}">janzedoysabas@gmail.com</a>.`,
+        };
     }
 
     function openAssistant() {
@@ -916,10 +1165,18 @@ section {
         }
 
         addMessage(cleaned, 'user');
-        addMessage(getReply(cleaned), 'bot');
+        const typing = addTyping();
+        const reply = getReply(cleaned);
+
+        setTimeout(() => {
+            typing.remove();
+            addMessage(reply.message, 'bot');
+            renderSuggestions(reply.intentId || 'default');
+        }, 320);
     }
 
-    addMessage('Hello. I’m the CleanTech assistant. Ask me about booking, services, provider sign-up, pricing, or support.', 'bot');
+    addMessage('Hello. I am the CleanTech assistant. Ask me about booking, services, availability, pricing, provider sign-up, or support.', 'bot');
+    renderSuggestions('default');
 
     launcher.addEventListener('click', () => {
         if (panel.classList.contains('open')) {
@@ -941,13 +1198,6 @@ section {
         handleQuestion(question);
         input.value = '';
         input.focus();
-    });
-
-    chips.forEach((chip) => {
-        chip.addEventListener('click', () => {
-            openAssistant();
-            handleQuestion(chip.dataset.question || chip.textContent || '');
-        });
     });
 
     document.addEventListener('click', (event) => {
