@@ -622,6 +622,8 @@
     const providerTrackingMetaEl = document.getElementById('providerTrackingMeta');
 
     const defaultCenter = [8.9475, 125.5436];
+    const isAppleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent || '')
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
     let map = null;
     let customerMarker = null;
@@ -743,7 +745,9 @@
         }
 
         if (error.code === 1) {
-            return 'Location access is blocked. Please allow location for this browser, then tap Start Tracking again.';
+            return isAppleMobile
+                ? 'Location access is blocked on this iPhone or iPad. Check Safari and Location Services settings, reload the page, then tap Start Tracking again.'
+                : 'Location access is blocked. Please allow location for this browser, then tap Start Tracking again.';
         }
 
         if (error.code === 2) {
@@ -755,22 +759,6 @@
         }
 
         return 'Unable to read your current location right now.';
-    }
-
-    function requestCurrentPosition() {
-        if (!navigator.geolocation) {
-            return Promise.reject(new Error('This browser does not support live location sharing.'));
-        }
-
-        return new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, (error) => {
-                reject(new Error(formatLocationError(error)));
-            }, {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 0,
-            });
-        });
     }
 
     async function pushProviderLocation(latitude, longitude) {
@@ -843,8 +831,34 @@
         await pushProviderLocation(position.coords.latitude, position.coords.longitude);
     }
 
-    async function startTracking() {
-        if (!trackingState.enabled || trackingActive || toggleBusy) {
+    function beginTrackingWatch() {
+        stopWatchingPosition();
+
+        watchId = navigator.geolocation.watchPosition((position) => {
+            sharePosition(position).catch((error) => {
+                setStatus(error.message || 'Unable to share location right now.', true);
+            });
+        }, (error) => {
+            if (error?.code === 1) {
+                trackingActive = false;
+                trackingState.provider.isTracking = false;
+                stopWatchingPosition();
+                syncButtonState();
+            }
+
+            setStatus(formatLocationError(error), true);
+        }, {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 3000,
+        });
+    }
+
+    function startTracking() {
+        if (!trackingState.enabled || trackingActive || toggleBusy || !navigator.geolocation) {
+            if (!navigator.geolocation) {
+                setStatus('This browser does not support live location sharing.', true);
+            }
             return;
         }
 
@@ -855,40 +869,41 @@
 
         toggleBusy = true;
         syncButtonState();
-        setStatus('Checking location access...');
+        setStatus(isAppleMobile ? 'Requesting location access from your device...' : 'Checking location access...');
 
-        try {
-            const firstPosition = await requestCurrentPosition();
+        // Request the first location directly from the tap event so Safari/iOS
+        // can show its permission prompt reliably.
+        navigator.geolocation.getCurrentPosition(async (firstPosition) => {
+            try {
+                trackingActive = true;
+                trackingState.provider.isTracking = true;
+                lastSharedAt = 0;
+                syncButtonState();
 
-            trackingActive = true;
-            trackingState.provider.isTracking = true;
-            lastSharedAt = 0;
-            syncButtonState();
-
-            await sharePosition(firstPosition, true);
-
-            watchId = navigator.geolocation.watchPosition((position) => {
-                sharePosition(position).catch((error) => {
-                    setStatus(error.message || 'Unable to share location right now.', true);
-                });
-            }, (error) => {
-                setStatus(formatLocationError(error), true);
-            }, {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 3000,
-            });
-
-            setStatus('Live tracking is active. Keep this page open while you are on the way.');
-        } catch (error) {
+                await sharePosition(firstPosition, true);
+                beginTrackingWatch();
+                setStatus('Live tracking is active. Keep this page open while you are on the way.');
+            } catch (error) {
+                trackingActive = false;
+                trackingState.provider.isTracking = false;
+                stopWatchingPosition();
+                setStatus(error.message || 'Unable to start live tracking right now.', true);
+            } finally {
+                toggleBusy = false;
+                syncButtonState();
+            }
+        }, (error) => {
             trackingActive = false;
             trackingState.provider.isTracking = false;
             stopWatchingPosition();
-            setStatus(error.message || 'Unable to start live tracking right now.', true);
-        } finally {
+            setStatus(formatLocationError(error), true);
             toggleBusy = false;
             syncButtonState();
-        }
+        }, {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0,
+        });
     }
 
     async function stopTracking() {
