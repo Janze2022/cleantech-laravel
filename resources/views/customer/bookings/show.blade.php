@@ -530,60 +530,54 @@
             </div>
         </div>
 
-        <div class="tracking-card">
-            <div class="tracking-head">
-                <div>
-                    <h4>Live Provider Tracking</h4>
-                    <div class="tracking-copy">
-                        Track your provider here once the cleaning is already in progress.
+        @if($trackingReady || $trackingWaiting)
+            <div class="tracking-card">
+                <div class="tracking-head">
+                    <div>
+                        <h4>Live Provider Tracking</h4>
+                        <div class="tracking-copy">
+                            Track your provider here once the cleaning is already in progress.
+                        </div>
                     </div>
+                    @if($trackingReady)
+                        <div id="customerTrackingStatus" class="tracking-status">
+                            Waiting for the provider's first live update.
+                        </div>
+                    @endif
                 </div>
+
                 @if($trackingReady)
-                    <div id="customerTrackingStatus" class="tracking-status">
-                        Waiting for the provider's first live update.
+                    <div id="customerTrackingMap" class="tracking-map"></div>
+
+                    <div class="tracking-grid">
+                        <div class="tracking-box">
+                            <div class="label">Your pinned location</div>
+                            <div class="value" id="customerPinnedAddressText">
+                                {{ $customerPinnedAddress !== '' ? $customerPinnedAddress : 'Your service pin is not saved yet.' }}
+                            </div>
+                            <div class="sub" id="customerPinnedCoordsText">
+                                {{ $customerLatitude !== null && $customerLongitude !== null ? 'Saved on the map for this booking.' : 'No saved map pin yet.' }}
+                            </div>
+                        </div>
+
+                        <div class="tracking-box">
+                            <div class="label">Provider current location</div>
+                            <div class="value" id="providerLiveAddressText">Waiting for the provider to start live tracking.</div>
+                            <div class="sub" id="providerLiveMetaText">Live updates will appear here once the job has started.</div>
+                        </div>
+                    </div>
+                @else
+                    <div class="tracking-placeholder">
+                        <div class="tracking-placeholder-title">
+                            Tracking will appear once the booking starts.
+                        </div>
+                        <div class="tracking-placeholder-copy">
+                            You can check back here when the provider is already on the job.
+                        </div>
                     </div>
                 @endif
             </div>
-
-            @if($trackingReady)
-                <div id="customerTrackingMap" class="tracking-map"></div>
-
-                <div class="tracking-grid">
-                    <div class="tracking-box">
-                        <div class="label">Your pinned location</div>
-                        <div class="value" id="customerPinnedAddressText">
-                            {{ $customerPinnedAddress !== '' ? $customerPinnedAddress : 'Your service pin is not saved yet.' }}
-                        </div>
-                        <div class="sub" id="customerPinnedCoordsText">
-                            {{ $customerLatitude !== null && $customerLongitude !== null ? 'Saved on the map for this booking.' : 'No saved map pin yet.' }}
-                        </div>
-                    </div>
-
-                    <div class="tracking-box">
-                        <div class="label">Provider current location</div>
-                        <div class="value" id="providerLiveAddressText">Waiting for the provider to start live tracking.</div>
-                        <div class="sub" id="providerLiveMetaText">Live updates will appear here once the job has started.</div>
-                    </div>
-                </div>
-            @else
-                <div class="tracking-placeholder">
-                    <div class="tracking-placeholder-title">
-                        @if($trackingWaiting)
-                            Tracking will appear once the booking starts.
-                        @else
-                            Live tracking is not active for this booking.
-                        @endif
-                    </div>
-                    <div class="tracking-placeholder-copy">
-                        @if($trackingWaiting)
-                            You can check back here when the provider is already on the job.
-                        @else
-                            This page will still keep your booking details here, but live map updates are no longer running.
-                        @endif
-                    </div>
-                </div>
-            @endif
-        </div>
+        @endif
 
         <div class="actions">
             <a href="{{ route('customer.bookings') }}" class="btnx primary">Back</a>
