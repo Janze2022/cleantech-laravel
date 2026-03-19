@@ -57,9 +57,12 @@ class AdminDashboardController extends Controller
         $createdDateExpr = $this->dateOnlySql('created_at');
         $updatedDateExpr = "DATE(COALESCE(updated_at, created_at))";
 
-        // Current confirmed today is best approximated from booking creation.
-        $confirmedToday = (int) DB::table('bookings')
+        $bookingsToday = (int) DB::table('bookings')
             ->whereRaw("$createdDateExpr = ?", [$today])
+            ->count();
+
+        // Keep this for compatibility with older widgets that still expect it.
+        $confirmedToday = (int) DB::table('bookings')
             ->whereRaw("$statusSql = 'confirmed'")
             ->count();
 
@@ -127,7 +130,7 @@ class AdminDashboardController extends Controller
 
         // =========================
         // DAILY OPS (LAST 7 DAYS)
-        // Confirmed uses created_at; completed uses updated_at.
+        // New bookings use created_at; completed uses the latest update date.
         // =========================
         $days7 = [];
         for ($i = 6; $i >= 0; $i--) $days7[] = $now->copy()->subDays($i)->toDateString();
@@ -135,19 +138,18 @@ class AdminDashboardController extends Controller
         $dailyLabels = array_map(fn($d) => Carbon::parse($d, $tz)->format('D'), $days7);
 
         $dailyMap = [];
-        foreach ($days7 as $d) $dailyMap[$d] = ['confirmed'=>0,'completed'=>0];
+        foreach ($days7 as $d) $dailyMap[$d] = ['booked'=>0,'completed'=>0];
 
-        $confirmedRows = DB::table('bookings')
+        $bookedRows = DB::table('bookings')
             ->whereRaw("$createdDateExpr BETWEEN ? AND ?", [$days7[0], $days7[6]])
-            ->whereRaw("$statusSql = 'confirmed'")
             ->selectRaw("$createdDateExpr as d, COUNT(*) as cnt")
             ->groupBy('d')
             ->get();
 
-        foreach ($confirmedRows as $r) {
+        foreach ($bookedRows as $r) {
             $d = (string)($r->d ?? '');
             if (isset($dailyMap[$d])) {
-                $dailyMap[$d]['confirmed'] = (int) $r->cnt;
+                $dailyMap[$d]['booked'] = (int) $r->cnt;
             }
         }
 
@@ -165,17 +167,17 @@ class AdminDashboardController extends Controller
             }
         }
 
-        $dailyConfirmed = [];
+        $dailyBooked = [];
         $dailyCompleted = [];
         foreach ($days7 as $d) {
-            $dailyConfirmed[] = (int)($dailyMap[$d]['confirmed'] ?? 0);
+            $dailyBooked[] = (int)($dailyMap[$d]['booked'] ?? 0);
             $dailyCompleted[] = (int)($dailyMap[$d]['completed'] ?? 0);
         }
 
         // =========================
         // SYSTEM LOAD (based on last 7 days confirmed+completed)
         // =========================
-        $ops7 = array_sum($dailyConfirmed) + array_sum($dailyCompleted);
+        $ops7 = array_sum($dailyBooked) + array_sum($dailyCompleted);
         $cap = 70;
         $index = (int) max(0, min(100, round(($ops7 / max(1,$cap)) * 100)));
 
@@ -217,10 +219,10 @@ class AdminDashboardController extends Controller
         return view('admin.dashboard', compact(
             'stats','chart',
             'totalCustomers','totalProviders','totalBookings',
-            'newCustomersToday','newProvidersToday','confirmedToday','completedToday',
+            'newCustomersToday','newProvidersToday','bookingsToday','confirmedToday','completedToday',
             'dailyIncome','monthlyRevenue',
             'statusCounts','statusCountsMonth',
-            'dailyLabels','dailyConfirmed','dailyCompleted',
+            'dailyLabels','dailyBooked','dailyCompleted',
             'trendLabels','trendRevenue',
             'index'
         ));

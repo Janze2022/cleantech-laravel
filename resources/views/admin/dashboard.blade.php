@@ -14,7 +14,7 @@
     $totalBookings = (int) ($totalBookings ?? ($stats['bookings'] ?? 0));
     $monthlyRevenue = (float) ($monthlyRevenue ?? 0);
     $dailyIncome = (float) ($dailyIncome ?? 0);
-    $confirmedToday = (int) ($confirmedToday ?? 0);
+    $bookingsToday = (int) ($bookingsToday ?? 0);
     $completedToday = (int) ($completedToday ?? 0);
     $statusCounts = $statusCounts ?? [
         'confirmed' => 0,
@@ -25,84 +25,82 @@
     ];
 
     $dailyLabels = $dailyLabels ?? [];
-    $dailyConfirmed = $dailyConfirmed ?? [];
+    $dailyBooked = $dailyBooked ?? [];
     $dailyCompleted = $dailyCompleted ?? [];
     $trendLabels = $trendLabels ?? [];
     $trendRevenue = $trendRevenue ?? [];
 
-    $statusCards = [
-        ['key' => 'confirmed', 'label' => 'Confirmed', 'color' => '#38bdf8'],
-        ['key' => 'in_progress', 'label' => 'In Progress', 'color' => '#f59e0b'],
-        ['key' => 'paid', 'label' => 'Paid', 'color' => '#a78bfa'],
-        ['key' => 'completed', 'label' => 'Completed', 'color' => '#22c55e'],
-        ['key' => 'cancelled', 'label' => 'Cancelled', 'color' => '#ef4444'],
+    $activeCards = [
+        ['label' => 'Confirmed', 'count' => (int) ($statusCounts['confirmed'] ?? 0), 'class' => 'blue'],
+        ['label' => 'In Progress', 'count' => (int) ($statusCounts['in_progress'] ?? 0), 'class' => 'amber'],
+        ['label' => 'Paid', 'count' => (int) ($statusCounts['paid'] ?? 0), 'class' => 'violet'],
     ];
 
-    $statusLabels = collect($statusCards)->pluck('label')->values();
-    $statusValues = collect($statusCards)->map(fn ($item) => (int) ($statusCounts[$item['key']] ?? 0))->values();
-    $statusColors = collect($statusCards)->pluck('color')->values();
-    $statusTotal = $statusValues->sum();
+    $closedCards = [
+        ['label' => 'Completed', 'count' => (int) ($statusCounts['completed'] ?? 0), 'class' => 'green'],
+        ['label' => 'Cancelled', 'count' => (int) ($statusCounts['cancelled'] ?? 0), 'class' => 'red'],
+    ];
 
-    $weekConfirmed = collect($dailyConfirmed)->sum();
+    $activeNow = collect($activeCards)->sum('count');
+    $closedNow = collect($closedCards)->sum('count');
+    $weekBooked = collect($dailyBooked)->sum();
     $weekCompleted = collect($dailyCompleted)->sum();
     $revenue30Days = collect($trendRevenue)->sum();
 @endphp
 
 <style>
 .admin-dashboard {
-    padding: 18px 20px 28px;
+    padding: 18px 20px 26px;
     color: #f8fafc;
 }
 
-.dashboard-head {
+.dashboard-bar {
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: flex-start;
-    gap: 14px;
+    gap: 12px;
     margin-bottom: 16px;
     flex-wrap: wrap;
 }
 
 .dashboard-title {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1.42rem;
     font-weight: 900;
     color: #f8fafc;
 }
 
-.dashboard-date {
+.dashboard-pill {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
+    padding: 9px 14px;
     border-radius: 999px;
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    background: rgba(15, 23, 42, 0.9);
     color: #cbd5e1;
-    font-size: 0.88rem;
+    font-size: 0.86rem;
     font-weight: 800;
 }
 
 .metric-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 14px;
-    margin-bottom: 16px;
+    gap: 12px;
+    margin-bottom: 14px;
 }
 
 .metric-card {
-    padding: 16px 18px;
-    border-radius: 18px;
+    border-radius: 16px;
     border: 1px solid rgba(148, 163, 184, 0.12);
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.86));
-    box-shadow: 0 16px 36px rgba(2, 6, 23, 0.22);
+    background: rgba(15, 23, 42, 0.92);
+    padding: 14px 16px;
 }
 
 .metric-label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     color: #94a3b8;
-    font-size: 0.76rem;
+    font-size: 0.74rem;
     font-weight: 900;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -111,225 +109,206 @@
 .metric-value {
     margin: 0;
     color: #f8fafc;
-    font-size: 1.6rem;
+    font-size: 1.46rem;
     font-weight: 900;
     line-height: 1.1;
 }
 
-.metric-value.accent {
-    color: #38bdf8;
-}
+.metric-value.blue { color: #38bdf8; }
+.metric-value.green { color: #4ade80; }
 
-.metric-value.success {
-    color: #4ade80;
-}
-
-.metric-value.warning {
-    color: #fbbf24;
-}
-
-.panel-grid {
+.dashboard-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.35fr);
-    gap: 16px;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
+    gap: 14px;
 }
 
 .panel {
-    border-radius: 22px;
+    border-radius: 20px;
     border: 1px solid rgba(148, 163, 184, 0.12);
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.9));
-    padding: 18px;
-    box-shadow: 0 18px 40px rgba(2, 6, 23, 0.24);
+    background: rgba(15, 23, 42, 0.95);
+    padding: 16px;
 }
 
-.panel-head {
+.panel + .panel {
+    margin-top: 0;
+}
+
+.panel-title-row {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 14px;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
     flex-wrap: wrap;
 }
 
 .panel-title {
     margin: 0;
     color: #f8fafc;
-    font-size: 1.02rem;
-    font-weight: 900;
-}
-
-.panel-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(56, 189, 248, 0.22);
-    background: rgba(14, 116, 144, 0.12);
-    color: #bae6fd;
-    font-size: 0.8rem;
-    font-weight: 800;
-}
-
-.status-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
-    gap: 18px;
-    align-items: center;
-}
-
-.status-chart-wrap {
-    position: relative;
-    min-height: 250px;
-}
-
-.status-center {
-    position: absolute;
-    inset: 50% auto auto 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    pointer-events: none;
-}
-
-.status-center strong {
-    display: block;
-    color: #f8fafc;
-    font-size: 1.8rem;
-    font-weight: 900;
-    line-height: 1;
-}
-
-.status-center span {
-    color: #94a3b8;
-    font-size: 0.8rem;
-    font-weight: 800;
-}
-
-.status-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-}
-
-.status-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 12px 14px;
-    border-radius: 16px;
-    border: 1px solid rgba(148, 163, 184, 0.1);
-    background: rgba(255, 255, 255, 0.02);
-}
-
-.status-item-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-}
-
-.status-dot {
-    width: 11px;
-    height: 11px;
-    border-radius: 999px;
-    flex: 0 0 auto;
-}
-
-.status-name {
-    color: #cbd5e1;
-    font-size: 0.88rem;
-    font-weight: 800;
-}
-
-.status-count {
-    color: #f8fafc;
     font-size: 1rem;
     font-weight: 900;
 }
 
-.activity-strip {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 14px;
+.mini-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.18);
+    color: #bae6fd;
+    font-size: 0.78rem;
+    font-weight: 800;
 }
 
-.activity-pill {
-    padding: 12px 14px;
+.queue-wrap {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.queue-block {
     border-radius: 16px;
     border: 1px solid rgba(148, 163, 184, 0.1);
     background: rgba(255, 255, 255, 0.02);
+    padding: 12px;
 }
 
-.activity-pill label {
-    display: block;
-    margin-bottom: 6px;
-    color: #94a3b8;
-    font-size: 0.74rem;
+.queue-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.queue-label {
+    color: #cbd5e1;
+    font-size: 0.84rem;
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
 
-.activity-pill strong {
+.queue-total {
     color: #f8fafc;
+    font-size: 0.84rem;
+    font-weight: 900;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.status-grid.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.status-card {
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.08);
+    background: rgba(15, 23, 42, 0.88);
+    padding: 12px;
+}
+
+.status-card label {
+    display: block;
+    margin-bottom: 6px;
+    color: #94a3b8;
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+
+.status-card strong {
+    display: block;
     font-size: 1.3rem;
     font-weight: 900;
 }
 
-.revenue-panel {
-    margin-top: 16px;
-}
+.status-card.blue strong { color: #38bdf8; }
+.status-card.amber strong { color: #f59e0b; }
+.status-card.violet strong { color: #a78bfa; }
+.status-card.green strong { color: #4ade80; }
+.status-card.red strong { color: #f87171; }
 
 .chart-wrap {
     position: relative;
-    min-height: 300px;
+    min-height: 230px;
 }
 
-.chart-wrap canvas,
-.status-chart-wrap canvas {
+.chart-wrap.tall {
+    min-height: 250px;
+}
+
+.chart-wrap canvas {
     width: 100% !important;
     height: 100% !important;
 }
 
-@media (max-width: 1280px) {
+.activity-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.activity-card {
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+    padding: 11px 12px;
+}
+
+.activity-card label {
+    display: block;
+    margin-bottom: 6px;
+    color: #94a3b8;
+    font-size: 0.73rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.activity-card strong {
+    color: #f8fafc;
+    font-size: 1.2rem;
+    font-weight: 900;
+}
+
+.revenue-panel {
+    margin-top: 14px;
+}
+
+@media (max-width: 1220px) {
     .metric-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 
-@media (max-width: 1080px) {
-    .panel-grid {
+@media (max-width: 1024px) {
+    .dashboard-grid {
         grid-template-columns: 1fr;
-    }
-
-    .status-layout {
-        grid-template-columns: 1fr;
-    }
-
-    .status-chart-wrap {
-        min-height: 220px;
     }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 720px) {
     .admin-dashboard {
         padding: 16px 14px 24px;
     }
 
-    .metric-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-    }
-
-    .status-list,
-    .activity-strip {
+    .metric-grid,
+    .status-grid,
+    .status-grid.two,
+    .activity-metrics {
         grid-template-columns: 1fr;
     }
 
-    .chart-wrap {
-        min-height: 260px;
+    .chart-wrap,
+    .chart-wrap.tall {
+        min-height: 220px;
     }
 }
 
@@ -339,22 +318,18 @@
     }
 
     .metric-card,
-    .panel {
-        padding: 15px;
-    }
-
-    .dashboard-title {
-        font-size: 1.3rem;
+    .panel,
+    .status-card,
+    .activity-card {
+        padding: 12px;
     }
 }
 </style>
 
 <div class="admin-dashboard">
-    <div class="dashboard-head">
-        <div>
-            <h1 class="dashboard-title">Dashboard</h1>
-        </div>
-        <div class="dashboard-date">{{ $now->format('M d, Y') }}</div>
+    <div class="dashboard-bar">
+        <h1 class="dashboard-title">Dashboard</h1>
+        <div class="dashboard-pill">{{ $now->format('M d, Y') }}</div>
     </div>
 
     <div class="metric-grid">
@@ -372,78 +347,88 @@
         </div>
         <div class="metric-card">
             <span class="metric-label">This Month</span>
-            <p class="metric-value accent">PHP {{ number_format($monthlyRevenue, 2) }}</p>
+            <p class="metric-value blue">PHP {{ number_format($monthlyRevenue, 2) }}</p>
         </div>
         <div class="metric-card">
             <span class="metric-label">Today</span>
-            <p class="metric-value success">PHP {{ number_format($dailyIncome, 2) }}</p>
+            <p class="metric-value green">PHP {{ number_format($dailyIncome, 2) }}</p>
         </div>
     </div>
 
-    <div class="panel-grid">
+    <div class="dashboard-grid">
         <section class="panel">
-            <div class="panel-head">
-                <h2 class="panel-title">Booking Status</h2>
-                <div class="panel-chip">{{ number_format($statusTotal) }} total</div>
+            <div class="panel-title-row">
+                <h2 class="panel-title">Queue Now</h2>
+                <div class="mini-pill">{{ number_format($activeNow + $closedNow) }} bookings</div>
             </div>
 
-            <div class="status-layout">
-                <div class="status-chart-wrap">
-                    <canvas id="statusChart"></canvas>
-                    <div class="status-center">
-                        <strong>{{ number_format($statusTotal) }}</strong>
-                        <span>Bookings</span>
+            <div class="queue-wrap">
+                <div class="queue-block">
+                    <div class="queue-head">
+                        <span class="queue-label">Active</span>
+                        <span class="queue-total">{{ number_format($activeNow) }}</span>
+                    </div>
+                    <div class="status-grid">
+                        @foreach ($activeCards as $item)
+                            <div class="status-card {{ $item['class'] }}">
+                                <label>{{ $item['label'] }}</label>
+                                <strong>{{ number_format($item['count']) }}</strong>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
 
-                <div class="status-list">
-                    @foreach ($statusCards as $statusCard)
-                        <div class="status-item">
-                            <div class="status-item-left">
-                                <span class="status-dot" style="background: {{ $statusCard['color'] }}"></span>
-                                <span class="status-name">{{ $statusCard['label'] }}</span>
+                <div class="queue-block">
+                    <div class="queue-head">
+                        <span class="queue-label">Closed</span>
+                        <span class="queue-total">{{ number_format($closedNow) }}</span>
+                    </div>
+                    <div class="status-grid two">
+                        @foreach ($closedCards as $item)
+                            <div class="status-card {{ $item['class'] }}">
+                                <label>{{ $item['label'] }}</label>
+                                <strong>{{ number_format($item['count']) }}</strong>
                             </div>
-                            <span class="status-count">{{ number_format((int) ($statusCounts[$statusCard['key']] ?? 0)) }}</span>
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
                 </div>
             </div>
         </section>
 
         <section class="panel">
-            <div class="panel-head">
+            <div class="panel-title-row">
                 <h2 class="panel-title">Weekly Activity</h2>
-                <div class="panel-chip">7 days</div>
+                <div class="mini-pill">7 days</div>
             </div>
 
             <div class="chart-wrap">
                 <canvas id="activityChart"></canvas>
             </div>
 
-            <div class="activity-strip">
-                <div class="activity-pill">
-                    <label>Confirmed Today</label>
-                    <strong>{{ number_format($confirmedToday) }}</strong>
+            <div class="activity-metrics">
+                <div class="activity-card">
+                    <label>Booked Today</label>
+                    <strong>{{ number_format($bookingsToday) }}</strong>
                 </div>
-                <div class="activity-pill">
+                <div class="activity-card">
                     <label>Completed Today</label>
                     <strong>{{ number_format($completedToday) }}</strong>
                 </div>
-                <div class="activity-pill">
-                    <label>7-Day Total</label>
-                    <strong>{{ number_format($weekConfirmed + $weekCompleted) }}</strong>
+                <div class="activity-card">
+                    <label>Week Total</label>
+                    <strong>{{ number_format($weekBooked + $weekCompleted) }}</strong>
                 </div>
             </div>
         </section>
     </div>
 
     <section class="panel revenue-panel">
-        <div class="panel-head">
-            <h2 class="panel-title">Revenue Trend</h2>
-            <div class="panel-chip">30 days: PHP {{ number_format($revenue30Days, 2) }}</div>
+        <div class="panel-title-row">
+            <h2 class="panel-title">Revenue</h2>
+            <div class="mini-pill">30 days: PHP {{ number_format($revenue30Days, 2) }}</div>
         </div>
 
-        <div class="chart-wrap">
+        <div class="chart-wrap tall">
             <canvas id="revenueChart"></canvas>
         </div>
     </section>
@@ -451,31 +436,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const axisColor = 'rgba(148, 163, 184, 0.55)';
+const axisColor = 'rgba(148, 163, 184, 0.58)';
 const gridColor = 'rgba(148, 163, 184, 0.10)';
-
-new Chart(document.getElementById('statusChart'), {
-    type: 'doughnut',
-    data: {
-        labels: @json($statusLabels),
-        datasets: [{
-            data: @json($statusValues),
-            backgroundColor: @json($statusColors),
-            borderWidth: 0,
-            hoverOffset: 6
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '72%',
-        plugins: {
-            legend: {
-                display: false
-            }
-        }
-    }
-});
 
 new Chart(document.getElementById('activityChart'), {
     type: 'bar',
@@ -483,18 +445,18 @@ new Chart(document.getElementById('activityChart'), {
         labels: @json($dailyLabels),
         datasets: [
             {
-                label: 'Confirmed',
-                data: @json($dailyConfirmed),
+                label: 'Booked',
+                data: @json($dailyBooked),
                 backgroundColor: '#38bdf8',
                 borderRadius: 8,
-                maxBarThickness: 34
+                maxBarThickness: 30
             },
             {
                 label: 'Completed',
                 data: @json($dailyCompleted),
                 backgroundColor: '#22c55e',
                 borderRadius: 8,
-                maxBarThickness: 34
+                maxBarThickness: 30
             }
         ]
     },
@@ -508,9 +470,7 @@ new Chart(document.getElementById('activityChart'), {
                     usePointStyle: true,
                     pointStyle: 'circle',
                     boxWidth: 8,
-                    font: {
-                        weight: '700'
-                    }
+                    font: { weight: '700' }
                 }
             }
         },
@@ -518,9 +478,7 @@ new Chart(document.getElementById('activityChart'), {
             x: {
                 ticks: {
                     color: axisColor,
-                    font: {
-                        weight: '700'
-                    }
+                    font: { weight: '700' }
                 },
                 grid: {
                     display: false
@@ -531,9 +489,7 @@ new Chart(document.getElementById('activityChart'), {
                 ticks: {
                     precision: 0,
                     color: axisColor,
-                    font: {
-                        weight: '700'
-                    }
+                    font: { weight: '700' }
                 },
                 grid: {
                     color: gridColor
@@ -548,7 +504,6 @@ new Chart(document.getElementById('revenueChart'), {
     data: {
         labels: @json($trendLabels),
         datasets: [{
-            label: 'Revenue',
             data: @json($trendRevenue),
             borderColor: '#60a5fa',
             backgroundColor: 'rgba(56, 189, 248, 0.16)',
@@ -572,9 +527,7 @@ new Chart(document.getElementById('revenueChart'), {
                 ticks: {
                     color: axisColor,
                     maxTicksLimit: 8,
-                    font: {
-                        weight: '700'
-                    }
+                    font: { weight: '700' }
                 },
                 grid: {
                     display: false
@@ -585,9 +538,7 @@ new Chart(document.getElementById('revenueChart'), {
                 ticks: {
                     color: axisColor,
                     callback: (value) => 'PHP ' + Number(value).toLocaleString(),
-                    font: {
-                        weight: '700'
-                    }
+                    font: { weight: '700' }
                 },
                 grid: {
                     color: gridColor
