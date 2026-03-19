@@ -539,8 +539,7 @@
 
                     @if($booking->tracking_enabled)
                         <div class="tracking-controls">
-                            <button type="button" class="btnx primary" id="startTrackingBtn">Start Tracking</button>
-                            <button type="button" class="btnx ghost" id="stopTrackingBtn">Stop Tracking</button>
+                            <button type="button" class="btnx primary" id="trackingToggleBtn">Start Tracking</button>
                         </div>
                     @endif
                 </div>
@@ -616,22 +615,22 @@
     };
 
     const statusEl = document.getElementById('providerTrackingStatusText');
-    const startBtn = document.getElementById('startTrackingBtn');
-    const stopBtn = document.getElementById('stopTrackingBtn');
+    const toggleBtn = document.getElementById('trackingToggleBtn');
     const customerLocationTextEl = document.getElementById('customerLocationText');
     const customerCoordsTextEl = document.getElementById('customerCoordsText');
     const providerLocationTextEl = document.getElementById('providerLocationText');
     const providerTrackingMetaEl = document.getElementById('providerTrackingMeta');
 
     const defaultCenter = [8.9475, 125.5436];
-    const storageKey = `provider-live-tracking:${trackingState.bookingReference}`;
 
     let map = null;
     let customerMarker = null;
     let providerMarker = null;
-    let trackingInterval = null;
+    let watchId = null;
+    let lastSharedAt = 0;
     let sendingLocation = false;
     let trackingActive = false;
+    let toggleBusy = false;
 
     function setStatus(message, isError = false) {
         if (!statusEl) {
@@ -717,123 +716,191 @@
     }
 
     function syncButtonState() {
-        if (startBtn) {
-            startBtn.disabled = trackingActive;
+        if (!toggleBtn) {
+            return;
         }
 
-        if (stopBtn) {
-            stopBtn.disabled = !trackingActive;
+        toggleBtn.disabled = toggleBusy || !trackingState.enabled;
+        toggleBtn.textContent = trackingActive ? 'Stop Tracking' : 'Start Tracking';
+        toggleBtn.classList.toggle('primary', !trackingActive);
+        toggleBtn.classList.toggle('ghost', trackingActive);
+    }
+
+    function stopWatchingPosition() {
+        if (watchId !== null && navigator.geolocation) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
         }
     }
 
-    // Browser geolocation is sampled on an interval and pushed to the booking-specific endpoint.
-    async function sendCurrentLocation() {
-        if (!trackingActive || sendingLocation) {
-            return;
+    function formatLocationError(error) {
+        if (!window.isSecureContext) {
+            return 'Live tracking needs a secure HTTPS page before location can be shared.';
         }
 
+        if (!error || typeof error.code === 'undefined') {
+            return 'Unable to read your current location right now.';
+        }
+
+        if (error.code === 1) {
+            return 'Location access is blocked. Please allow location for this browser, then tap Start Tracking again.';
+        }
+
+        if (error.code === 2) {
+            return 'Your location could not be found. Try moving to an area with better signal, then try again.';
+        }
+
+        if (error.code === 3) {
+            return 'Location took too long to load. Please try again.';
+        }
+
+        return 'Unable to read your current location right now.';
+    }
+
+    function requestCurrentPosition() {
         if (!navigator.geolocation) {
-            setStatus('This browser does not support live location sharing.', true);
-            return;
+            return Promise.reject(new Error('This browser does not support live location sharing.'));
         }
 
-        navigator.geolocation.getCurrentPosition(async (position) => {
-            sendingLocation = true;
-
-            const latitude = position.coords.latitude;
-            const longitude = position.coords.longitude;
-
-            try {
-                const response = await fetch(trackingState.updateUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': trackingState.csrf,
-                    },
-                    body: JSON.stringify({
-                        latitude,
-                        longitude,
-                    }),
-                });
-
-                const payload = await response.json();
-
-                if (!response.ok) {
-                    if (response.status === 422) {
-                        trackingActive = false;
-                        localStorage.removeItem(storageKey);
-
-                        if (trackingInterval) {
-                            window.clearInterval(trackingInterval);
-                            trackingInterval = null;
-                        }
-
-                        syncButtonState();
-                    }
-
-                    throw new Error(payload.message || 'Unable to share location right now.');
-                }
-
-                trackingState.provider.latitude = payload.location?.latitude ?? latitude;
-                trackingState.provider.longitude = payload.location?.longitude ?? longitude;
-                trackingState.provider.address = payload.location?.formatted_address || trackingState.provider.address;
-                trackingState.provider.trackedAt = payload.location?.tracked_at || null;
-                trackingState.provider.isTracking = true;
-
-                providerMarker = ensureMarker(providerMarker, latitude, longitude, {
-                    radius: 9,
-                    color: '#38bdf8',
-                    fillColor: '#38bdf8',
-                    fillOpacity: 0.9,
-                    weight: 2,
-                });
-
-                updateProviderCard();
-                fitToKnownPoints();
-                setStatus('Live tracking is active. Your latest location was shared successfully.');
-            } catch (error) {
-                setStatus(error.message || 'Unable to share location right now.', true);
-            } finally {
-                sendingLocation = false;
-            }
-        }, () => {
-            setStatus('Location access was blocked. Please allow browser location permissions to continue tracking.', true);
-        }, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 3000,
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, (error) => {
+                reject(new Error(formatLocationError(error)));
+            }, {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0,
+            });
         });
     }
 
-    function startTracking() {
-        if (!trackingState.enabled || trackingActive) {
+    async function pushProviderLocation(latitude, longitude) {
+        if (sendingLocation) {
             return;
         }
 
-        trackingActive = true;
-        localStorage.setItem(storageKey, '1');
-        syncButtonState();
-        setStatus('Starting live tracking...');
-        sendCurrentLocation();
-        trackingInterval = window.setInterval(sendCurrentLocation, 8000);
+        sendingLocation = true;
+
+        try {
+            const response = await fetch(trackingState.updateUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': trackingState.csrf,
+                },
+                body: JSON.stringify({
+                    latitude,
+                    longitude,
+                }),
+            });
+
+            const payload = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 422) {
+                    stopWatchingPosition();
+                    trackingActive = false;
+                    trackingState.provider.isTracking = false;
+                    syncButtonState();
+                }
+
+                throw new Error(payload.message || 'Unable to share location right now.');
+            }
+
+            trackingState.provider.latitude = payload.location?.latitude ?? latitude;
+            trackingState.provider.longitude = payload.location?.longitude ?? longitude;
+            trackingState.provider.address = payload.location?.formatted_address || trackingState.provider.address;
+            trackingState.provider.trackedAt = payload.location?.tracked_at || null;
+            trackingState.provider.isTracking = true;
+
+            providerMarker = ensureMarker(providerMarker, latitude, longitude, {
+                radius: 9,
+                color: '#38bdf8',
+                fillColor: '#38bdf8',
+                fillOpacity: 0.9,
+                weight: 2,
+            });
+
+            updateProviderCard();
+            fitToKnownPoints();
+            setStatus('Live tracking is on. Your latest location was shared.');
+        } finally {
+            sendingLocation = false;
+        }
     }
 
-    async function stopTracking() {
+    async function sharePosition(position, forceSend = false) {
         if (!trackingActive) {
             return;
         }
 
-        trackingActive = false;
-        localStorage.removeItem(storageKey);
-
-        if (trackingInterval) {
-            window.clearInterval(trackingInterval);
-            trackingInterval = null;
+        const now = Date.now();
+        if (!forceSend && now - lastSharedAt < 8000) {
+            return;
         }
 
+        lastSharedAt = now;
+        await pushProviderLocation(position.coords.latitude, position.coords.longitude);
+    }
+
+    async function startTracking() {
+        if (!trackingState.enabled || trackingActive || toggleBusy) {
+            return;
+        }
+
+        if (!window.isSecureContext) {
+            setStatus('Live tracking needs a secure HTTPS page before location can be shared.', true);
+            return;
+        }
+
+        toggleBusy = true;
         syncButtonState();
+        setStatus('Checking location access...');
+
+        try {
+            const firstPosition = await requestCurrentPosition();
+
+            trackingActive = true;
+            trackingState.provider.isTracking = true;
+            lastSharedAt = 0;
+            syncButtonState();
+
+            await sharePosition(firstPosition, true);
+
+            watchId = navigator.geolocation.watchPosition((position) => {
+                sharePosition(position).catch((error) => {
+                    setStatus(error.message || 'Unable to share location right now.', true);
+                });
+            }, (error) => {
+                setStatus(formatLocationError(error), true);
+            }, {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 3000,
+            });
+
+            setStatus('Live tracking is active. Keep this page open while you are on the way.');
+        } catch (error) {
+            trackingActive = false;
+            trackingState.provider.isTracking = false;
+            stopWatchingPosition();
+            setStatus(error.message || 'Unable to start live tracking right now.', true);
+        } finally {
+            toggleBusy = false;
+            syncButtonState();
+        }
+    }
+
+    async function stopTracking() {
+        if ((!trackingActive && !trackingState.provider.isTracking) || toggleBusy) {
+            return;
+        }
+
+        toggleBusy = true;
+        trackingActive = false;
         trackingState.provider.isTracking = false;
+        stopWatchingPosition();
+        syncButtonState();
 
         try {
             await fetch(trackingState.stopUrl, {
@@ -845,9 +912,21 @@
             });
         } catch (error) {
             // Keep the local stop state even if the stop request cannot be confirmed.
+        } finally {
+            toggleBusy = false;
+            syncButtonState();
         }
 
-        setStatus('Live tracking stopped. You can start it again any time while the booking is active.');
+        setStatus('Live tracking stopped. Tap Start Tracking again when you are ready to share your location.');
+    }
+
+    function toggleTracking() {
+        if (trackingActive) {
+            stopTracking();
+            return;
+        }
+
+        startTracking();
     }
 
     map = L.map(mapEl, {
@@ -885,23 +964,19 @@
     syncButtonState();
 
     if (trackingState.enabled) {
-        const shouldResume = trackingState.provider.isTracking || localStorage.getItem(storageKey) === '1';
-        setStatus('Start tracking when you are on the way so the customer can follow your live location.');
-
-        if (shouldResume) {
-            startTracking();
-        }
+        setStatus(
+            trackingState.provider.isTracking
+                ? 'Tap Start Tracking to continue sharing from this device.'
+                : 'Tap Start Tracking when you are on the way so the customer can follow your live location.'
+        );
     } else {
         setStatus('Live tracking is only available while this booking is still active.');
     }
 
-    startBtn?.addEventListener('click', startTracking);
-    stopBtn?.addEventListener('click', stopTracking);
+    toggleBtn?.addEventListener('click', toggleTracking);
 
     window.addEventListener('beforeunload', () => {
-        if (trackingInterval) {
-            window.clearInterval(trackingInterval);
-        }
+        stopWatchingPosition();
     });
 })();
 </script>
