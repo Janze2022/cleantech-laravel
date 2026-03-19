@@ -678,7 +678,21 @@ class ProviderBookingController extends Controller
         $booking->service_name = $booking->service;
         $booking->option_label = $booking->option ?? '';
         $booking->tracking_enabled = $this->bookingCanTrack($booking->status_key ?? $booking->status);
-        $booking->provider_location = $booking->id ? $this->latestProviderLocation((int) $booking->id) : null;
+
+        if (!$booking->tracking_enabled && $booking->id && $this->providerLocationTableAvailable()) {
+            DB::table('booking_provider_locations')
+                ->where('booking_id', (int) $booking->id)
+                ->where('is_tracking', true)
+                ->update([
+                    'is_tracking' => false,
+                    'stopped_at' => now(),
+                    'updated_at' => now(),
+                ]);
+        }
+
+        $booking->provider_location = $booking->tracking_enabled && $booking->id
+            ? $this->latestProviderLocation((int) $booking->id)
+            : null;
 
         return view('provider.bookings.show', compact('booking'));
     }

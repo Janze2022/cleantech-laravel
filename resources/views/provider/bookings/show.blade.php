@@ -524,58 +524,54 @@
 
             </div>
 
-            <div class="card tracking-card">
-                <div class="tracking-head">
-                    <div class="tracking-head-copy">
-                        <div class="k">Live Tracking</div>
-                        <div id="providerTrackingStatusText" class="tracking-status">
-                            @if($booking->tracking_enabled)
+            @if($booking->tracking_enabled)
+                <div class="card tracking-card">
+                    <div class="tracking-head">
+                        <div class="tracking-head-copy">
+                            <div class="k">Live Tracking</div>
+                            <div id="providerTrackingStatusText" class="tracking-status">
                                 Start tracking when you are on the way so the customer can follow your live location.
-                            @else
-                                Live tracking is only available while this booking is still active.
-                            @endif
+                            </div>
                         </div>
-                    </div>
 
-                    @if($booking->tracking_enabled)
                         <div class="tracking-controls">
                             <button type="button" class="btnx primary" id="trackingToggleBtn">Start Tracking</button>
                         </div>
-                    @endif
-                </div>
-
-                <div id="providerTrackingMap" class="tracking-map"></div>
-
-                <div class="tracking-meta-grid">
-                    <div class="tracking-meta-box">
-                        <div class="k">Customer Pin</div>
-                        <div class="tracking-meta-value" id="customerLocationText">
-                            {{ $customerPinnedAddress !== '' ? $customerPinnedAddress : 'Customer pin is not available for this booking yet.' }}
-                        </div>
-                        <div class="tracking-meta-sub" id="customerCoordsText">
-                            @if($customerLatitude !== null && $customerLongitude !== null)
-                                {{ number_format($customerLatitude, 6) }}, {{ number_format($customerLongitude, 6) }}
-                            @else
-                                No saved customer coordinates yet.
-                            @endif
-                        </div>
                     </div>
 
-                    <div class="tracking-meta-box">
-                        <div class="k">Your Latest Shared Location</div>
-                        <div class="tracking-meta-value" id="providerLocationText">
-                            {{ $providerTrackedAddress !== '' ? $providerTrackedAddress : 'No live provider location has been shared yet.' }}
+                    <div id="providerTrackingMap" class="tracking-map"></div>
+
+                    <div class="tracking-meta-grid">
+                        <div class="tracking-meta-box">
+                            <div class="k">Customer Pin</div>
+                            <div class="tracking-meta-value" id="customerLocationText">
+                                {{ $customerPinnedAddress !== '' ? $customerPinnedAddress : 'Customer pin is not available for this booking yet.' }}
+                            </div>
+                            <div class="tracking-meta-sub" id="customerCoordsText">
+                                @if($customerLatitude !== null && $customerLongitude !== null)
+                                    {{ number_format($customerLatitude, 6) }}, {{ number_format($customerLongitude, 6) }}
+                                @else
+                                    No saved customer coordinates yet.
+                                @endif
+                            </div>
                         </div>
-                        <div class="tracking-meta-sub" id="providerTrackingMeta">
-                            @if($providerLatitude !== null && $providerLongitude !== null)
-                                {{ number_format($providerLatitude, 6) }}, {{ number_format($providerLongitude, 6) }}
-                            @else
-                                Waiting for the first provider location update.
-                            @endif
+
+                        <div class="tracking-meta-box">
+                            <div class="k">Your Latest Shared Location</div>
+                            <div class="tracking-meta-value" id="providerLocationText">
+                                {{ $providerTrackedAddress !== '' ? $providerTrackedAddress : 'No live provider location has been shared yet.' }}
+                            </div>
+                            <div class="tracking-meta-sub" id="providerTrackingMeta">
+                                @if($providerLatitude !== null && $providerLongitude !== null)
+                                    {{ number_format($providerLatitude, 6) }}, {{ number_format($providerLongitude, 6) }}
+                                @else
+                                    Waiting for the first provider location update.
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            @endif
         </div>
 
     </div>
