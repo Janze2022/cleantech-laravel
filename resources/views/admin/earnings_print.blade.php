@@ -639,7 +639,6 @@
                 <div class="table-head">
                     <div>
                         <h2 class="table-title">Provider Remittance Rows</h2>
-                        <div class="table-note">Approved providers only. The print list includes earnings inside the selected period plus rows remitted inside the same period.</div>
                     </div>
                 </div>
 
@@ -751,10 +750,6 @@
                             </div>
                         </article>
                     @endforeach
-                </div>
-
-                <div class="foot-note">
-                    Approved providers only. This list shows provider earnings inside the selected period and any rows marked remitted inside that same period.
                 </div>
             </section>
         @endif

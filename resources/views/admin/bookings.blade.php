@@ -816,8 +816,8 @@ select.status-select option{
                             $ref = $b->reference_code ?: ('#'.$b->id);
                             $custName = $b->customer_name ?: ('Customer ID: '.$b->customer_id);
                             $provName = $b->provider_name ?: ($b->provider_id ? 'Provider ID: '.$b->provider_id : 'Unassigned');
-                            $serviceLabel = $b->service_name ?: (!empty($b->service_id) ? 'Service #'.$b->service_id : 'Cleaning Service');
-                            $serviceOptionLabel = $b->service_option_name ?: (!empty($b->service_option_id) ? 'Option #'.$b->service_option_id : 'No option');
+                            $serviceLabel = $b->service_name ?: 'Cleaning Service';
+                            $serviceOptionLabel = trim((string) ($b->service_option_name ?? '')) ?: 'Selected booking option';
                             $houseLabel = $b->house_type ? ucwords(str_replace('_', ' ', $b->house_type)) : 'Not specified';
 
                             $details = [
@@ -1002,8 +1002,8 @@ select.status-select option{
                                 ? \Carbon\Carbon::parse($b->updated_at)->timezone($tz)->toDateString()
                                 : ($b->booking_date ?: '');
 
-                            $serviceLabel = $b->service_name ?: (!empty($b->service_id) ? 'Service #'.$b->service_id : 'Cleaning Service');
-                            $serviceOptionLabel = $b->service_option_name ?: (!empty($b->service_option_id) ? 'Option #'.$b->service_option_id : 'No option');
+                            $serviceLabel = $b->service_name ?: 'Cleaning Service';
+                            $serviceOptionLabel = trim((string) ($b->service_option_name ?? '')) ?: 'Selected booking option';
                             $houseLabel = $b->house_type ? ucwords(str_replace('_', ' ', $b->house_type)) : 'Not specified';
 
                             $details = [
@@ -1429,8 +1429,8 @@ function openBooking(b){
     const cust = (b.customer_name ? b.customer_name : ('Customer ID: ' + (b.customer_id ?? '-'))) + (b.customer_phone ? (' • ' + b.customer_phone) : '');
     const prov = (b.provider_name ? b.provider_name : (b.provider_id ? ('Provider ID: ' + b.provider_id) : 'Unassigned')) + (b.provider_phone ? (' • ' + b.provider_phone) : '');
 
-    const serviceName = b.service_name ? b.service_name : (b.service_id ? ('Service #' + b.service_id) : '-');
-    const optionName = b.service_option_name ? b.service_option_name : (b.service_option_id ? ('Option #' + b.service_option_id) : '-');
+    const serviceName = b.service_name ? b.service_name : 'Cleaning Service';
+    const optionName = b.service_option_name ? b.service_option_name : 'Selected booking option';
     const houseType = b.house_type ? String(b.house_type).replaceAll('_', ' ') : '-';
 
     const serviceText =

@@ -479,6 +479,7 @@
 
     const suggestionSets = {
         default: [
+            'What is CleanTech?',
             'How do I book a service?',
             'How do I register as a provider?',
             'What services do you offer?',
@@ -541,12 +542,146 @@
             .trim();
     }
 
+    function tokenizeText(value) {
+        return normalizeText(value)
+            .split(' ')
+            .filter((token) => token.length > 2);
+    }
+
     function hasAny(text, parts) {
         return parts.some((part) => text.includes(part));
     }
 
     function hasEveryGroup(text, groups) {
         return groups.every((group) => group.some((part) => text.includes(part)));
+    }
+
+    const knowledgeBase = [
+        {
+            intentId: 'company',
+            keywords: ['what is cleantech', 'what is clean tech', 'who is cleantech', 'who are you', 'what does cleantech do'],
+            tokens: ['cleantech', 'platform', 'customers', 'providers', 'booking', 'services'],
+            message: `CleanTech is a service platform that helps customers book home cleaning more easily and helps approved providers receive and manage bookings in one place. Customers can create an account, choose a service, pick an available provider, confirm the booking, and follow updates from their dashboard.`,
+        },
+        {
+            intentId: 'company',
+            keywords: ['mission', 'vision', 'goal', 'purpose'],
+            tokens: ['mission', 'vision', 'trusted', 'affordable', 'reliable', 'community'],
+            message: `CleanTech aims to provide reliable and affordable home cleaning, repair, and maintenance services with honesty, convenience, and customer care at the center. Its vision is to be a trusted and accessible service provider in the community, known for dependable work and practical support for households.`,
+        },
+        {
+            intentId: 'services',
+            keywords: ['services', 'what services', 'offer', 'general cleaning', 'deep cleaning', 'specific area'],
+            tokens: ['services', 'cleaning', 'general', 'deep', 'specific', 'area'],
+            message: `CleanTech currently highlights General Cleaning, Deep Cleaning, and Specific Area Cleaning on the public pages. You can compare them on the <a href="${routes.services}">Services page</a> and then view available providers for your chosen date.`,
+        },
+        {
+            intentId: 'booking',
+            keywords: ['book a service', 'how do i book', 'how to book', 'booking steps', 'reserve service', 'schedule service'],
+            tokens: ['book', 'booking', 'service', 'provider', 'date', 'confirm'],
+            message: `To book, create a customer account, sign in, open the services page, choose a service, tap View Providers, pick an available provider for your date, fill in the booking details, and confirm the request. <a href="${routes.customerRegister}">Start here</a>.`,
+        },
+        {
+            intentId: 'provider',
+            keywords: ['register as a provider', 'provider sign up', 'provider signup', 'become a provider', 'apply as provider'],
+            tokens: ['provider', 'register', 'signup', 'approval', 'application'],
+            message: `To become a provider, open <a href="${routes.providerSignup}">Provider Sign-up</a>, review the terms, continue the registration steps, complete the required details, and wait for approval before receiving bookings.`,
+        },
+        {
+            intentId: 'provider',
+            keywords: ['provider approval', 'approved provider', 'provider review', 'how provider approval works'],
+            tokens: ['provider', 'approval', 'approved', 'review'],
+            message: `Providers appear on the platform only after review and approval. Once approved, they can log in, set availability, and receive customer bookings.`,
+        },
+        {
+            intentId: 'account',
+            keywords: ['customer account', 'create account', 'customer register', 'customer signup', 'sign in', 'login'],
+            tokens: ['customer', 'account', 'register', 'login', 'provider'],
+            message: `Customers can create an account from <a href="${routes.customerRegister}">Customer Registration</a> and sign in from <a href="${routes.customerLogin}">Customer Login</a>. Providers use <a href="${routes.providerSignup}">Provider Sign-up</a> first, then <a href="${routes.providerLogin}">Provider Login</a> after approval.`,
+        },
+        {
+            intentId: 'pricing',
+            keywords: ['pricing', 'price', 'how much', 'cost', 'fee', 'amount', 'payment'],
+            tokens: ['price', 'pricing', 'amount', 'service', 'option'],
+            message: `Pricing depends on the service type and the option you pick. The <a href="${routes.pricing}">Pricing page</a> gives the overview, and the booking flow shows the total before you confirm.`,
+        },
+        {
+            intentId: 'booking',
+            keywords: ['available date', 'availability', 'time slot', 'available providers', 'today', 'tomorrow'],
+            tokens: ['available', 'date', 'slot', 'provider', 'time'],
+            message: `Availability is based on the exact date you choose. When you change the date, CleanTech refreshes the providers and available time slots for that day only.`,
+        },
+        {
+            intentId: 'tracking',
+            keywords: ['track provider', 'tracking', 'live location', 'provider location'],
+            tokens: ['tracking', 'provider', 'location', 'live'],
+            message: `Customers can follow provider live tracking during active bookings. Tracking is meant for the in-progress stage so customers can see the provider while the job is already underway.`,
+        },
+        {
+            intentId: 'booking',
+            keywords: ['cancel booking', 'cancellation', 'can i cancel', 'reschedule'],
+            tokens: ['cancel', 'booking', 'cancellation', 'progress'],
+            message: `Customers can cancel eligible bookings before the job is already in progress. Once work has started, customer-side cancellation is locked.`,
+        },
+        {
+            intentId: 'booking',
+            keywords: ['pin location', 'service location', 'map', 'address', 'barangay', 'location'],
+            tokens: ['map', 'pin', 'location', 'address', 'barangay'],
+            message: `During booking, you can search the place, pin the service location on the map, and continue with the rest of the booking details before confirmation.`,
+        },
+        {
+            intentId: 'support',
+            keywords: ['contact', 'support', 'email', 'reach cleantech', 'message cleantech'],
+            tokens: ['contact', 'support', 'email', 'help'],
+            message: `You can reach CleanTech through the <a href="${routes.contact}">Contact page</a> or email directly at <a href="${routes.email}">janzedoysabas@gmail.com</a>.`,
+        },
+        {
+            intentId: 'support',
+            keywords: ['faq', 'questions', 'help page'],
+            tokens: ['faq', 'questions', 'answers', 'help'],
+            message: `The <a href="${routes.faq}">FAQ page</a> is the fastest place for common questions about booking, providers, and how the platform works.`,
+        },
+        {
+            intentId: 'booking',
+            keywords: ['how it works', 'how cleantech works', 'how does it work'],
+            tokens: ['how', 'works', 'book', 'service', 'provider'],
+            message: `CleanTech works in a simple flow: create an account, choose a service, pick an available provider for your date, confirm the booking, and follow updates from your dashboard. <a href="${routes.howItWorks}">See how it works</a>.`,
+        },
+    ];
+
+    function scoreKnowledgeEntry(text, entry) {
+        let score = 0;
+
+        (entry.keywords || []).forEach((keyword) => {
+            if (text.includes(keyword)) {
+                score += keyword.split(' ').length > 2 ? 5 : 3;
+            }
+        });
+
+        const tokens = tokenizeText(text);
+        const tokenMatches = tokens.filter((token) => (entry.tokens || []).includes(token));
+        score += tokenMatches.length;
+
+        return score;
+    }
+
+    function answerFromKnowledgeBase(questionText) {
+        let bestEntry = null;
+        let bestScore = 0;
+
+        knowledgeBase.forEach((entry) => {
+            const score = scoreKnowledgeEntry(questionText, entry);
+            if (score > bestScore) {
+                bestScore = score;
+                bestEntry = entry;
+            }
+        });
+
+        if (!bestEntry || bestScore < 3) {
+            return null;
+        }
+
+        return reply(bestEntry.intentId, bestEntry.message);
     }
 
     function renderSuggestions(intentId) {
@@ -603,7 +738,7 @@
     function answerPlatformOverview() {
         return reply(
             'company',
-            `CleanTech helps customers create an account, browse services, choose an available provider for a selected date, pin the service location, confirm a booking, and review past jobs. Providers can apply, wait for approval, manage availability, and receive bookings.`
+            `CleanTech is a local service platform that helps customers book home cleaning more easily and helps approved providers manage bookings in one place. Customers can create an account, choose a service, pick an available provider, confirm the booking, and follow updates from their dashboard.`
         );
     }
 
@@ -722,7 +857,7 @@
     function answerAbout() {
         return reply(
             'company',
-            `CleanTech is a service platform built to make home cleaning easier to book and easier to follow. You can read more on the <a href="${routes.about}">About page</a>.`
+            `CleanTech focuses on reliable and affordable household services with honesty, convenience, and customer care. You can read more on the <a href="${routes.about}">About page</a>.`
         );
     }
 
@@ -827,9 +962,14 @@
             return answerChooseProvider();
         }
 
+        const knowledgeReply = answerFromKnowledgeBase(normalized);
+        if (knowledgeReply) {
+            return knowledgeReply;
+        }
+
         return reply(
             state.lastIntent || 'default',
-            `I want to keep the answer accurate. I can help best with booking, provider sign-up, services, pricing, tracking, and support. Try one of the quick questions below, open the <a href="${routes.faq}">FAQ</a>, or email <a href="${routes.email}">janzedoysabas@gmail.com</a>.`
+            `I can help with CleanTech website questions, booking steps, provider sign-up, services, pricing, tracking, and support. If your question is outside the site flow, I may not answer it well. Try one of the quick questions below, open the <a href="${routes.faq}">FAQ</a>, or email <a href="${routes.email}">janzedoysabas@gmail.com</a>.`
         );
     }
 
@@ -868,7 +1008,7 @@
         }, 260);
     }
 
-    addMessage('Hello. I am the CleanTech assistant. Ask me about booking, provider sign-up, services, pricing, tracking, or support.', 'bot');
+    addMessage('Hello. I am the CleanTech assistant. Ask me about CleanTech, booking, provider sign-up, services, pricing, tracking, or support.', 'bot');
     renderSuggestions(pageIntentMap[currentPage] || 'default');
 
     launcher.addEventListener('click', () => {

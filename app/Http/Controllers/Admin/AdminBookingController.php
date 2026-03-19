@@ -85,6 +85,8 @@ class AdminBookingController extends Controller
                 $serviceOptionNameSql = "service_options.name";
             } elseif (Schema::hasColumn('service_options', 'option_name')) {
                 $serviceOptionNameSql = "service_options.option_name";
+            } elseif (Schema::hasColumn('service_options', 'label')) {
+                $serviceOptionNameSql = "service_options.label";
             } elseif (Schema::hasColumn('service_options', 'title')) {
                 $serviceOptionNameSql = "service_options.title";
             } else {
@@ -222,6 +224,8 @@ class AdminBookingController extends Controller
                 $serviceOptionDisplaySql = "service_options.name";
             } elseif (Schema::hasColumn('service_options', 'option_name')) {
                 $serviceOptionDisplaySql = "service_options.option_name";
+            } elseif (Schema::hasColumn('service_options', 'label')) {
+                $serviceOptionDisplaySql = "service_options.label";
             } elseif (Schema::hasColumn('service_options', 'title')) {
                 $serviceOptionDisplaySql = "service_options.title";
             } else {
