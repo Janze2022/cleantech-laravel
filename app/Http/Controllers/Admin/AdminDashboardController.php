@@ -23,6 +23,16 @@ class AdminDashboardController extends Controller
         return $s;
     }
 
+    private function normalizedStatusSql(string $column = 'status'): string
+    {
+        return "LOWER(REPLACE(REPLACE({$column},'-','_'),' ','_'))";
+    }
+
+    private function dateOnlySql(string $column): string
+    {
+        return "DATE({$column})";
+    }
+
     public function index(Request $request)
     {
         $tz  = config('app.timezone') ?? 'Asia/Manila';
@@ -43,25 +53,31 @@ class AdminDashboardController extends Controller
         $newCustomersToday = (int) DB::table('customers')->whereDate('created_at', $today)->count();
         $newProvidersToday = (int) DB::table('service_providers')->whereDate('created_at', $today)->count();
 
-        // Use booking_date if it exists, else created_at date (IMPORTANT!)
-        $dateExpr = 'DATE(COALESCE(booking_date, created_at))';
+        $statusSql = $this->normalizedStatusSql('status');
+        $createdDateExpr = $this->dateOnlySql('created_at');
+        $updatedDateExpr = "DATE(COALESCE(updated_at, created_at))";
 
-        // Completed today
-        $completedToday = (int) DB::table('bookings')
-            ->whereRaw("$dateExpr = ?", [$today])
-            ->whereRaw("LOWER(REPLACE(status,' ','_')) = 'completed'")
+        // Current confirmed today is best approximated from booking creation.
+        $confirmedToday = (int) DB::table('bookings')
+            ->whereRaw("$createdDateExpr = ?", [$today])
+            ->whereRaw("$statusSql = 'confirmed'")
             ->count();
 
-        // Daily income (paid+completed today)
+        // Completed today is best approximated from the latest status update.
+        $completedToday = (int) DB::table('bookings')
+            ->whereRaw("$updatedDateExpr = ?", [$today])
+            ->whereRaw("$statusSql = 'completed'")
+            ->count();
+
+        // Revenue uses the latest booking update rather than the scheduled booking date.
         $dailyIncome = (float) DB::table('bookings')
-            ->whereRaw("$dateExpr = ?", [$today])
-            ->whereIn(DB::raw("LOWER(REPLACE(REPLACE(status,'-','_'),' ','_'))"), ['paid','completed'])
+            ->whereRaw("$updatedDateExpr = ?", [$today])
+            ->whereIn(DB::raw($statusSql), ['paid','completed'])
             ->sum(DB::raw('COALESCE(price,0)'));
 
-        // Monthly revenue (paid+completed this month)
         $monthlyRevenue = (float) DB::table('bookings')
-            ->whereRaw("$dateExpr BETWEEN ? AND ?", [$monthStart, $monthEnd])
-            ->whereIn(DB::raw("LOWER(REPLACE(REPLACE(status,'-','_'),' ','_'))"), ['paid','completed'])
+            ->whereRaw("$updatedDateExpr BETWEEN ? AND ?", [$monthStart, $monthEnd])
+            ->whereIn(DB::raw($statusSql), ['paid','completed'])
             ->sum(DB::raw('COALESCE(price,0)'));
 
         // =========================
@@ -97,7 +113,7 @@ class AdminDashboardController extends Controller
         ];
 
         $monthStatusRows = DB::table('bookings')
-            ->whereRaw("$dateExpr BETWEEN ? AND ?", [$monthStart, $monthEnd])
+            ->whereRaw("$updatedDateExpr BETWEEN ? AND ?", [$monthStart, $monthEnd])
             ->selectRaw("status, COUNT(*) as cnt")
             ->groupBy('status')
             ->get();
@@ -111,6 +127,7 @@ class AdminDashboardController extends Controller
 
         // =========================
         // DAILY OPS (LAST 7 DAYS)
+        // Confirmed uses created_at; completed uses updated_at.
         // =========================
         $days7 = [];
         for ($i = 6; $i >= 0; $i--) $days7[] = $now->copy()->subDays($i)->toDateString();
@@ -120,18 +137,31 @@ class AdminDashboardController extends Controller
         $dailyMap = [];
         foreach ($days7 as $d) $dailyMap[$d] = ['confirmed'=>0,'completed'=>0];
 
-        $opsRows = DB::table('bookings')
-            ->whereRaw("$dateExpr BETWEEN ? AND ?", [$days7[0], $days7[6]])
-            ->whereIn(DB::raw("LOWER(REPLACE(REPLACE(status,'-','_'),' ','_'))"), ['confirmed','completed'])
-            ->selectRaw("$dateExpr as d, LOWER(REPLACE(REPLACE(status,'-','_'),' ','_')) as st, COUNT(*) as cnt")
-            ->groupBy('d','st')
+        $confirmedRows = DB::table('bookings')
+            ->whereRaw("$createdDateExpr BETWEEN ? AND ?", [$days7[0], $days7[6]])
+            ->whereRaw("$statusSql = 'confirmed'")
+            ->selectRaw("$createdDateExpr as d, COUNT(*) as cnt")
+            ->groupBy('d')
             ->get();
 
-        foreach ($opsRows as $r) {
+        foreach ($confirmedRows as $r) {
             $d = (string)($r->d ?? '');
-            $s = (string)($r->st ?? '');
-            if (isset($dailyMap[$d]) && isset($dailyMap[$d][$s])) {
-                $dailyMap[$d][$s] = (int)$r->cnt;
+            if (isset($dailyMap[$d])) {
+                $dailyMap[$d]['confirmed'] = (int) $r->cnt;
+            }
+        }
+
+        $completedRows = DB::table('bookings')
+            ->whereRaw("$updatedDateExpr BETWEEN ? AND ?", [$days7[0], $days7[6]])
+            ->whereRaw("$statusSql = 'completed'")
+            ->selectRaw("$updatedDateExpr as d, COUNT(*) as cnt")
+            ->groupBy('d')
+            ->get();
+
+        foreach ($completedRows as $r) {
+            $d = (string)($r->d ?? '');
+            if (isset($dailyMap[$d])) {
+                $dailyMap[$d]['completed'] = (int) $r->cnt;
             }
         }
 
@@ -157,9 +187,9 @@ class AdminDashboardController extends Controller
 
         $trendMap = [];
         $trendRows = DB::table('bookings')
-            ->whereRaw("$dateExpr BETWEEN ? AND ?", [$trendStart, $trendEnd])
-            ->whereIn(DB::raw("LOWER(REPLACE(REPLACE(status,'-','_'),' ','_'))"), ['paid','completed'])
-            ->selectRaw("$dateExpr as d, SUM(COALESCE(price,0)) as amt")
+            ->whereRaw("$updatedDateExpr BETWEEN ? AND ?", [$trendStart, $trendEnd])
+            ->whereIn(DB::raw($statusSql), ['paid','completed'])
+            ->selectRaw("$updatedDateExpr as d, SUM(COALESCE(price,0)) as amt")
             ->groupBy('d')
             ->orderBy('d')
             ->get();
@@ -187,7 +217,7 @@ class AdminDashboardController extends Controller
         return view('admin.dashboard', compact(
             'stats','chart',
             'totalCustomers','totalProviders','totalBookings',
-            'newCustomersToday','newProvidersToday','completedToday',
+            'newCustomersToday','newProvidersToday','confirmedToday','completedToday',
             'dailyIncome','monthlyRevenue',
             'statusCounts','statusCountsMonth',
             'dailyLabels','dailyConfirmed','dailyCompleted',

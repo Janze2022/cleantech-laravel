@@ -16,6 +16,15 @@
     $totalBookings  = (int)($totalBookings  ?? ($stats['bookings']  ?? 0));
     $monthlyRevenue = (float)($monthlyRevenue ?? 0);
     $dailyIncome    = (float)($dailyIncome ?? 0);
+    $confirmedToday = (int)($confirmedToday ?? 0);
+    $completedToday = (int)($completedToday ?? 0);
+    $statusCounts   = $statusCounts ?? [
+        'confirmed' => 0,
+        'in_progress' => 0,
+        'paid' => 0,
+        'completed' => 0,
+        'cancelled' => 0,
+    ];
 
     // Chart arrays (safe)
     $dailyLabels     = $dailyLabels ?? [];
@@ -148,6 +157,11 @@ canvas{
     flex-direction:column;
     gap:12px;
 }
+.status-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
 .trend-item{
     border:1px solid var(--border);
     border-radius:14px;
@@ -215,6 +229,7 @@ canvas{
 }
 @media(max-width: 576px){
     .kpi-row{ grid-template-columns:1fr; }
+    .status-grid{ grid-template-columns:1fr; }
 }
 </style>
 
@@ -257,48 +272,63 @@ canvas{
         {{-- MAIN CHART --}}
         <div class="card">
             <div class="tabs">
-                <button class="tab-btn active" data-type="bookings" type="button">Bookings (7 days)</button>
+                <button class="tab-btn active" data-type="bookings" type="button">Booking Activity (7 days)</button>
                 <button class="tab-btn" data-type="revenue" type="button">Revenue (30 days)</button>
             </div>
 
             <canvas id="mainChart"></canvas>
         </div>
 
-        {{-- SIDE PANEL: BOOKING TRENDS --}}
+        {{-- SIDE PANEL: CURRENT STATUS + DAILY SNAPSHOT --}}
         <div class="card">
-            <h4>Booking Trends</h4>
+            <h4>Current Booking Status</h4>
 
-            <div class="trend-list">
+            <div class="status-grid">
                 <div class="trend-item">
-                    <div class="trend-label">Total Confirmed (7 Days)</div>
-                    <div class="trend-value">{{ number_format($confirmedTotal) }}</div>
-                    <div class="trend-sub">
-                        <span class="badge-up">Latest Day: {{ number_format($latestConfirmed) }}</span>
-                    </div>
+                    <div class="trend-label">Confirmed</div>
+                    <div class="trend-value">{{ number_format((int)($statusCounts['confirmed'] ?? 0)) }}</div>
+                    <div class="trend-sub">Current confirmed bookings</div>
                 </div>
 
                 <div class="trend-item">
-                    <div class="trend-label">Total Completed (7 Days)</div>
-                    <div class="trend-value">{{ number_format($completedTotal) }}</div>
-                    <div class="trend-sub">
-                        <span class="badge-done">Latest Day: {{ number_format($latestCompleted) }}</span>
-                    </div>
+                    <div class="trend-label">In Progress</div>
+                    <div class="trend-value">{{ number_format((int)($statusCounts['in_progress'] ?? 0)) }}</div>
+                    <div class="trend-sub">Jobs currently in progress</div>
                 </div>
 
                 <div class="trend-item">
-                    <div class="trend-label">Average Per Day</div>
-                    <div class="trend-value">{{ $avgConfirmed }}</div>
-                    <div class="trend-sub">Confirmed bookings per day</div>
+                    <div class="trend-label">Paid</div>
+                    <div class="trend-value">{{ number_format((int)($statusCounts['paid'] ?? 0)) }}</div>
+                    <div class="trend-sub">Waiting to be wrapped up</div>
                 </div>
 
                 <div class="trend-item">
-                    <div class="trend-label">Average Completed Per Day</div>
-                    <div class="trend-value">{{ $avgCompleted }}</div>
-                    <div class="trend-sub">Completed bookings per day</div>
+                    <div class="trend-label">Completed</div>
+                    <div class="trend-value">{{ number_format((int)($statusCounts['completed'] ?? 0)) }}</div>
+                    <div class="trend-sub">Finished bookings</div>
+                </div>
+
+                <div class="trend-item">
+                    <div class="trend-label">Cancelled</div>
+                    <div class="trend-value">{{ number_format((int)($statusCounts['cancelled'] ?? 0)) }}</div>
+                    <div class="trend-sub">Bookings that were cancelled</div>
+                </div>
+
+                <div class="trend-item">
+                    <div class="trend-label">Today</div>
+                    <div class="trend-value">{{ number_format($confirmedToday) }} / {{ number_format($completedToday) }}</div>
+                    <div class="trend-sub">Confirmed today / Completed today</div>
                 </div>
             </div>
 
-            
+            <div class="trend-mini">
+                <h5>7-Day Activity Snapshot</h5>
+                <div class="trend-note">
+                    Confirmed in the last 7 days: <strong>{{ number_format($confirmedTotal) }}</strong><br>
+                    Completed in the last 7 days: <strong>{{ number_format($completedTotal) }}</strong><br>
+                    Latest day activity: <strong>{{ number_format($latestConfirmed) }}</strong> confirmed and <strong>{{ number_format($latestCompleted) }}</strong> completed.
+                </div>
+            </div>
         </div>
 
     </div>
@@ -323,14 +353,14 @@ const chartData = {
     labels: dailyLabels,
     datasets: [
       {
-        label: 'Confirmed',
+        label: 'Confirmed (created)',
         data: dailyConfirmed,
         backgroundColor: '#3b82f6',
         borderRadius: 8,
         maxBarThickness: 42
       },
       {
-        label: 'Completed',
+        label: 'Completed (updated)',
         data: dailyCompleted,
         backgroundColor: '#22c55e',
         borderRadius: 8,
