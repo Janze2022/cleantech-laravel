@@ -149,8 +149,8 @@
 
 .public-assistant .assistant-panel-body{
     padding: .9rem;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
     gap: .7rem;
     flex: 1;
     min-height: 0;
@@ -245,18 +245,38 @@
     }
 }
 
+.public-assistant .assistant-footer{
+    display:flex;
+    flex-direction:column;
+    gap:.65rem;
+    padding-top:.15rem;
+    border-top:1px solid rgba(255,255,255,.06);
+}
+
 .public-assistant .assistant-chip-list{
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: .5rem;
-    overflow-x: auto;
-    padding-bottom: .12rem;
-    scrollbar-width: none;
+    max-height: 92px;
+    overflow-y: auto;
+    padding-right: .14rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(56,189,248,.28) rgba(255,255,255,.04);
     -webkit-overflow-scrolling: touch;
 }
 
 .public-assistant .assistant-chip-list::-webkit-scrollbar{
-    display: none;
+    width: 6px;
+}
+
+.public-assistant .assistant-chip-list::-webkit-scrollbar-track{
+    background: rgba(255,255,255,.04);
+    border-radius: 999px;
+}
+
+.public-assistant .assistant-chip-list::-webkit-scrollbar-thumb{
+    background: rgba(56,189,248,.28);
+    border-radius: 999px;
 }
 
 .public-assistant .assistant-chip{
@@ -348,6 +368,15 @@
         padding-right: 0;
     }
 
+    .public-assistant .assistant-footer{
+        gap: .55rem;
+    }
+
+    .public-assistant .assistant-chip-list{
+        max-height: 80px;
+        gap: .42rem;
+    }
+
     .public-assistant .assistant-chip{
         font-size: .72rem;
         padding: .38rem .68rem;
@@ -417,18 +446,21 @@
 
         <div class="assistant-panel-body">
             <div class="assistant-messages" id="publicAssistantMessages"></div>
-            <div class="assistant-chip-list" id="publicAssistantSuggestions"></div>
 
-            <form class="assistant-form" id="publicAssistantForm">
-                <input
-                    type="text"
-                    class="assistant-input"
-                    id="publicAssistantInput"
-                    placeholder="Ask about booking, provider sign-up, pricing, or support"
-                    autocomplete="off"
-                >
-                <button type="submit" class="assistant-send">Send</button>
-            </form>
+            <div class="assistant-footer">
+                <div class="assistant-chip-list" id="publicAssistantSuggestions"></div>
+
+                <form class="assistant-form" id="publicAssistantForm">
+                    <input
+                        type="text"
+                        class="assistant-input"
+                        id="publicAssistantInput"
+                        placeholder="Ask about booking, provider sign-up, pricing, or support"
+                        autocomplete="off"
+                    >
+                    <button type="submit" class="assistant-send">Send</button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -643,8 +675,8 @@
         },
         {
             intentId: 'booking',
-            keywords: ['how it works', 'how cleantech works', 'how does it work'],
-            tokens: ['how', 'works', 'book', 'service', 'provider'],
+            keywords: ['how it works', 'how cleantech works', 'how does cleantech work', 'how does clean tech work', 'how does it work'],
+            tokens: ['how', 'work', 'works', 'cleantech', 'book', 'service', 'provider'],
             message: `CleanTech works in a simple flow: create an account, choose a service, pick an available provider for your date, confirm the booking, and follow updates from your dashboard. <a href="${routes.howItWorks}">See how it works</a>.`,
         },
     ];
@@ -677,7 +709,7 @@
             }
         });
 
-        if (!bestEntry || bestScore < 3) {
+        if (!bestEntry || bestScore < 2) {
             return null;
         }
 
@@ -944,6 +976,10 @@
 
         if (hasAny(normalized, ['contact', 'email', 'support', 'phone', 'reach', 'message'])) {
             return answerSupport();
+        }
+
+        if (hasAny(normalized, ['how does cleantech work', 'how cleantech works', 'how does clean tech work', 'how does it work'])) {
+            return answerHowItWorks();
         }
 
         if (hasAny(normalized, ['faq', 'questions', 'how it works'])) {
