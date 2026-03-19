@@ -6,19 +6,17 @@
 @php
     use Carbon\Carbon;
 
-    $tz  = config('app.timezone') ?? 'Asia/Manila';
+    $tz = config('app.timezone') ?? 'Asia/Manila';
     $now = Carbon::now($tz);
-    $today = $now->toDateString();
 
-    // KPIs (safe fallbacks)
-    $totalCustomers = (int)($totalCustomers ?? ($stats['customers'] ?? 0));
-    $totalProviders = (int)($totalProviders ?? ($stats['providers'] ?? 0));
-    $totalBookings  = (int)($totalBookings  ?? ($stats['bookings']  ?? 0));
-    $monthlyRevenue = (float)($monthlyRevenue ?? 0);
-    $dailyIncome    = (float)($dailyIncome ?? 0);
-    $confirmedToday = (int)($confirmedToday ?? 0);
-    $completedToday = (int)($completedToday ?? 0);
-    $statusCounts   = $statusCounts ?? [
+    $totalCustomers = (int) ($totalCustomers ?? ($stats['customers'] ?? 0));
+    $totalProviders = (int) ($totalProviders ?? ($stats['providers'] ?? 0));
+    $totalBookings = (int) ($totalBookings ?? ($stats['bookings'] ?? 0));
+    $monthlyRevenue = (float) ($monthlyRevenue ?? 0);
+    $dailyIncome = (float) ($dailyIncome ?? 0);
+    $confirmedToday = (int) ($confirmedToday ?? 0);
+    $completedToday = (int) ($completedToday ?? 0);
+    $statusCounts = $statusCounts ?? [
         'confirmed' => 0,
         'in_progress' => 0,
         'paid' => 0,
@@ -26,412 +24,577 @@
         'cancelled' => 0,
     ];
 
-    // Chart arrays (safe)
-    $dailyLabels     = $dailyLabels ?? [];
-    $dailyConfirmed  = $dailyConfirmed ?? [];
-    $dailyCompleted  = $dailyCompleted ?? [];
+    $dailyLabels = $dailyLabels ?? [];
+    $dailyConfirmed = $dailyConfirmed ?? [];
+    $dailyCompleted = $dailyCompleted ?? [];
+    $trendLabels = $trendLabels ?? [];
+    $trendRevenue = $trendRevenue ?? [];
 
-    $trendLabels     = $trendLabels ?? [];
-    $trendRevenue    = $trendRevenue ?? [];
+    $statusCards = [
+        ['key' => 'confirmed', 'label' => 'Confirmed', 'color' => '#38bdf8'],
+        ['key' => 'in_progress', 'label' => 'In Progress', 'color' => '#f59e0b'],
+        ['key' => 'paid', 'label' => 'Paid', 'color' => '#a78bfa'],
+        ['key' => 'completed', 'label' => 'Completed', 'color' => '#22c55e'],
+        ['key' => 'cancelled', 'label' => 'Cancelled', 'color' => '#ef4444'],
+    ];
 
-    // Booking trend summaries
-    $confirmedTotal = collect($dailyConfirmed)->sum();
-    $completedTotal = collect($dailyCompleted)->sum();
-    $trendDays      = count($dailyLabels);
+    $statusLabels = collect($statusCards)->pluck('label')->values();
+    $statusValues = collect($statusCards)->map(fn ($item) => (int) ($statusCounts[$item['key']] ?? 0))->values();
+    $statusColors = collect($statusCards)->pluck('color')->values();
+    $statusTotal = $statusValues->sum();
 
-    $latestConfirmed = $trendDays > 0 ? (int)($dailyConfirmed[$trendDays - 1] ?? 0) : 0;
-    $latestCompleted = $trendDays > 0 ? (int)($dailyCompleted[$trendDays - 1] ?? 0) : 0;
-
-    $avgConfirmed = $trendDays > 0 ? round($confirmedTotal / max($trendDays, 1), 1) : 0;
-    $avgCompleted = $trendDays > 0 ? round($completedTotal / max($trendDays, 1), 1) : 0;
+    $weekConfirmed = collect($dailyConfirmed)->sum();
+    $weekCompleted = collect($dailyCompleted)->sum();
+    $revenue30Days = collect($trendRevenue)->sum();
 @endphp
 
 <style>
-:root{
-    --bg:#0f172a;
-    --card:#111827;
-    --border:rgba(255,255,255,.08);
-    --text:#f1f5f9;
-    --muted:#94a3b8;
-    --accent:#3b82f6;
-    --success:#22c55e;
-    --warning:#f59e0b;
-    --danger:#ef4444;
-}
-.admin-wrap{ padding:20px; }
-
-.header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:18px;
-    gap:12px;
-    flex-wrap:wrap;
-}
-.header h2{
-    margin:0;
-    font-size:1.35rem;
-    font-weight:900;
-    color:var(--text);
-}
-.header .meta{
-    color:var(--muted);
-    font-weight:700;
-    font-size:.9rem;
+.admin-dashboard {
+    padding: 18px 20px 28px;
+    color: #f8fafc;
 }
 
-/* KPI */
-.kpi-row{
-    display:grid;
-    grid-template-columns: repeat(5,1fr);
-    gap:14px;
-    margin-bottom:18px;
-}
-.kpi{
-    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-    border:1px solid var(--border);
-    border-radius:14px;
-    padding:16px 16px 14px;
-}
-.kpi h4{
-    margin:0;
-    font-size:.82rem;
-    color:var(--muted);
-    font-weight:800;
-}
-.kpi .value{
-    font-size:1.35rem;
-    font-weight:900;
-    margin-top:6px;
-    color:var(--text);
+.dashboard-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
 }
 
-/* Layout */
-.main-grid{
-    display:grid;
-    grid-template-columns: 2fr 1fr;
-    gap:16px;
-}
-.card{
-    background: rgba(17,24,39,.92);
-    border:1px solid var(--border);
-    border-radius:16px;
-    padding:18px;
-}
-.card h4{
-    margin:0 0 12px;
-    color:var(--text);
-    font-weight:900;
-    font-size:1rem;
+.dashboard-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #f8fafc;
 }
 
-/* Tabs */
-.tabs{
-    display:flex;
-    gap:10px;
-    margin-bottom:12px;
-    flex-wrap:wrap;
-}
-.tab-btn{
-    padding:8px 12px;
-    border-radius:10px;
-    border:1px solid var(--border);
-    background:transparent;
-    color:var(--text);
-    cursor:pointer;
-    font-size:.82rem;
-    font-weight:800;
-}
-.tab-btn.active{
-    background:var(--accent);
-    border-color:var(--accent);
-}
-canvas{
-    width:100%!important;
-    height:300px!important;
+.dashboard-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: rgba(15, 23, 42, 0.92);
+    color: #cbd5e1;
+    font-size: 0.88rem;
+    font-weight: 800;
 }
 
-/* Trend summary */
-.trend-list{
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-}
-.status-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-}
-.trend-item{
-    border:1px solid var(--border);
-    border-radius:14px;
-    padding:14px;
-    background:rgba(255,255,255,.02);
-}
-.trend-label{
-    color:var(--muted);
-    font-size:.82rem;
-    font-weight:800;
-    margin-bottom:6px;
-}
-.trend-value{
-    color:var(--text);
-    font-size:1.25rem;
-    font-weight:900;
-    line-height:1.2;
-}
-.trend-sub{
-    margin-top:4px;
-    color:var(--muted);
-    font-size:.82rem;
-    font-weight:700;
-}
-.trend-mini{
-    margin-top:18px;
-    padding-top:14px;
-    border-top:1px solid var(--border);
-}
-.trend-mini h5{
-    margin:0 0 10px;
-    color:var(--text);
-    font-size:.9rem;
-    font-weight:900;
-}
-.trend-note{
-    color:var(--muted);
-    font-size:.83rem;
-    font-weight:700;
-    line-height:1.7;
-}
-.badge-up,
-.badge-done{
-    display:inline-flex;
-    align-items:center;
-    padding:4px 8px;
-    border-radius:999px;
-    font-size:.72rem;
-    font-weight:900;
-}
-.badge-up{
-    background:rgba(59,130,246,.15);
-    color:#93c5fd;
-}
-.badge-done{
-    background:rgba(34,197,94,.15);
-    color:#86efac;
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
 }
 
-/* Responsive */
-@media(max-width: 992px){
-    .kpi-row{ grid-template-columns:1fr 1fr; }
-    .main-grid{ grid-template-columns:1fr; }
-    canvas{ height:260px!important; }
+.metric-card {
+    padding: 16px 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.86));
+    box-shadow: 0 16px 36px rgba(2, 6, 23, 0.22);
 }
-@media(max-width: 576px){
-    .kpi-row{ grid-template-columns:1fr; }
-    .status-grid{ grid-template-columns:1fr; }
+
+.metric-label {
+    display: block;
+    margin-bottom: 8px;
+    color: #94a3b8;
+    font-size: 0.76rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.metric-value {
+    margin: 0;
+    color: #f8fafc;
+    font-size: 1.6rem;
+    font-weight: 900;
+    line-height: 1.1;
+}
+
+.metric-value.accent {
+    color: #38bdf8;
+}
+
+.metric-value.success {
+    color: #4ade80;
+}
+
+.metric-value.warning {
+    color: #fbbf24;
+}
+
+.panel-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.35fr);
+    gap: 16px;
+}
+
+.panel {
+    border-radius: 22px;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.9));
+    padding: 18px;
+    box-shadow: 0 18px 40px rgba(2, 6, 23, 0.24);
+}
+
+.panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.panel-title {
+    margin: 0;
+    color: #f8fafc;
+    font-size: 1.02rem;
+    font-weight: 900;
+}
+
+.panel-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    background: rgba(14, 116, 144, 0.12);
+    color: #bae6fd;
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+.status-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: center;
+}
+
+.status-chart-wrap {
+    position: relative;
+    min-height: 250px;
+}
+
+.status-center {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+}
+
+.status-center strong {
+    display: block;
+    color: #f8fafc;
+    font-size: 1.8rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.status-center span {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+.status-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.status-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.status-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 999px;
+    flex: 0 0 auto;
+}
+
+.status-name {
+    color: #cbd5e1;
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+
+.status-count {
+    color: #f8fafc;
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.activity-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.activity-pill {
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.activity-pill label {
+    display: block;
+    margin-bottom: 6px;
+    color: #94a3b8;
+    font-size: 0.74rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.activity-pill strong {
+    color: #f8fafc;
+    font-size: 1.3rem;
+    font-weight: 900;
+}
+
+.revenue-panel {
+    margin-top: 16px;
+}
+
+.chart-wrap {
+    position: relative;
+    min-height: 300px;
+}
+
+.chart-wrap canvas,
+.status-chart-wrap canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+@media (max-width: 1280px) {
+    .metric-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1080px) {
+    .panel-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .status-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .status-chart-wrap {
+        min-height: 220px;
+    }
+}
+
+@media (max-width: 760px) {
+    .admin-dashboard {
+        padding: 16px 14px 24px;
+    }
+
+    .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .status-list,
+    .activity-strip {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-wrap {
+        min-height: 260px;
+    }
+}
+
+@media (max-width: 520px) {
+    .metric-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .metric-card,
+    .panel {
+        padding: 15px;
+    }
+
+    .dashboard-title {
+        font-size: 1.3rem;
+    }
 }
 </style>
 
-<div class="admin-wrap">
-
-    <div class="header">
+<div class="admin-dashboard">
+    <div class="dashboard-head">
         <div>
-            <h2>Dashboard Overview</h2>
-            <div class="meta">{{ $today }} • {{ $tz }}</div>
+            <h1 class="dashboard-title">Dashboard</h1>
         </div>
-        <button type="button" class="tab-btn" onclick="location.reload()" title="Refresh">⟳ Refresh</button>
+        <div class="dashboard-date">{{ $now->format('M d, Y') }}</div>
     </div>
 
-    {{-- KPI ROW --}}
-    <div class="kpi-row">
-        <div class="kpi">
-            <h4>Customers</h4>
-            <div class="value">{{ number_format($totalCustomers) }}</div>
+    <div class="metric-grid">
+        <div class="metric-card">
+            <span class="metric-label">Customers</span>
+            <p class="metric-value">{{ number_format($totalCustomers) }}</p>
         </div>
-        <div class="kpi">
-            <h4>Providers</h4>
-            <div class="value">{{ number_format($totalProviders) }}</div>
+        <div class="metric-card">
+            <span class="metric-label">Providers</span>
+            <p class="metric-value">{{ number_format($totalProviders) }}</p>
         </div>
-        <div class="kpi">
-            <h4>Bookings</h4>
-            <div class="value">{{ number_format($totalBookings) }}</div>
+        <div class="metric-card">
+            <span class="metric-label">Bookings</span>
+            <p class="metric-value">{{ number_format($totalBookings) }}</p>
         </div>
-        <div class="kpi">
-            <h4>Monthly Revenue</h4>
-            <div class="value">₱{{ number_format($monthlyRevenue, 2) }}</div>
+        <div class="metric-card">
+            <span class="metric-label">This Month</span>
+            <p class="metric-value accent">PHP {{ number_format($monthlyRevenue, 2) }}</p>
         </div>
-        <div class="kpi">
-            <h4>Today's Income</h4>
-            <div class="value">₱{{ number_format($dailyIncome, 2) }}</div>
+        <div class="metric-card">
+            <span class="metric-label">Today</span>
+            <p class="metric-value success">PHP {{ number_format($dailyIncome, 2) }}</p>
         </div>
     </div>
 
-    <div class="main-grid">
-
-        {{-- MAIN CHART --}}
-        <div class="card">
-            <div class="tabs">
-                <button class="tab-btn active" data-type="bookings" type="button">Booking Activity (7 days)</button>
-                <button class="tab-btn" data-type="revenue" type="button">Revenue (30 days)</button>
+    <div class="panel-grid">
+        <section class="panel">
+            <div class="panel-head">
+                <h2 class="panel-title">Booking Status</h2>
+                <div class="panel-chip">{{ number_format($statusTotal) }} total</div>
             </div>
 
-            <canvas id="mainChart"></canvas>
-        </div>
-
-        {{-- SIDE PANEL: CURRENT STATUS + DAILY SNAPSHOT --}}
-        <div class="card">
-            <h4>Current Booking Status</h4>
-
-            <div class="status-grid">
-                <div class="trend-item">
-                    <div class="trend-label">Confirmed</div>
-                    <div class="trend-value">{{ number_format((int)($statusCounts['confirmed'] ?? 0)) }}</div>
-                    <div class="trend-sub">Current confirmed bookings</div>
+            <div class="status-layout">
+                <div class="status-chart-wrap">
+                    <canvas id="statusChart"></canvas>
+                    <div class="status-center">
+                        <strong>{{ number_format($statusTotal) }}</strong>
+                        <span>Bookings</span>
+                    </div>
                 </div>
 
-                <div class="trend-item">
-                    <div class="trend-label">In Progress</div>
-                    <div class="trend-value">{{ number_format((int)($statusCounts['in_progress'] ?? 0)) }}</div>
-                    <div class="trend-sub">Jobs currently in progress</div>
-                </div>
-
-                <div class="trend-item">
-                    <div class="trend-label">Paid</div>
-                    <div class="trend-value">{{ number_format((int)($statusCounts['paid'] ?? 0)) }}</div>
-                    <div class="trend-sub">Waiting to be wrapped up</div>
-                </div>
-
-                <div class="trend-item">
-                    <div class="trend-label">Completed</div>
-                    <div class="trend-value">{{ number_format((int)($statusCounts['completed'] ?? 0)) }}</div>
-                    <div class="trend-sub">Finished bookings</div>
-                </div>
-
-                <div class="trend-item">
-                    <div class="trend-label">Cancelled</div>
-                    <div class="trend-value">{{ number_format((int)($statusCounts['cancelled'] ?? 0)) }}</div>
-                    <div class="trend-sub">Bookings that were cancelled</div>
-                </div>
-
-                <div class="trend-item">
-                    <div class="trend-label">Today</div>
-                    <div class="trend-value">{{ number_format($confirmedToday) }} / {{ number_format($completedToday) }}</div>
-                    <div class="trend-sub">Confirmed today / Completed today</div>
+                <div class="status-list">
+                    @foreach ($statusCards as $statusCard)
+                        <div class="status-item">
+                            <div class="status-item-left">
+                                <span class="status-dot" style="background: {{ $statusCard['color'] }}"></span>
+                                <span class="status-name">{{ $statusCard['label'] }}</span>
+                            </div>
+                            <span class="status-count">{{ number_format((int) ($statusCounts[$statusCard['key']] ?? 0)) }}</span>
+                        </div>
+                    @endforeach
                 </div>
             </div>
+        </section>
 
-            <div class="trend-mini">
-                <h5>7-Day Activity Snapshot</h5>
-                <div class="trend-note">
-                    Confirmed in the last 7 days: <strong>{{ number_format($confirmedTotal) }}</strong><br>
-                    Completed in the last 7 days: <strong>{{ number_format($completedTotal) }}</strong><br>
-                    Latest day activity: <strong>{{ number_format($latestConfirmed) }}</strong> confirmed and <strong>{{ number_format($latestCompleted) }}</strong> completed.
+        <section class="panel">
+            <div class="panel-head">
+                <h2 class="panel-title">Weekly Activity</h2>
+                <div class="panel-chip">7 days</div>
+            </div>
+
+            <div class="chart-wrap">
+                <canvas id="activityChart"></canvas>
+            </div>
+
+            <div class="activity-strip">
+                <div class="activity-pill">
+                    <label>Confirmed Today</label>
+                    <strong>{{ number_format($confirmedToday) }}</strong>
+                </div>
+                <div class="activity-pill">
+                    <label>Completed Today</label>
+                    <strong>{{ number_format($completedToday) }}</strong>
+                </div>
+                <div class="activity-pill">
+                    <label>7-Day Total</label>
+                    <strong>{{ number_format($weekConfirmed + $weekCompleted) }}</strong>
                 </div>
             </div>
-        </div>
-
+        </section>
     </div>
+
+    <section class="panel revenue-panel">
+        <div class="panel-head">
+            <h2 class="panel-title">Revenue Trend</h2>
+            <div class="panel-chip">30 days: PHP {{ number_format($revenue30Days, 2) }}</div>
+        </div>
+
+        <div class="chart-wrap">
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </section>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
-const ctx = document.getElementById('mainChart');
-let currentType = 'bookings';
+const axisColor = 'rgba(148, 163, 184, 0.55)';
+const gridColor = 'rgba(148, 163, 184, 0.10)';
 
-// Blade -> JS data
-const dailyLabels    = @json($dailyLabels);
-const dailyConfirmed = @json($dailyConfirmed);
-const dailyCompleted = @json($dailyCompleted);
-
-const trendLabels  = @json($trendLabels);
-const trendRevenue = @json($trendRevenue);
-
-const chartData = {
-  bookings: {
-    labels: dailyLabels,
-    datasets: [
-      {
-        label: 'Confirmed (created)',
-        data: dailyConfirmed,
-        backgroundColor: '#3b82f6',
-        borderRadius: 8,
-        maxBarThickness: 42
-      },
-      {
-        label: 'Completed (updated)',
-        data: dailyCompleted,
-        backgroundColor: '#22c55e',
-        borderRadius: 8,
-        maxBarThickness: 42
-      }
-    ]
-  },
-  revenue: {
-    labels: trendLabels,
-    datasets: [
-      {
-        label: 'Revenue',
-        data: trendRevenue,
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59,130,246,.22)',
-        fill: true,
-        tension: .4,
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        borderWidth: 2
-      }
-    ]
-  }
-};
-
-function getChartOptions() {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        labels: {
-          color: 'rgba(255,255,255,.75)',
-          font: { weight: '700' }
-        }
-      }
+new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+        labels: @json($statusLabels),
+        datasets: [{
+            data: @json($statusValues),
+            backgroundColor: @json($statusColors),
+            borderWidth: 0,
+            hoverOffset: 6
+        }]
     },
-    scales: {
-      x: {
-        ticks: { color: 'rgba(255,255,255,.55)' },
-        grid: { color: 'rgba(255,255,255,.06)' }
-      },
-      y: {
-        beginAtZero: true,
-        ticks: { color: 'rgba(255,255,255,.55)' },
-        grid: { color: 'rgba(255,255,255,.06)' }
-      }
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '72%',
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
     }
-  };
-}
-
-let mainChart = new Chart(ctx, {
-  type: 'bar',
-  data: chartData.bookings,
-  options: getChartOptions()
 });
 
-document.querySelectorAll('.tab-btn[data-type]').forEach(btn => {
-  btn.addEventListener('click', function () {
-    document.querySelectorAll('.tab-btn[data-type]').forEach(b => b.classList.remove('active'));
-    this.classList.add('active');
+new Chart(document.getElementById('activityChart'), {
+    type: 'bar',
+    data: {
+        labels: @json($dailyLabels),
+        datasets: [
+            {
+                label: 'Confirmed',
+                data: @json($dailyConfirmed),
+                backgroundColor: '#38bdf8',
+                borderRadius: 8,
+                maxBarThickness: 34
+            },
+            {
+                label: 'Completed',
+                data: @json($dailyCompleted),
+                backgroundColor: '#22c55e',
+                borderRadius: 8,
+                maxBarThickness: 34
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                labels: {
+                    color: '#cbd5e1',
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    boxWidth: 8,
+                    font: {
+                        weight: '700'
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: {
+                    color: axisColor,
+                    font: {
+                        weight: '700'
+                    }
+                },
+                grid: {
+                    display: false
+                }
+            },
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    precision: 0,
+                    color: axisColor,
+                    font: {
+                        weight: '700'
+                    }
+                },
+                grid: {
+                    color: gridColor
+                }
+            }
+        }
+    }
+});
 
-    currentType = this.dataset.type;
-
-    mainChart.destroy();
-    mainChart = new Chart(ctx, {
-      type: currentType === 'revenue' ? 'line' : 'bar',
-      data: chartData[currentType],
-      options: getChartOptions()
-    });
-  });
+new Chart(document.getElementById('revenueChart'), {
+    type: 'line',
+    data: {
+        labels: @json($trendLabels),
+        datasets: [{
+            label: 'Revenue',
+            data: @json($trendRevenue),
+            borderColor: '#60a5fa',
+            backgroundColor: 'rgba(56, 189, 248, 0.16)',
+            fill: true,
+            tension: 0.32,
+            pointRadius: 2.5,
+            pointHoverRadius: 4,
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                ticks: {
+                    color: axisColor,
+                    maxTicksLimit: 8,
+                    font: {
+                        weight: '700'
+                    }
+                },
+                grid: {
+                    display: false
+                }
+            },
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    color: axisColor,
+                    callback: (value) => 'PHP ' + Number(value).toLocaleString(),
+                    font: {
+                        weight: '700'
+                    }
+                },
+                grid: {
+                    color: gridColor
+                }
+            }
+        }
+    }
 });
 </script>
 @endsection
