@@ -81,7 +81,6 @@ html{
 }
 
 .navbar-collapse{
-    display:flex !important;
     align-items:center;
     justify-content:space-between;
     gap:1rem;
@@ -204,6 +203,12 @@ html{
     box-shadow: none;
 }
 
+@media (min-width: 992px){
+    .navbar-collapse{
+        display:flex !important;
+    }
+}
+
 @media (max-width: 991px){
     .navbar-grid{
         display:flex;
@@ -211,9 +216,16 @@ html{
     }
 
     .navbar-collapse{
-        display:block !important;
         flex:none;
         width:auto;
+    }
+
+    .navbar-collapse:not(.show){
+        display:none !important;
+    }
+
+    .navbar-collapse.show{
+        display:block !important;
     }
 
     .navbar-center{
