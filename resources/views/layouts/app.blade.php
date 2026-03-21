@@ -144,8 +144,6 @@ select option{
     @if(request()->routeIs('home', 'about', 'services', 'pricing', 'blog', 'contact', 'faq', 'how.it.works'))
         @include('partials.public_assistant', ['assistantPage' => request()->route()?->getName()])
     @endif
-
-    @include('partials.footer')
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
