@@ -42,10 +42,10 @@ html{
 }
 
 .navbar-grid{
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:1rem;
 }
 
 .navbar-brand{
@@ -58,6 +58,7 @@ html{
     gap: .5rem;
     margin: 0;
     padding: 0;
+    flex-shrink:0;
 }
 
 .brand-icon{
@@ -78,9 +79,19 @@ html{
     stroke: currentColor;
 }
 
+.navbar-collapse{
+    display:flex !important;
+    align-items:center;
+    justify-content:space-between;
+    gap:1rem;
+    flex:1 1 auto;
+}
+
 .navbar-center{
     display: flex;
     justify-content: center;
+    flex:1 1 auto;
+    min-width:0;
 }
 
 .navbar-center-links{
@@ -88,6 +99,7 @@ html{
     gap: 2rem;
     flex-wrap: wrap;
     justify-content: center;
+    align-items:center;
     margin: 0;
     padding: 0;
 }
@@ -174,9 +186,17 @@ html{
     border-color:rgba(56,189,248,.22);
 }
 
+.navbar-actions{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    flex-shrink:0;
+}
+
 .navbar-toggler{
     border: none;
     padding: .25rem .45rem;
+    margin-left:auto;
 }
 
 .navbar-toggler:focus{
@@ -188,8 +208,13 @@ html{
         display: block;
     }
 
+    .navbar-collapse{
+        display:block !important;
+    }
+
     .navbar-center{
         margin-top: .75rem;
+        justify-content:flex-start;
     }
 
     .navbar-center-links{
@@ -203,6 +228,10 @@ html{
         width: 100%;
         text-align: center;
         margin-top: .75rem;
+    }
+
+    .navbar-actions{
+        display:block;
     }
 
     #mainNav{
@@ -307,7 +336,7 @@ html{
                 </div>
             @endif
 
-            <ul class="navbar-nav ms-auto">
+            <ul class="navbar-nav navbar-actions">
                 @if (!session()->has('user_id') && !session()->has('provider_id'))
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle nav-login" href="#" data-bs-toggle="dropdown" aria-expanded="false">
