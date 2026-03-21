@@ -85,7 +85,7 @@ html{
 
 .navbar-center-links{
     display: flex;
-    gap: 3.5rem;
+    gap: 2rem;
     flex-wrap: wrap;
     justify-content: center;
     margin: 0;
@@ -156,6 +156,24 @@ html{
     border-top: 1px solid rgba(255,255,255,.08);
 }
 
+.nav-user-link{
+    min-height:42px;
+    padding:.48rem .85rem !important;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    color:#fff !important;
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    font-weight:800;
+}
+
+.nav-user-link:hover{
+    background:rgba(56,189,248,.08);
+    border-color:rgba(56,189,248,.22);
+}
+
 .navbar-toggler{
     border: none;
     padding: .25rem .45rem;
@@ -175,13 +193,25 @@ html{
     }
 
     .navbar-center-links{
-        gap: 1.25rem;
+        gap: 1rem;
+        flex-direction:column;
+        align-items:flex-start;
+        padding:.35rem 0 .2rem;
     }
 
     .nav-login{
         width: 100%;
         text-align: center;
         margin-top: .75rem;
+    }
+
+    #mainNav{
+        margin-top:.75rem;
+        padding:.8rem;
+        border-radius:18px;
+        background:rgba(15,23,42,.96);
+        border:1px solid rgba(255,255,255,.08);
+        box-shadow:0 24px 50px rgba(0,0,0,.32);
     }
 }
 
@@ -265,8 +295,6 @@ html{
             @if (!session()->has('user_id') && !session()->has('provider_id'))
                 <div class="navbar-center">
                     <ul class="navbar-nav navbar-center-links">
-                        <li></li>
-                        <li></li>
                         <li class="nav-item"><a class="nav-link" href="{{ route('services') }}">Services</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ route('how.it.works') }}">How It Works</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ route('pricing') }}">Pricing</a></li>
@@ -298,7 +326,7 @@ html{
                     </li>
                 @elseif (session()->has('user_id'))
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle nav-user-link" href="#" data-bs-toggle="dropdown" aria-expanded="false">
                             {{ session('name') ?? 'Customer' }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
@@ -319,7 +347,7 @@ html{
                     </li>
                 @elseif (session()->has('provider_id'))
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle nav-user-link" href="#" data-bs-toggle="dropdown" aria-expanded="false">
                             {{ session('name') ?? 'Provider' }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">

@@ -15,6 +15,40 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        :root{
+            --admin-bg:#020617;
+            --admin-surface:#081120;
+            --admin-surface-2:#0f172a;
+            --admin-border:rgba(255,255,255,.08);
+            --admin-text:#e5e7eb;
+            --admin-muted:#94a3b8;
+            --admin-accent:#38bdf8;
+        }
+
+        html{
+            scroll-behavior:smooth;
+        }
+
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar,
+        .admin-content *::-webkit-scrollbar{
+            width:10px;
+            height:10px;
+        }
+
+        html::-webkit-scrollbar-track,
+        body::-webkit-scrollbar-track,
+        .admin-content *::-webkit-scrollbar-track{
+            background:rgba(255,255,255,.04);
+        }
+
+        html::-webkit-scrollbar-thumb,
+        body::-webkit-scrollbar-thumb,
+        .admin-content *::-webkit-scrollbar-thumb{
+            background:rgba(56,189,248,.24);
+            border-radius:999px;
+        }
+
         body {
             background: #020617;
             color: #e5e7eb;
@@ -177,6 +211,104 @@
             padding: 2rem;
             padding-top: 96px;
             min-height: 100vh;
+        }
+
+        .admin-content .card,
+        .admin-content .table-responsive,
+        .admin-content .modal-content,
+        .admin-content .list-group,
+        .admin-content .accordion-item{
+            background:linear-gradient(180deg, rgba(9,17,32,.96), rgba(4,10,22,.96));
+            border:1px solid rgba(255,255,255,.07);
+            color:var(--admin-text);
+            border-radius:18px;
+            box-shadow:0 18px 40px rgba(0,0,0,.22);
+        }
+
+        .admin-content .card-header,
+        .admin-content .modal-header,
+        .admin-content .modal-footer,
+        .admin-content .accordion-button{
+            background:transparent;
+            color:var(--admin-text);
+            border-color:rgba(255,255,255,.06);
+        }
+
+        .admin-content .table{
+            color:var(--admin-text);
+            margin-bottom:0;
+        }
+
+        .admin-content .table th{
+            color:#9fb6d6;
+            border-color:rgba(255,255,255,.07);
+            font-weight:800;
+            text-transform:uppercase;
+            letter-spacing:.08em;
+            font-size:.75rem;
+        }
+
+        .admin-content .table td{
+            border-color:rgba(255,255,255,.06);
+            vertical-align:middle;
+        }
+
+        .admin-content .form-control,
+        .admin-content .form-select,
+        .admin-content textarea,
+        .admin-content select{
+            background:#071120;
+            color:#f8fafc;
+            border:1px solid rgba(255,255,255,.10);
+            border-radius:14px;
+            min-height:46px;
+            box-shadow:none;
+        }
+
+        .admin-content textarea{
+            min-height:120px;
+        }
+
+        .admin-content .form-control::placeholder,
+        .admin-content textarea::placeholder{
+            color:#6f86a8;
+        }
+
+        .admin-content .form-control:focus,
+        .admin-content .form-select:focus,
+        .admin-content textarea:focus,
+        .admin-content select:focus{
+            background:#091427;
+            color:#fff;
+            border-color:rgba(56,189,248,.34);
+            box-shadow:0 0 0 .2rem rgba(56,189,248,.12);
+        }
+
+        .admin-content select option{
+            background:#071120;
+            color:#f8fafc;
+        }
+
+        .admin-content .btn{
+            border-radius:14px;
+            font-weight:800;
+        }
+
+        .admin-content .btn-outline-secondary,
+        .admin-content .btn-outline-light{
+            color:#dbeafe;
+            border-color:rgba(255,255,255,.12);
+        }
+
+        .admin-content .btn-outline-secondary:hover,
+        .admin-content .btn-outline-light:hover{
+            background:rgba(255,255,255,.08);
+            color:#fff;
+            border-color:rgba(255,255,255,.16);
+        }
+
+        .admin-content .badge{
+            border-radius:999px;
         }
 
         /* ================================
