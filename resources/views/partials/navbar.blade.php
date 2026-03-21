@@ -205,16 +205,21 @@ html{
 
 @media (max-width: 991px){
     .navbar-grid{
-        display: block;
+        display:flex;
+        flex-wrap:wrap;
+        align-items:center;
     }
 
     .navbar-collapse{
         display:block !important;
+        flex:0 0 100%;
+        width:100%;
     }
 
     .navbar-center{
         margin-top: .75rem;
         justify-content:flex-start;
+        width:100%;
     }
 
     .navbar-center-links{
@@ -222,6 +227,7 @@ html{
         flex-direction:column;
         align-items:flex-start;
         padding:.35rem 0 .2rem;
+        width:100%;
     }
 
     .nav-login{
@@ -232,9 +238,13 @@ html{
 
     .navbar-actions{
         display:block;
+        width:100%;
+        margin-top:.25rem;
     }
 
     #mainNav{
+        flex-basis:100%;
+        width:100%;
         margin-top:.75rem;
         padding:.8rem;
         border-radius:18px;
