@@ -230,16 +230,27 @@ html{
 
     .navbar-center{
         margin-top: 0;
-        justify-content:flex-start;
+        justify-content:center;
         width:100%;
     }
 
     .navbar-center-links{
         gap: 1rem;
         flex-direction:column;
-        align-items:flex-start;
+        align-items:center;
         padding:.35rem 0 .2rem;
         width:100%;
+        text-align:center;
+    }
+
+    .navbar-center-links .nav-item{
+        width:100%;
+    }
+
+    .navbar-center-links .nav-link{
+        display:block;
+        width:100%;
+        text-align:center;
     }
 
     .nav-login{
@@ -252,6 +263,12 @@ html{
         display:block;
         width:100%;
         margin-top:.35rem;
+        text-align:center;
+    }
+
+    .navbar-actions .nav-item,
+    .navbar-actions .dropdown{
+        width:100%;
     }
 
     #mainNav{
@@ -460,6 +477,10 @@ html{
     if (mainNav) {
         mainNav.querySelectorAll('.nav-link, .dropdown-item').forEach(function (link) {
             link.addEventListener('click', function () {
+                if (link.classList.contains('dropdown-toggle')) {
+                    return;
+                }
+
                 if (window.innerWidth > 991 || !mainNav.classList.contains('show')) {
                     return;
                 }
