@@ -46,6 +46,7 @@ html{
     align-items:center;
     justify-content:space-between;
     gap:1rem;
+    position:relative;
 }
 
 .navbar-brand{
@@ -206,18 +207,17 @@ html{
 @media (max-width: 991px){
     .navbar-grid{
         display:flex;
-        flex-wrap:wrap;
         align-items:center;
     }
 
     .navbar-collapse{
         display:block !important;
-        flex:0 0 100%;
-        width:100%;
+        flex:none;
+        width:auto;
     }
 
     .navbar-center{
-        margin-top: .75rem;
+        margin-top: 0;
         justify-content:flex-start;
         width:100%;
     }
@@ -239,18 +239,33 @@ html{
     .navbar-actions{
         display:block;
         width:100%;
-        margin-top:.25rem;
+        margin-top:.35rem;
     }
 
     #mainNav{
-        flex-basis:100%;
+        position:absolute;
+        top:calc(100% + 10px);
+        left:0;
+        right:0;
         width:100%;
-        margin-top:.75rem;
-        padding:.8rem;
-        border-radius:18px;
+        margin-top:0;
+        padding:.9rem;
+        border-radius:22px;
         background:rgba(15,23,42,.96);
         border:1px solid rgba(255,255,255,.08);
         box-shadow:0 24px 50px rgba(0,0,0,.32);
+        backdrop-filter:blur(14px);
+    }
+
+    .navbar-actions .dropdown-menu{
+        position:static !important;
+        inset:auto !important;
+        transform:none !important;
+        width:100%;
+        min-width:0;
+        margin-top:.6rem;
+        border-radius:16px;
+        box-shadow:none;
     }
 }
 
@@ -415,6 +430,7 @@ html{
 <script>
 (function () {
     const nav = document.querySelector('.navbar-cleantech');
+    const mainNav = document.getElementById('mainNav');
 
     if (!nav) {
         return;
@@ -428,5 +444,18 @@ html{
     window.addEventListener('resize', setOffset);
     document.addEventListener('shown.bs.collapse', setOffset);
     document.addEventListener('hidden.bs.collapse', setOffset);
+
+    if (mainNav) {
+        mainNav.querySelectorAll('.nav-link, .dropdown-item').forEach(function (link) {
+            link.addEventListener('click', function () {
+                if (window.innerWidth > 991 || !mainNav.classList.contains('show')) {
+                    return;
+                }
+
+                const collapse = bootstrap.Collapse.getOrCreateInstance(mainNav, { toggle: false });
+                collapse.hide();
+            });
+        });
+    }
 })();
 </script>
