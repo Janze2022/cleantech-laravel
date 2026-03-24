@@ -421,31 +421,6 @@ html, body {
     margin-bottom: 24px;
 }
 
-.testimonial-controls {
-    display: flex;
-    gap: 10px;
-}
-
-.testimonial-arrow {
-    width: 46px;
-    height: 46px;
-    border-radius: 16px;
-    border: 1px solid rgba(255,255,255,.10);
-    background: rgba(255,255,255,.04);
-    color: #fff;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    transition: transform .22s ease, background .22s ease, border-color .22s ease;
-}
-
-.testimonial-arrow:hover {
-    transform: translateY(-1px);
-    background: rgba(56,189,248,.10);
-    border-color: rgba(56,189,248,.20);
-}
-
 .testimonial-viewport {
     overflow: hidden;
     padding: 4px 2px 6px;
@@ -909,12 +884,6 @@ html, body {
                         </div>
                     </div>
 
-                    <div class="d-flex align-items-center gap-3 flex-wrap justify-content-end">
-                        <div class="testimonial-controls">
-                            <button type="button" class="testimonial-arrow" id="reviewPrev" aria-label="Previous review">&#8592;</button>
-                            <button type="button" class="testimonial-arrow" id="reviewNext" aria-label="Next review">&#8594;</button>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="testimonial-viewport" id="reviewViewport">
@@ -1003,11 +972,9 @@ html, body {
 (() => {
     const viewport = document.getElementById('reviewViewport');
     const track = document.getElementById('reviewTrack');
-    const prevButton = document.getElementById('reviewPrev');
-    const nextButton = document.getElementById('reviewNext');
     const dotsWrap = document.getElementById('reviewDots');
 
-    if (!viewport || !track || !prevButton || !nextButton || !dotsWrap) {
+    if (!viewport || !track || !dotsWrap) {
         return;
     }
 
@@ -1073,16 +1040,6 @@ html, body {
     renderDots();
     update();
     start();
-
-    prevButton.addEventListener('click', () => {
-        goTo(index - 1);
-        start();
-    });
-
-    nextButton.addEventListener('click', () => {
-        goTo(index + 1);
-        start();
-    });
 
     dotsWrap.addEventListener('click', (event) => {
         const dot = event.target.closest('.testimonial-dot');
