@@ -975,7 +975,6 @@ html, body {
         <div class="cta text-center reveal">
             <h2 class="fw-bold mb-2">Book. Clean. Relax.</h2>
             <p class="mb-4">A modern way to keep your space spotless.</p>
-            <a href="{{ route('customer.register') }}" class="btn btn-light btn-lg">Get Started</a>
         </div>
     </section>
 </div>
