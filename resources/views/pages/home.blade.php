@@ -3,28 +3,111 @@
 @section('title', 'CleanTech Solutions | Professional Cleaning Services')
 
 @php
+    $avatarPresets = [
+        ['bg' => '#2563eb', 'accent' => '#38bdf8', 'text' => '#f8fbff'],
+        ['bg' => '#7c3aed', 'accent' => '#a78bfa', 'text' => '#f8fbff'],
+        ['bg' => '#0f766e', 'accent' => '#2dd4bf', 'text' => '#f4fffe'],
+        ['bg' => '#b45309', 'accent' => '#fbbf24', 'text' => '#fff8eb'],
+        ['bg' => '#be123c', 'accent' => '#fb7185', 'text' => '#fff4f6'],
+    ];
+
+    $buildAvatar = static function (string $name, int $index) use ($avatarPresets): string {
+        $parts = preg_split('/\s+/', trim($name)) ?: [];
+        $initials = collect($parts)
+            ->filter()
+            ->take(2)
+            ->map(fn ($part) => strtoupper(mb_substr($part, 0, 1)))
+            ->implode('');
+
+        if ($initials === '') {
+            $initials = 'CT';
+        }
+
+        $palette = $avatarPresets[$index % count($avatarPresets)];
+        $svg = <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="{$palette['accent']}"/>
+      <stop offset="100%" stop-color="{$palette['bg']}"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="44" fill="url(#g)"/>
+  <circle cx="80" cy="80" r="58" fill="rgba(255,255,255,0.12)"/>
+  <text x="80" y="95" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="700" fill="{$palette['text']}">{$initials}</text>
+</svg>
+SVG;
+
+        return 'data:image/svg+xml;charset=UTF-8,' . rawurlencode($svg);
+    };
+
     $testimonials = [
         [
             'name' => 'Janze Salva',
             'review' => 'The booking flow felt smooth and easy to follow. From choosing a service to receiving updates, everything felt more organized and less stressful.',
             'rating' => 5,
+            'role' => 'Home Cleaning',
         ],
         [
             'name' => 'Maria Santos',
             'review' => 'I liked how simple the process was. The provider arrived on time, the service felt professional, and the overall experience looked clean and modern.',
             'rating' => 5,
+            'role' => 'General Cleaning',
         ],
         [
             'name' => 'Ronald Saballe',
             'review' => 'CleanTech made it easier to arrange cleaning without the usual back and forth. It felt reliable, clear, and well guided from start to finish.',
             'rating' => 5,
+            'role' => 'Deep Cleaning',
         ],
         [
             'name' => 'Aileen Cruz',
             'review' => 'The site was easy to understand and the updates were clear. It feels like a professional service platform that actually helps customers book with confidence.',
             'rating' => 5,
+            'role' => 'Apartment Cleaning',
+        ],
+        [
+            'name' => 'Kyla Ramirez',
+            'review' => 'I booked from my phone and it only took a few minutes. The provider arrived prepared and the house felt fresh right after the visit.',
+            'rating' => 5,
+            'role' => 'Same-Day Cleaning',
+        ],
+        [
+            'name' => 'Lester Dela Cruz',
+            'review' => 'The progress updates helped a lot. I always knew when the booking was confirmed and when the provider was already on the way.',
+            'rating' => 5,
+            'role' => 'Booking Updates',
+        ],
+        [
+            'name' => 'Sheila Gomez',
+            'review' => 'What I liked most was the clear schedule and professional approach. It felt safe, organized, and worth booking again.',
+            'rating' => 5,
+            'role' => 'Verified Provider',
+        ],
+        [
+            'name' => 'Marco Villanueva',
+            'review' => 'The provider handled the service well and the platform looked trustworthy. The steps were simple enough even for first-time users.',
+            'rating' => 5,
+            'role' => 'Easy Booking',
+        ],
+        [
+            'name' => 'Nica Fernandez',
+            'review' => 'I appreciated how clean the website looked and how easy it was to choose a service. It made the whole process feel premium.',
+            'rating' => 5,
+            'role' => 'Smooth Experience',
+        ],
+        [
+            'name' => 'Paolo Mendez',
+            'review' => 'From booking to completion, the flow stayed clear and professional. I would recommend it to anyone looking for a reliable cleaning service.',
+            'rating' => 5,
+            'role' => 'Trusted Service',
         ],
     ];
+
+    $testimonials = array_map(function (array $testimonial, int $index) use ($buildAvatar) {
+        $testimonial['avatar'] = $buildAvatar($testimonial['name'], $index);
+        return $testimonial;
+    }, $testimonials, array_keys($testimonials));
 @endphp
 
 @push('styles')
@@ -98,35 +181,10 @@ html, body {
     z-index: 2;
 }
 
-.hero-badge,
 .hero h1,
 .hero p,
 .hero-actions {
     animation: fadeUp .85s ease both;
-}
-
-.hero-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 14px;
-    border-radius: 999px;
-    border: 1px solid rgba(56,189,248,.24);
-    background: rgba(56,189,248,.10);
-    color: #d8f3ff;
-    font-size: .78rem;
-    font-weight: 900;
-    letter-spacing: .12em;
-    text-transform: uppercase;
-}
-
-.hero-badge::before {
-    content: "";
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #38bdf8;
-    box-shadow: 0 0 0 6px rgba(56,189,248,.14);
 }
 
 .hero h1 {
@@ -324,6 +382,26 @@ html, body {
     margin: 0;
 }
 
+.steps-section {
+    padding: 4.75rem 0 2rem;
+}
+
+.steps-shell {
+    padding: 2.25rem;
+    border-radius: 30px;
+    border: 1px solid rgba(255,255,255,.06);
+    background:
+        radial-gradient(circle at top center, rgba(56,189,248,.07), transparent 32%),
+        linear-gradient(180deg, rgba(11,18,34,.98), rgba(7,13,25,.98));
+    box-shadow: 0 24px 60px rgba(0,0,0,.28);
+}
+
+.steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+}
+
 .testimonial-shell {
     padding: 28px;
     border-radius: 30px;
@@ -368,8 +446,27 @@ html, body {
     border-color: rgba(56,189,248,.20);
 }
 
+.testimonial-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.08);
+    color: #dce8f8;
+    font-size: .92rem;
+    font-weight: 700;
+}
+
+.testimonial-summary strong {
+    color: #fff;
+    font-size: 1.05rem;
+}
+
 .testimonial-viewport {
     overflow: hidden;
+    padding: 4px 2px 6px;
 }
 
 .testimonial-track {
@@ -379,60 +476,63 @@ html, body {
 }
 
 .testimonial-slide {
-    min-width: 100%;
-    flex: 0 0 100%;
-    padding: 2px;
+    min-width: 33.3333%;
+    flex: 0 0 33.3333%;
+    padding: 10px;
 }
 
 .testimonial-card {
-    display: grid;
-    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
-    gap: 22px;
-    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    height: 100%;
+    min-height: 100%;
+    padding: 24px;
     border-radius: 26px;
     border: 1px solid rgba(255,255,255,.08);
     background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
     backdrop-filter: blur(16px);
-    transform: scale(.985);
-    transition: transform .45s ease, box-shadow .45s ease, border-color .45s ease;
+    transform: translateY(0) scale(.985);
+    transition: transform .45s ease, box-shadow .45s ease, border-color .45s ease, opacity .45s ease;
 }
 
 .testimonial-slide.is-active .testimonial-card {
-    transform: scale(1);
+    transform: translateY(-4px) scale(1);
     border-color: rgba(56,189,248,.18);
     box-shadow: 0 18px 48px rgba(0,0,0,.22);
 }
 
-.testimonial-side {
-    padding-right: 10px;
-    border-right: 1px solid rgba(255,255,255,.07);
+.testimonial-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
 
-.quote-mark {
-    width: 52px;
-    height: 52px;
-    border-radius: 18px;
-    display: grid;
-    place-items: center;
-    background: rgba(56,189,248,.12);
-    border: 1px solid rgba(56,189,248,.18);
-    color: #cdefff;
-    font-size: 1.7rem;
-    font-weight: 900;
-    margin-bottom: 16px;
+.testimonial-avatar {
+    width: 68px;
+    height: 68px;
+    flex: 0 0 68px;
+    border-radius: 22px;
+    object-fit: cover;
+    border: 1px solid rgba(255,255,255,.10);
+    box-shadow: 0 14px 28px rgba(0,0,0,.24);
+}
+
+.testimonial-meta {
+    min-width: 0;
 }
 
 .testimonial-name {
     margin: 0;
     color: #fff;
-    font-size: 1.2rem;
+    font-size: 1.05rem;
     font-weight: 900;
 }
 
 .testimonial-role {
-    margin-top: 6px;
-    color: #8ca1c4;
-    font-size: .85rem;
+    margin-top: 4px;
+    color: #9cb0ce;
+    font-size: .78rem;
     font-weight: 800;
     letter-spacing: .08em;
     text-transform: uppercase;
@@ -441,19 +541,52 @@ html, body {
 .testimonial-text {
     margin: 0;
     color: #d7e2f3;
-    font-size: 1.02rem;
-    line-height: 1.85;
+    font-size: .97rem;
+    line-height: 1.78;
+    flex: 1;
 }
 
 .stars {
     display: flex;
     gap: 4px;
-    margin-top: 14px;
+    margin-top: 2px;
 }
 
 .stars span {
     color: #fbbf24;
     font-size: 1rem;
+}
+
+.testimonial-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,.06);
+}
+
+.testimonial-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(56,189,248,.10);
+    border: 1px solid rgba(56,189,248,.15);
+    color: #d8f1ff;
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.testimonial-badge::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #38bdf8;
 }
 
 .testimonial-dots {
@@ -512,15 +645,13 @@ html, body {
 }
 
 @media (max-width: 1199.98px) {
-    .testimonial-card {
-        grid-template-columns: 1fr;
+    .steps-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .testimonial-side {
-        border-right: none;
-        border-bottom: 1px solid rgba(255,255,255,.07);
-        padding-right: 0;
-        padding-bottom: 16px;
+    .testimonial-slide {
+        min-width: 50%;
+        flex-basis: 50%;
     }
 }
 
@@ -530,6 +661,7 @@ html, body {
         padding: 36px 0 28px;
     }
 
+    .steps-section,
     .testimonials-section,
     .services-showcase,
     .promo-banner,
@@ -547,8 +679,42 @@ html, body {
         width: 100%;
     }
 
+    .steps-shell,
     .testimonial-shell {
-        padding: 22px;
+        padding: 22px 18px;
+    }
+
+    .steps-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+
+    .work-image-card {
+        height: 260px;
+    }
+
+    .testimonial-top {
+        gap: 14px;
+    }
+
+    .testimonial-slide {
+        min-width: 100%;
+        flex-basis: 100%;
+        padding: 8px 4px;
+    }
+
+    .testimonial-card {
+        padding: 20px;
+    }
+
+    .testimonial-summary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .testimonial-controls {
+        width: 100%;
+        justify-content: flex-end;
     }
 }
 </style>
@@ -563,7 +729,6 @@ html, body {
         <div class="hero-overlay"></div>
 
         <div class="container hero-content">
-            <span class="hero-badge">Professional Cleaning Services</span>
             <h1>CleanTech</h1>
             <p>Professional home and office cleaning services in Butuan City.</p>
             <div class="hero-actions d-flex justify-content-center gap-3 flex-wrap">
@@ -573,39 +738,43 @@ html, body {
         </div>
     </section>
 
-    <section class="container my-5">
-        <div class="section-title reveal">
-            <h2>How CleanTech Works</h2>
-            <p>From booking to spotless made simple</p>
-        </div>
-
-        <div class="row g-4">
-            <div class="col-md-4 reveal">
-                <div class="work-image-card">
-                    <img src="https://t3.ftcdn.net/jpg/02/98/67/88/360_F_298678837_bNtbbc5QqtNZdinHQkPKddKKVq5WKlXl.jpg" alt="Book cleaning online">
-                    <div class="work-overlay">
-                        <h5>Book Online</h5>
-                        <p>Select your service, date, and location in minutes.</p>
-                    </div>
+    <section class="steps-section">
+        <div class="container">
+            <div class="steps-shell reveal">
+                <div class="section-title">
+                    <h2>How CleanTech Works</h2>
+                    <p>From booking to spotless made simple</p>
                 </div>
-            </div>
 
-            <div class="col-md-4 reveal" style="--delay:.08s">
-                <div class="work-image-card">
-                    <img src="https://t4.ftcdn.net/jpg/03/05/63/55/360_F_305635573_47SjydzWbcQPCTbkcfHyfD4fUY81XW9R.jpg" alt="Professional cleaner">
-                    <div class="work-overlay">
-                        <h5>Get Matched</h5>
-                        <p>We assign a verified professional to your booking.</p>
+                <div class="steps-grid">
+                    <div class="reveal">
+                        <div class="work-image-card">
+                            <img src="https://t3.ftcdn.net/jpg/02/98/67/88/360_F_298678837_bNtbbc5QqtNZdinHQkPKddKKVq5WKlXl.jpg" alt="Book cleaning online">
+                            <div class="work-overlay">
+                                <h5>Book Online</h5>
+                                <p>Select your service, date, and location in minutes.</p>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <div class="col-md-4 reveal" style="--delay:.16s">
-                <div class="work-image-card">
-                    <img src="https://images.pexels.com/photos/48889/cleaning-washing-cleanup-the-ilo-48889.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500" alt="Clean home">
-                    <div class="work-overlay">
-                        <h5>Relax & Enjoy</h5>
-                        <p>Come home to a clean, fresh, and peaceful space.</p>
+                    <div class="reveal" style="--delay:.08s">
+                        <div class="work-image-card">
+                            <img src="https://t4.ftcdn.net/jpg/03/05/63/55/360_F_305635573_47SjydzWbcQPCTbkcfHyfD4fUY81XW9R.jpg" alt="Professional cleaner">
+                            <div class="work-overlay">
+                                <h5>Get Matched</h5>
+                                <p>We assign a verified professional to your booking.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="reveal" style="--delay:.16s">
+                        <div class="work-image-card">
+                            <img src="https://images.pexels.com/photos/48889/cleaning-washing-cleanup-the-ilo-48889.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500" alt="Clean home">
+                            <div class="work-overlay">
+                                <h5>Relax & Enjoy</h5>
+                                <p>Come home to a clean, fresh, and peaceful space.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -664,9 +833,14 @@ html, body {
                         </div>
                     </div>
 
-                    <div class="testimonial-controls">
+                    <div class="d-flex align-items-center gap-3 flex-wrap justify-content-end">
+                        <div class="testimonial-summary">
+                            <strong>{{ count($testimonials) }}</strong> customer reviews
+                        </div>
+                        <div class="testimonial-controls">
                         <button type="button" class="testimonial-arrow" id="reviewPrev" aria-label="Previous review">&#8592;</button>
                         <button type="button" class="testimonial-arrow" id="reviewNext" aria-label="Next review">&#8594;</button>
+                        </div>
                     </div>
                 </div>
 
@@ -675,18 +849,29 @@ html, body {
                         @foreach ($testimonials as $testimonial)
                             <div class="testimonial-slide">
                                 <article class="testimonial-card">
-                                    <div class="testimonial-side">
-                                        <div class="quote-mark">&ldquo;</div>
-                                        <h3 class="testimonial-name">{{ $testimonial['name'] }}</h3>
-                                        <div class="testimonial-role">CleanTech Customer</div>
+                                    <div class="testimonial-head">
+                                        <img src="{{ $testimonial['avatar'] }}" alt="{{ $testimonial['name'] }} avatar" class="testimonial-avatar">
+                                        <div class="testimonial-meta">
+                                            <h3 class="testimonial-name">{{ $testimonial['name'] }}</h3>
+                                            <div class="testimonial-role">{{ $testimonial['role'] }}</div>
+                                            <div class="stars" aria-label="{{ $testimonial['rating'] }} out of 5 stars">
+                                                @for ($star = 0; $star < $testimonial['rating']; $star++)
+                                                    <span>&#9733;</span>
+                                                @endfor
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <p class="testimonial-text">&ldquo;{{ $testimonial['review'] }}&rdquo;</p>
+
+                                    <div class="testimonial-foot">
+                                        <span class="testimonial-badge">Verified Feedback</span>
                                         <div class="stars" aria-label="{{ $testimonial['rating'] }} out of 5 stars">
                                             @for ($star = 0; $star < $testimonial['rating']; $star++)
                                                 <span>&#9733;</span>
                                             @endfor
                                         </div>
                                     </div>
-
-                                    <p class="testimonial-text">{{ $testimonial['review'] }}</p>
                                 </article>
                             </div>
                         @endforeach
@@ -767,19 +952,43 @@ html, body {
     let index = 0;
     let timer = null;
     let startX = 0;
+    let slidesPerView = 1;
+    let pageCount = slides.length;
+
+    function getSlidesPerView() {
+        if (window.innerWidth >= 1200) {
+            return 3;
+        }
+
+        if (window.innerWidth >= 768) {
+            return 2;
+        }
+
+        return 1;
+    }
+
+    function buildPages() {
+        slidesPerView = getSlidesPerView();
+        pageCount = Math.max(1, Math.ceil(slides.length / slidesPerView));
+        index = Math.min(index, pageCount - 1);
+    }
 
     function renderDots() {
-        dotsWrap.innerHTML = slides.map((_, i) => `<button type="button" class="testimonial-dot${i === 0 ? ' is-active' : ''}" data-index="${i}" aria-label="Go to review ${i + 1}"></button>`).join('');
+        dotsWrap.innerHTML = Array.from({ length: pageCount }, (_, i) => `<button type="button" class="testimonial-dot${i === 0 ? ' is-active' : ''}" data-index="${i}" aria-label="Go to review page ${i + 1}"></button>`).join('');
     }
 
     function update() {
-        track.style.transform = `translateX(-${index * 100}%)`;
-        slides.forEach((slide, i) => slide.classList.toggle('is-active', i === index));
+        const offset = (100 / slidesPerView) * index;
+        track.style.transform = `translateX(-${offset}%)`;
+        slides.forEach((slide, i) => {
+            const pageIndex = Math.floor(i / slidesPerView);
+            slide.classList.toggle('is-active', pageIndex === index);
+        });
         dotsWrap.querySelectorAll('.testimonial-dot').forEach((dot, i) => dot.classList.toggle('is-active', i === index));
     }
 
     function goTo(nextIndex) {
-        index = (nextIndex + slides.length) % slides.length;
+        index = (nextIndex + pageCount) % pageCount;
         update();
     }
 
@@ -793,6 +1002,7 @@ html, body {
         timer = window.setInterval(() => goTo(index + 1), 5200);
     }
 
+    buildPages();
     renderDots();
     update();
     start();
@@ -841,6 +1051,18 @@ html, body {
 
         start();
     }, { passive: true });
+
+    window.addEventListener('resize', () => {
+        const nextSlidesPerView = getSlidesPerView();
+        if (nextSlidesPerView === slidesPerView) {
+            return;
+        }
+
+        buildPages();
+        renderDots();
+        update();
+        start();
+    });
 })();
 </script>
 @endpush
