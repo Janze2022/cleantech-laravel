@@ -167,6 +167,12 @@
     padding:1rem;
 }
 
+.insights-grid{
+    display:grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+    gap:1rem;
+}
+
 .card-title{
     margin:0;
     font-size:1rem;
@@ -407,6 +413,10 @@
     .quick-notes{
         grid-template-columns: 1fr;
     }
+
+    .insights-grid{
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 767.98px){
@@ -464,37 +474,44 @@
             </div>
         </section>
 
-        <section class="ratings-card">
-            <h2 class="card-title">Rating breakdown</h2>
-            <p class="card-subtitle">A quick look at how your scores are distributed.</p>
+        <section class="insights-grid">
+            <div class="ratings-card">
+                <h2 class="card-title">Rating breakdown</h2>
+                <p class="card-subtitle">A quick look at how your scores are distributed.</p>
 
-            <div class="breakdown-list">
-                @foreach($breakdown as $row)
-                    @php $rowPercent = $percent($row->cnt ?? 0); @endphp
-                    <div class="breakdown-row">
-                        <div class="breakdown-label">{{ $row->star }} star</div>
-                        <div class="breakdown-bar">
-                            <span style="width: {{ $rowPercent }}%;"></span>
+                <div class="breakdown-list">
+                    @foreach($breakdown as $row)
+                        @php $rowPercent = $percent($row->cnt ?? 0); @endphp
+                        <div class="breakdown-row">
+                            <div class="breakdown-label">{{ $row->star }} star</div>
+                            <div class="breakdown-bar">
+                                <span style="width: {{ $rowPercent }}%;"></span>
+                            </div>
+                            <div class="breakdown-count">{{ (int) ($row->cnt ?? 0) }}</div>
                         </div>
-                        <div class="breakdown-count">{{ (int) ($row->cnt ?? 0) }}</div>
-                    </div>
-                @endforeach
+                    @endforeach
+                </div>
             </div>
 
-            <div class="quick-notes">
-                <div class="note-box">
-                    <div class="note-label">Current standing</div>
-                    <div class="note-value">{{ $count > 0 ? $ratingWord($avg) . ' at ' . $fmtAvg . ' / 5' : 'No customer ratings yet' }}</div>
-                </div>
+            <div class="ratings-card">
+                <h2 class="card-title">Quick notes</h2>
+                <p class="card-subtitle">Small signals that help you read your feedback faster.</p>
 
-                <div class="note-box">
-                    <div class="note-label">Strongest area</div>
-                    <div class="note-value">{{ $fiveStarCount > 0 ? $fiveStarCount . ' customers left a five-star review.' : 'No five-star reviews yet.' }}</div>
-                </div>
+                <div class="quick-notes">
+                    <div class="note-box">
+                        <div class="note-label">Current standing</div>
+                        <div class="note-value">{{ $count > 0 ? $ratingWord($avg) . ' at ' . $fmtAvg . ' / 5' : 'No customer ratings yet' }}</div>
+                    </div>
 
-                <div class="note-box">
-                    <div class="note-label">What this page shows</div>
-                    <div class="note-value">Only submitted customer ratings with scores from 1 to 5 are included here.</div>
+                    <div class="note-box">
+                        <div class="note-label">Strongest area</div>
+                        <div class="note-value">{{ $fiveStarCount > 0 ? $fiveStarCount . ' customers left a five-star review.' : 'No five-star reviews yet.' }}</div>
+                    </div>
+
+                    <div class="note-box">
+                        <div class="note-label">What this page shows</div>
+                        <div class="note-value">Only submitted customer ratings with scores from 1 to 5 are included here.</div>
+                    </div>
                 </div>
             </div>
         </section>
