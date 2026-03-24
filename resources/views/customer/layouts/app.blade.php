@@ -74,16 +74,6 @@
             transition:left .28s ease;
         }
 
-        .customer-sidebar::before{
-            content:"";
-            position:absolute;
-            top:0;
-            left:0;
-            right:0;
-            height:2px;
-            background:linear-gradient(90deg, #38bdf8, #2563eb, #22d3ee);
-        }
-
         .panel-brand{
             display:flex;
             align-items:center;
