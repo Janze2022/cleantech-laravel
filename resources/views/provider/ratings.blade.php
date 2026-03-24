@@ -163,13 +163,6 @@
 
 .star.on{ fill:#fbbf24; }
 
-.ratings-grid{
-    display:grid;
-    grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
-    gap:1rem;
-    align-items:start;
-}
-
 .ratings-card{
     padding:1rem;
 }
@@ -229,6 +222,7 @@
 
 .quick-notes{
     display:grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap:.75rem;
     margin-top:1rem;
 }
@@ -410,7 +404,7 @@
 
 @media (max-width: 991.98px){
     .summary-grid,
-    .ratings-grid{
+    .quick-notes{
         grid-template-columns: 1fr;
     }
 }
@@ -470,46 +464,39 @@
             </div>
         </section>
 
-        <section class="ratings-grid">
-            <article class="ratings-card">
-                <h2 class="card-title">Rating breakdown</h2>
-                <p class="card-subtitle">A quick look at how your scores are distributed.</p>
+        <section class="ratings-card">
+            <h2 class="card-title">Rating breakdown</h2>
+            <p class="card-subtitle">A quick look at how your scores are distributed.</p>
 
-                <div class="breakdown-list">
-                    @foreach($breakdown as $row)
-                        @php $rowPercent = $percent($row->cnt ?? 0); @endphp
-                        <div class="breakdown-row">
-                            <div class="breakdown-label">{{ $row->star }} star</div>
-                            <div class="breakdown-bar">
-                                <span style="width: {{ $rowPercent }}%;"></span>
-                            </div>
-                            <div class="breakdown-count">{{ (int) ($row->cnt ?? 0) }}</div>
+            <div class="breakdown-list">
+                @foreach($breakdown as $row)
+                    @php $rowPercent = $percent($row->cnt ?? 0); @endphp
+                    <div class="breakdown-row">
+                        <div class="breakdown-label">{{ $row->star }} star</div>
+                        <div class="breakdown-bar">
+                            <span style="width: {{ $rowPercent }}%;"></span>
                         </div>
-                    @endforeach
+                        <div class="breakdown-count">{{ (int) ($row->cnt ?? 0) }}</div>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="quick-notes">
+                <div class="note-box">
+                    <div class="note-label">Current standing</div>
+                    <div class="note-value">{{ $count > 0 ? $ratingWord($avg) . ' at ' . $fmtAvg . ' / 5' : 'No customer ratings yet' }}</div>
                 </div>
-            </article>
 
-            <article class="ratings-card">
-                <h2 class="card-title">Quick notes</h2>
-                <p class="card-subtitle">Small signals that help you read your feedback faster.</p>
-
-                <div class="quick-notes">
-                    <div class="note-box">
-                        <div class="note-label">Current standing</div>
-                        <div class="note-value">{{ $count > 0 ? $ratingWord($avg) . ' at ' . $fmtAvg . ' / 5' : 'No customer ratings yet' }}</div>
-                    </div>
-
-                    <div class="note-box">
-                        <div class="note-label">Strongest area</div>
-                        <div class="note-value">{{ $fiveStarCount > 0 ? $fiveStarCount . ' customers left a five-star review.' : 'No five-star reviews yet.' }}</div>
-                    </div>
-
-                    <div class="note-box">
-                        <div class="note-label">What this page shows</div>
-                        <div class="note-value">Only submitted customer ratings with scores from 1 to 5 are included here.</div>
-                    </div>
+                <div class="note-box">
+                    <div class="note-label">Strongest area</div>
+                    <div class="note-value">{{ $fiveStarCount > 0 ? $fiveStarCount . ' customers left a five-star review.' : 'No five-star reviews yet.' }}</div>
                 </div>
-            </article>
+
+                <div class="note-box">
+                    <div class="note-label">What this page shows</div>
+                    <div class="note-value">Only submitted customer ratings with scores from 1 to 5 are included here.</div>
+                </div>
+            </div>
         </section>
 
         @if($reviews->isEmpty())
