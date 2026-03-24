@@ -99,6 +99,8 @@
     background:rgba(56,189,248,.10);
     color:#fff;
     padding:.55rem .85rem;
+    white-space:nowrap;
+    min-width:132px;
 }
 
 .result-note{
@@ -156,6 +158,12 @@
 .desktop-table td{
     color:#fff;
     font-size:.9rem;
+}
+
+.desktop-table th:last-child,
+.desktop-table td:last-child{
+    white-space:nowrap;
+    width:1%;
 }
 
 .desktop-table tbody tr:last-child td{
