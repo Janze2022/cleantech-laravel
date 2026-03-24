@@ -63,11 +63,30 @@
     border: 1px solid var(--border-soft);
     border-radius: 16px;
     padding: .35rem;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(56,189,248,.30) rgba(255,255,255,.04);
+}
+
+.table-wrap::-webkit-scrollbar{
+    height: 10px;
+}
+
+.table-wrap::-webkit-scrollbar-track{
+    background: rgba(255,255,255,.04);
+    border-radius: 999px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb{
+    background: rgba(56,189,248,.30);
+    border-radius: 999px;
 }
 
 .table-darkish{
     width: 100%;
+    min-width: 1120px;
     margin: 0;
     color: rgba(255,255,255,.86);
     background: transparent !important;
