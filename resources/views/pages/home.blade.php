@@ -939,11 +939,6 @@ html, body {
 
                                     <div class="testimonial-foot">
                                         <span class="testimonial-badge">Verified Feedback</span>
-                                        <div class="stars" aria-label="{{ $testimonial['rating'] }} out of 5 stars">
-                                            @for ($star = 0; $star < $testimonial['rating']; $star++)
-                                                <span>&#9733;</span>
-                                            @endfor
-                                        </div>
                                     </div>
                                 </article>
                             </div>
