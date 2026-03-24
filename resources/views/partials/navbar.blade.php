@@ -31,16 +31,6 @@ html{
     z-index: 1050;
 }
 
-.navbar-cleantech::before{
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 2px;
-    width: 100%;
-    background: linear-gradient(90deg, #0ea5e9, #2563eb, #6366f1);
-}
-
 .navbar-grid{
     display:flex;
     align-items:center;
