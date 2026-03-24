@@ -334,17 +334,23 @@
 
 @media (max-width: 575px){
     .public-assistant{
-        right: 14px;
-        bottom: 14px;
+        right: 12px;
+        bottom: 10px;
         left: auto;
     }
 
     .public-assistant .assistant-launcher{
-        width: 58px;
-        height: 58px;
+        width: 54px;
+        height: 54px;
         padding: 0;
         border-radius: 50%;
         justify-content: center;
+        box-shadow: 0 18px 34px rgba(37,99,235,.30);
+    }
+
+    .public-assistant .assistant-launcher-badge{
+        width: 38px;
+        height: 38px;
     }
 
     .public-assistant .assistant-launcher-copy{

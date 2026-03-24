@@ -46,61 +46,61 @@ SVG;
             'name' => 'Janze Salva',
             'review' => 'The booking flow felt smooth and easy to follow. From choosing a service to receiving updates, everything felt more organized and less stressful.',
             'rating' => 5,
-            'role' => 'Home Cleaning',
+            'role' => 'General Cleaning',
         ],
         [
             'name' => 'Maria Santos',
             'review' => 'I liked how simple the process was. The provider arrived on time, the service felt professional, and the overall experience looked clean and modern.',
             'rating' => 5,
-            'role' => 'General Cleaning',
+            'role' => 'Deep Cleaning',
         ],
         [
             'name' => 'Ronald Saballe',
             'review' => 'CleanTech made it easier to arrange cleaning without the usual back and forth. It felt reliable, clear, and well guided from start to finish.',
             'rating' => 5,
-            'role' => 'Deep Cleaning',
+            'role' => 'Specific Area Cleaning',
         ],
         [
             'name' => 'Aileen Cruz',
             'review' => 'The site was easy to understand and the updates were clear. It feels like a professional service platform that actually helps customers book with confidence.',
             'rating' => 5,
-            'role' => 'Apartment Cleaning',
+            'role' => 'General Cleaning',
         ],
         [
             'name' => 'Kyla Ramirez',
             'review' => 'I booked from my phone and it only took a few minutes. The provider arrived prepared and the house felt fresh right after the visit.',
             'rating' => 5,
-            'role' => 'Same-Day Cleaning',
+            'role' => 'Deep Cleaning',
         ],
         [
             'name' => 'Lester Dela Cruz',
             'review' => 'The progress updates helped a lot. I always knew when the booking was confirmed and when the provider was already on the way.',
             'rating' => 5,
-            'role' => 'Booking Updates',
+            'role' => 'Specific Area Cleaning',
         ],
         [
             'name' => 'Sheila Gomez',
             'review' => 'What I liked most was the clear schedule and professional approach. It felt safe, organized, and worth booking again.',
             'rating' => 5,
-            'role' => 'Verified Provider',
+            'role' => 'General Cleaning',
         ],
         [
             'name' => 'Marco Villanueva',
             'review' => 'The provider handled the service well and the platform looked trustworthy. The steps were simple enough even for first-time users.',
             'rating' => 5,
-            'role' => 'Easy Booking',
+            'role' => 'Deep Cleaning',
         ],
         [
             'name' => 'Nica Fernandez',
             'review' => 'I appreciated how clean the website looked and how easy it was to choose a service. It made the whole process feel premium.',
             'rating' => 5,
-            'role' => 'Smooth Experience',
+            'role' => 'Specific Area Cleaning',
         ],
         [
             'name' => 'Paolo Mendez',
             'review' => 'From booking to completion, the flow stayed clear and professional. I would recommend it to anyone looking for a reliable cleaning service.',
             'rating' => 5,
-            'role' => 'Trusted Service',
+            'role' => 'General Cleaning',
         ],
     ];
 
@@ -639,8 +639,8 @@ html, body {
 
 @media (max-width: 767.98px) {
     .hero {
-        min-height: auto;
-        padding: 36px 0 28px;
+        min-height: 78vh;
+        padding: 82px 0 34px;
     }
 
     .steps-section,
@@ -648,50 +648,147 @@ html, body {
     .services-showcase,
     .promo-banner,
     .mission {
-        padding: 4.2rem 0;
+        padding: 3.2rem 0;
+    }
+
+    .hero-content {
+        width: 100%;
+        padding-inline: 4px;
+    }
+
+    .hero h1 {
+        font-size: clamp(2.7rem, 14vw, 3.2rem);
+        line-height: .98;
+        margin-bottom: .75rem;
+    }
+
+    .hero p {
+        max-width: 320px;
+        margin: 0 auto 1.5rem;
+        font-size: 1rem;
+        line-height: 1.55;
     }
 
     .hero-actions {
         flex-direction: column;
         gap: 12px;
+        width: 100%;
+        max-width: 100%;
+        margin-inline: auto;
     }
 
     .button-txt,
     .button-outline {
         width: 100%;
+        min-height: 56px;
+        border-radius: 18px;
+    }
+
+    .section-title {
+        margin-bottom: 1.45rem;
+    }
+
+    .section-title h2 {
+        font-size: 2rem;
+        line-height: 1.08;
+    }
+
+    .section-title p {
+        font-size: .98rem;
+        line-height: 1.6;
     }
 
     .steps-shell,
     .testimonial-shell {
-        padding: 22px 18px;
+        padding: 18px 14px;
+        border-radius: 24px;
     }
 
     .steps-grid {
         grid-template-columns: 1fr;
-        gap: 18px;
+        gap: 14px;
     }
 
     .work-image-card {
-        height: 260px;
+        height: 220px;
+        border-radius: 18px;
+    }
+
+    .work-overlay {
+        padding: 1.15rem;
+    }
+
+    .work-overlay h5 {
+        font-size: 1.45rem;
+        margin-bottom: .28rem;
+    }
+
+    .work-overlay p {
+        font-size: .9rem;
+        line-height: 1.5;
     }
 
     .testimonial-top {
         gap: 14px;
+        justify-content: center;
+        text-align: center;
+        margin-bottom: 16px;
+    }
+
+    .testimonial-top .section-title {
+        text-align: center !important;
+        margin-bottom: 0;
+    }
+
+    .testimonial-top .section-title p {
+        max-width: none;
     }
 
     .testimonial-slide {
         min-width: 100%;
         flex-basis: 100%;
-        padding: 8px 4px;
+        padding: 6px 0;
     }
 
     .testimonial-card {
-        padding: 20px;
+        padding: 18px;
+        border-radius: 22px;
+        gap: 14px;
+    }
+
+    .testimonial-head {
+        gap: 12px;
+    }
+
+    .testimonial-avatar {
+        width: 56px;
+        height: 56px;
+        flex-basis: 56px;
+        border-radius: 18px;
+    }
+
+    .testimonial-name {
+        font-size: 1rem;
+    }
+
+    .testimonial-role {
+        font-size: .72rem;
+    }
+
+    .testimonial-text {
+        font-size: .93rem;
+        line-height: 1.64;
+    }
+
+    .testimonial-foot {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
     }
 
     .testimonial-controls {
         width: 100%;
-        justify-content: flex-end;
+        justify-content: center;
     }
 }
 </style>
