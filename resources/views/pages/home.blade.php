@@ -671,17 +671,19 @@ html, body {
 
     .hero-actions {
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
         width: 100%;
-        max-width: 100%;
+        max-width: 300px;
         margin-inline: auto;
     }
 
     .button-txt,
     .button-outline {
         width: 100%;
-        min-height: 56px;
-        border-radius: 18px;
+        min-height: 50px;
+        padding: .76rem 1.15rem;
+        border-radius: 16px;
+        font-size: .92rem;
     }
 
     .section-title {
