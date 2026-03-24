@@ -446,24 +446,6 @@ html, body {
     border-color: rgba(56,189,248,.20);
 }
 
-.testimonial-summary {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 16px;
-    border-radius: 999px;
-    background: rgba(255,255,255,.04);
-    border: 1px solid rgba(255,255,255,.08);
-    color: #dce8f8;
-    font-size: .92rem;
-    font-weight: 700;
-}
-
-.testimonial-summary strong {
-    color: #fff;
-    font-size: 1.05rem;
-}
-
 .testimonial-viewport {
     overflow: hidden;
     padding: 4px 2px 6px;
@@ -707,11 +689,6 @@ html, body {
         padding: 20px;
     }
 
-    .testimonial-summary {
-        width: 100%;
-        justify-content: center;
-    }
-
     .testimonial-controls {
         width: 100%;
         justify-content: flex-end;
@@ -834,12 +811,9 @@ html, body {
                     </div>
 
                     <div class="d-flex align-items-center gap-3 flex-wrap justify-content-end">
-                        <div class="testimonial-summary">
-                            <strong>{{ count($testimonials) }}</strong> customer reviews
-                        </div>
                         <div class="testimonial-controls">
-                        <button type="button" class="testimonial-arrow" id="reviewPrev" aria-label="Previous review">&#8592;</button>
-                        <button type="button" class="testimonial-arrow" id="reviewNext" aria-label="Next review">&#8594;</button>
+                            <button type="button" class="testimonial-arrow" id="reviewPrev" aria-label="Previous review">&#8592;</button>
+                            <button type="button" class="testimonial-arrow" id="reviewNext" aria-label="Next review">&#8594;</button>
                         </div>
                     </div>
                 </div>
