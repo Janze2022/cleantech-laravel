@@ -125,8 +125,8 @@
 }
 
 .dashboard-grid > .panel {
-    align-self: start;
-    height: auto;
+    align-self: stretch;
+    height: 100%;
 }
 
 .panel {
@@ -171,10 +171,11 @@
 .queue-wrap {
     display: grid;
     grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
     gap: 12px;
     align-items: stretch;
-    min-height: 0;
-    align-content: start;
+    min-height: 100%;
+    height: 100%;
 }
 
 .queue-block {
@@ -185,8 +186,8 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    height: auto;
-    min-height: auto;
+    height: 100%;
+    min-height: 0;
 }
 
 .queue-head {
@@ -215,7 +216,7 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(110px, 1fr));
     gap: 10px;
-    flex: none;
+    flex: 1;
     align-items: stretch;
 }
 
@@ -232,6 +233,7 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    height: 100%;
 }
 
 .status-card label {
