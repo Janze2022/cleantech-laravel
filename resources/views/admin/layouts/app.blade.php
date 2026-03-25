@@ -234,6 +234,14 @@
             border-color:rgba(255,255,255,.06);
         }
 
+        .modal-backdrop{
+            z-index: 2000 !important;
+        }
+
+        .modal{
+            z-index: 2010 !important;
+        }
+
         .admin-content .table{
             color:var(--admin-text);
             margin-bottom:0;
