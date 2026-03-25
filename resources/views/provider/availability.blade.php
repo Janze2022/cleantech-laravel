@@ -583,7 +583,6 @@
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <div>
             <h5 class="mb-1" style="color: var(--text-strong);">Availability History</h5>
-            <div class="muted" style="font-size:.9rem;">View, search, and manage your saved schedules</div>
         </div>
     </div>
 

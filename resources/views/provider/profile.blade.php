@@ -316,7 +316,6 @@ textarea.form-control{
 
         <div class="profile-header">
             <h4>Profile Settings</h4>
-            <p>Manage your provider photo, contact details, and account security.</p>
         </div>
 
         @if(session('success'))
@@ -341,7 +340,6 @@ textarea.form-control{
 
         <div class="profile-section">
             <h6>Profile Picture</h6>
-            <p>Upload a JPG, PNG, GIF, or WEBP image up to 5MB.</p>
 
             <form method="POST" action="{{ route('provider.profile.image.update') }}" enctype="multipart/form-data">
                 @csrf
@@ -376,7 +374,6 @@ textarea.form-control{
 
         <div class="profile-section">
             <h6>Profile Information</h6>
-            <p>Update the contact details customers use to reach you.</p>
 
             <form method="POST" action="{{ route('provider.profile.update') }}">
                 @csrf
@@ -424,7 +421,6 @@ textarea.form-control{
 
         <div class="profile-section">
             <h6>Address and Account</h6>
-            <p>Your location and approval details are shown here for reference.</p>
 
             <div class="readonly-grid">
                 <div class="readonly-card">
@@ -466,7 +462,6 @@ textarea.form-control{
 
         <div class="profile-section">
             <h6>Change Password</h6>
-            <p>For security, use a strong password that only you know.</p>
 
             <form method="POST" action="{{ route('provider.password.update') }}">
                 @csrf

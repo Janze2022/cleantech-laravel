@@ -606,7 +606,6 @@ canvas{
 <div class="page-head">
     <div>
         <h4>Analytics</h4>
-        <div class="muted">Earnings, top dates, and service trends</div>
     </div>
 
     <div class="filters">
@@ -658,7 +657,6 @@ canvas{
 
 <div class="cardx">
     <div class="soft" style="font-weight:900;">Overview</div>
-    <div class="muted" style="margin-top:.15rem;">Quick KPIs based on provider booking analytics</div>
 
     <div class="kpi-grid">
         <div class="kpi">
@@ -667,7 +665,6 @@ canvas{
                 <span class="pill">TOTAL</span>
             </div>
             <div class="value">₱{{ number_format($annualTotal ?? 0, 2) }}</div>
-            <div class="sub">Paid + completed</div>
         </div>
 
         <div class="kpi">
@@ -676,7 +673,6 @@ canvas{
                 <span class="pill">{{ (int)($days ?? 14) }}D</span>
             </div>
             <div class="value">₱{{ number_format($dailySum, 2) }}</div>
-            <div class="sub">Sum of displayed days</div>
         </div>
 
         <div class="kpi">
@@ -685,7 +681,6 @@ canvas{
                 <span class="pill">{{ (int)($months ?? 12) }}M</span>
             </div>
             <div class="value">₱{{ number_format($monthlySum, 2) }}</div>
-            <div class="sub">Sum of displayed months</div>
         </div>
 
         <div class="kpi">
@@ -703,7 +698,6 @@ canvas{
                 <span class="pill">{{ $topServiceCount }} BOOKINGS</span>
             </div>
             <div class="value" style="color: var(--accent);">{{ $topServiceLabel }}</div>
-            <div class="sub">Most booked service</div>
         </div>
     </div>
 </div>
@@ -713,7 +707,6 @@ canvas{
         <div class="panel-title" style="margin-bottom:.3rem;">
             <div>
                 <h6>Selected Date Earnings</h6>
-                <div class="hint">{{ \Carbon\Carbon::parse($selectedDate)->format('F d, Y') }}</div>
             </div>
         </div>
 
@@ -736,7 +729,6 @@ canvas{
         <div class="panel-title">
             <div>
                 <h6>Daily Earnings Graph</h6>
-                <div class="hint">Paid + completed earnings per day</div>
             </div>
             <div class="muted" style="font-size:.82rem;">Line graph</div>
         </div>
@@ -745,11 +737,6 @@ canvas{
             <canvas id="dailyChart"></canvas>
         </div>
 
-        <div class="divider"></div>
-
-        <div class="muted" style="font-size:.82rem;">
-            Use this to see which dates are strongest so you can align your availability better.
-        </div>
     </div>
 
     <div class="stack">
@@ -757,7 +744,6 @@ canvas{
             <div class="panel-title" style="margin-bottom:.25rem;">
                 <div>
                     <h6>Status Breakdown</h6>
-                    <div class="hint">Booking count by status</div>
                 </div>
             </div>
 
@@ -815,7 +801,6 @@ canvas{
         <div class="panel-title">
             <div>
                 <h6>Monthly Earnings</h6>
-                <div class="hint">Paid + completed earnings per month</div>
             </div>
             <div class="muted" style="font-size:.82rem;">Bar chart</div>
         </div>
@@ -829,7 +814,6 @@ canvas{
         <div class="panel-title">
             <div>
                 <h6>Top Trend Services</h6>
-                <div class="hint">Most booked services for the selected filter</div>
             </div>
             <div class="muted" style="font-size:.82rem;">Horizontal bar chart</div>
         </div>
@@ -843,7 +827,6 @@ canvas{
         <div class="panel-title">
             <div>
                 <h6>Earnings by Actual Date</h6>
-                <div class="hint">Track exactly how much you earned on each date</div>
             </div>
             <div class="muted" style="font-size:.82rem;">Detailed breakdown</div>
         </div>

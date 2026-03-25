@@ -426,7 +426,6 @@
             <div class="ratings-head">
                 <div>
                     <h1 class="ratings-title">Ratings and Reviews</h1>
-                    <p class="ratings-subtitle">See how customers rate your service and read their latest feedback.</p>
                 </div>
 
                 <div class="ratings-chip">
@@ -465,7 +464,6 @@
 
         <section class="ratings-card">
             <h2 class="card-title">Rating breakdown</h2>
-            <p class="card-subtitle">A quick look at how your scores are distributed.</p>
 
             <div class="breakdown-list">
                 @foreach($breakdown as $row)
@@ -483,7 +481,6 @@
 
         <section class="ratings-card">
             <h2 class="card-title">Quick notes</h2>
-            <p class="card-subtitle">Small signals that help you read your feedback faster.</p>
 
             <div class="quick-notes" style="margin-top:1rem;">
                 <div class="note-box">

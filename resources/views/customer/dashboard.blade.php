@@ -130,14 +130,6 @@
         letter-spacing: -0.04em;
     }
 
-    .hero-subtitle {
-        max-width: 640px;
-        margin: 0.85rem 0 0;
-        color: var(--dash-muted);
-        font-size: 1rem;
-        line-height: 1.7;
-    }
-
     .hero-actions {
         display: flex;
         flex-wrap: wrap;
@@ -210,12 +202,6 @@
         font-size: 1.25rem;
         font-weight: 900;
         line-height: 1.2;
-    }
-
-    .hero-summary-note {
-        color: var(--dash-muted);
-        font-size: 0.92rem;
-        line-height: 1.6;
     }
 
     .hero-summary-badges {
@@ -292,13 +278,6 @@
         line-height: 1;
     }
 
-    .overview-text {
-        margin-top: 0.55rem;
-        color: var(--dash-muted);
-        font-size: 0.88rem;
-        line-height: 1.45;
-    }
-
     .dashboard-main {
         display: grid;
         grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.95fr);
@@ -323,13 +302,6 @@
         font-size: 1.15rem;
         font-weight: 900;
         letter-spacing: -0.02em;
-    }
-
-    .panel-subtitle {
-        margin: 0.35rem 0 0;
-        color: var(--dash-muted);
-        font-size: 0.86rem;
-        line-height: 1.5;
     }
 
     .panel-tag {
@@ -371,13 +343,6 @@
         margin-top: 0.55rem;
         font-size: 1.1rem;
         font-weight: 900;
-    }
-
-    .insight-caption {
-        margin-top: 0.35rem;
-        color: var(--dash-muted);
-        font-size: 0.78rem;
-        line-height: 1.4;
     }
 
     .next-steps {
@@ -423,13 +388,6 @@
     .step-title {
         font-weight: 800;
         font-size: 0.94rem;
-    }
-
-    .step-copy {
-        margin-top: 0.2rem;
-        color: var(--dash-muted);
-        font-size: 0.78rem;
-        line-height: 1.35;
     }
 
     .recent-card {
@@ -573,13 +531,6 @@
         margin-bottom: 0.35rem;
     }
 
-    .empty-state-copy {
-        color: var(--dash-muted);
-        font-size: 0.95rem;
-        line-height: 1.7;
-        margin-bottom: 1rem;
-    }
-
     @media (max-width: 1199.98px) {
         .hero-grid,
         .dashboard-main {
@@ -649,10 +600,6 @@
 
                     <h1 class="hero-title">Welcome back, {{ $name }}.</h1>
 
-                    <p class="hero-subtitle">
-                        See what is active, check your totals, and book again when you need to.
-                    </p>
-
                     <div class="hero-actions">
                         <a class="hero-button" href="{{ route('customer.services') }}">
                             <i class="bi bi-search"></i>
@@ -675,9 +622,6 @@
                     <div>
                         <div class="hero-summary-label">Today</div>
                         <div class="hero-summary-date">{{ $now->format('l, F j, Y') }}</div>
-                        <div class="hero-summary-note">
-                            {{ $bookingsToday }} today and {{ $activeBookings }} active right now.
-                        </div>
                     </div>
 
                     <div class="hero-summary-badges">
@@ -709,9 +653,6 @@
                     </div>
                 </div>
                 <div class="overview-value">{{ $activeBookings }}</div>
-                <div class="overview-text">
-                    {{ $activeBookings > 0 ? 'In progress now.' : 'Nothing in progress.' }}
-                </div>
             </article>
 
             <article class="overview-card">
@@ -722,9 +663,6 @@
                     </div>
                 </div>
                 <div class="overview-value">{{ $totalBookings }}</div>
-                <div class="overview-text">
-                    Booked so far.
-                </div>
             </article>
 
             <article class="overview-card">
@@ -735,9 +673,6 @@
                     </div>
                 </div>
                 <div class="overview-value">{{ $formatMoney($totalSpent) }}</div>
-                <div class="overview-text">
-                    Paid and completed.
-                </div>
             </article>
         </section>
 
@@ -746,7 +681,6 @@
                 <div class="panel-header">
                     <div>
                         <h2 class="panel-title">Spending snapshot</h2>
-                        <p class="panel-subtitle">A quick look at your recent totals.</p>
                     </div>
 
                     <div class="panel-tag">
@@ -759,25 +693,21 @@
                     <div class="insight-item">
                         <div class="insight-label">Spent today</div>
                         <div class="insight-value">{{ $formatMoney($spentToday) }}</div>
-                        <div class="insight-caption">Today</div>
                     </div>
 
                     <div class="insight-item">
                         <div class="insight-label">Spent this month</div>
                         <div class="insight-value">{{ $formatMoney($spentMonth) }}</div>
-                        <div class="insight-caption">{{ $now->format('F') }}</div>
                     </div>
 
                     <div class="insight-item">
                         <div class="insight-label">Spent this year</div>
                         <div class="insight-value">{{ $formatMoney($spentYear) }}</div>
-                        <div class="insight-caption">{{ $now->format('Y') }}</div>
                     </div>
 
                     <div class="insight-item">
                         <div class="insight-label">Completed today</div>
                         <div class="insight-value">{{ $completedToday }}</div>
-                        <div class="insight-caption">Done today</div>
                     </div>
                 </div>
             </article>
@@ -786,7 +716,6 @@
                 <div class="panel-header">
                     <div>
                         <h2 class="panel-title">Quick links</h2>
-                        <p class="panel-subtitle">Fast access to the pages you will use most.</p>
                     </div>
                 </div>
 
@@ -797,7 +726,6 @@
                         </div>
                         <div>
                             <div class="step-title">Browse services</div>
-                            <div class="step-copy">Book now</div>
                         </div>
                     </a>
 
@@ -807,7 +735,6 @@
                         </div>
                         <div>
                             <div class="step-title">Check active bookings</div>
-                            <div class="step-copy">In progress</div>
                         </div>
                     </a>
 
@@ -817,7 +744,6 @@
                         </div>
                         <div>
                             <div class="step-title">Review past bookings</div>
-                            <div class="step-copy">Completed jobs</div>
                         </div>
                     </a>
 
@@ -827,7 +753,6 @@
                         </div>
                         <div>
                             <div class="step-title">Update your profile</div>
-                            <div class="step-copy">Account settings</div>
                         </div>
                     </a>
                 </div>
@@ -838,7 +763,6 @@
             <div class="recent-head">
                 <div>
                     <h2 class="panel-title">Completed bookings</h2>
-                    <p class="panel-subtitle">Your latest finished jobs.</p>
                 </div>
 
                 <a class="recent-link" href="{{ route('customer.bookings.history', ['status' => 'completed']) }}">
@@ -928,9 +852,6 @@
                         <i class="bi bi-house-heart"></i>
                     </div>
                     <div class="empty-state-title">No completed bookings yet</div>
-                    <div class="empty-state-copy">
-                        Finished bookings will show up here once you complete your first service.
-                    </div>
                     <a class="hero-button" href="{{ route('customer.services') }}">
                         <i class="bi bi-search"></i>
                         <span>Explore Services</span>

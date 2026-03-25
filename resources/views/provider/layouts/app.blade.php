@@ -102,9 +102,7 @@
         }
 
         .panel-brand p{
-            margin:.2rem 0 0;
-            color:var(--muted);
-            font-size:.82rem;
+            display:none;
         }
 
         .panel-nav{
@@ -165,10 +163,7 @@
         }
 
         .panel-link-text span{
-            display:block;
-            margin-top:.18rem;
-            color:var(--muted);
-            font-size:.75rem;
+            display:none;
         }
 
         .provider-topbar{
@@ -609,7 +604,6 @@
         </div>
         <div>
             <h5>Provider Panel</h5>
-            <p>Bookings, availability, and earnings</p>
         </div>
     </div>
 
@@ -618,7 +612,6 @@
             <span class="panel-link-icon"><i class="bi bi-grid"></i></span>
             <span class="panel-link-text">
                 <strong>Dashboard</strong>
-                <span>Overview and activity</span>
             </span>
         </a>
 
@@ -626,7 +619,6 @@
             <span class="panel-link-icon"><i class="bi bi-calendar2-week"></i></span>
             <span class="panel-link-text">
                 <strong>Availability</strong>
-                <span>Manage open schedules</span>
             </span>
         </a>
 
@@ -634,7 +626,6 @@
             <span class="panel-link-icon"><i class="bi bi-briefcase"></i></span>
             <span class="panel-link-text">
                 <strong>Bookings</strong>
-                <span>Current customer jobs</span>
             </span>
         </a>
 
@@ -642,7 +633,6 @@
             <span class="panel-link-icon"><i class="bi bi-clock-history"></i></span>
             <span class="panel-link-text">
                 <strong>Booking History</strong>
-                <span>Completed and past work</span>
             </span>
         </a>
 
@@ -650,7 +640,6 @@
             <span class="panel-link-icon"><i class="bi bi-graph-up"></i></span>
             <span class="panel-link-text">
                 <strong>Analytics</strong>
-                <span>Performance trends</span>
             </span>
         </a>
 
@@ -658,7 +647,6 @@
             <span class="panel-link-icon"><i class="bi bi-wallet2"></i></span>
             <span class="panel-link-text">
                 <strong>Earnings</strong>
-                <span>Income and remittance view</span>
             </span>
         </a>
 
@@ -666,7 +654,6 @@
             <span class="panel-link-icon"><i class="bi bi-stars"></i></span>
             <span class="panel-link-text">
                 <strong>My Ratings</strong>
-                <span>Customer feedback</span>
             </span>
         </a>
     </nav>

@@ -393,7 +393,7 @@ textarea.form-control{
 .location-top-grid,
 .location-controls-grid{
     display:grid;
-    grid-template-columns:minmax(0, 1.35fr) minmax(220px, .65fr);
+    grid-template-columns:minmax(0, 1fr);
     gap:.75rem;
     align-items:start;
 }
@@ -567,7 +567,6 @@ body::-webkit-scrollbar-thumb:hover,
             <div class="booking-summary-head">
                 <div>
                     <h6>Quick Summary</h6>
-                    <div class="booking-summary-note">Your choices will show here.</div>
                 </div>
                 <div class="booking-date-chip">{{ $selectedDateLabel ?? 'Today' }}</div>
             </div>
@@ -706,23 +705,10 @@ body::-webkit-scrollbar-thumb:hover,
                                         type="text"
                                         id="locationSearch"
                                         class="form-control"
-                                        placeholder="Search street, place, or barangay"
+                                        placeholder="Search street or place"
                                         autocomplete="off"
                                     >
                                     <div id="locationResults" class="location-results hidden"></div>
-                                </div>
-                            </div>
-
-                            <div class="location-card">
-                                <span class="location-card-label">Barangay</span>
-                                <select id="barangay" class="form-control" required>
-                                    <option value="">Choose barangay</option>
-                                    @if(old('barangay'))
-                                        <option value="{{ old('barangay') }}" selected>{{ old('barangay') }}</option>
-                                    @endif
-                                </select>
-                                <div class="location-helper">
-                                    The map will try to match this. You can change it anytime.
                                 </div>
                             </div>
                         </div>
@@ -1284,7 +1270,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const cityInputEl = document.getElementById('cityInput');
     const provinceInputEl = document.getElementById('provinceInput');
     const barangayTextEl = document.getElementById('barangay_text');
-    const barangaySelectEl = document.getElementById('barangay');
 
     if (!searchEl || !resultsEl || !mapEl || !statusEl || !previewEl || !window.L) {
         return;
@@ -1299,7 +1284,6 @@ window.addEventListener('DOMContentLoaded', () => {
     let searchTimer = null;
     let activeSearchRequest = 0;
     let activeReverseRequest = 0;
-    let barangayCatalog = [];
 
     function setStatus(message, isError = false) {
         statusEl.textContent = message;
@@ -1319,74 +1303,10 @@ window.addEventListener('DOMContentLoaded', () => {
         updateLocationPreview(lat, lng, formattedAddress);
     }
 
-    function normalizeBarangay(value) {
-        return String(value || '').trim().toLowerCase();
-    }
-
-    function buildBarangayOptions(names) {
-        if (!barangaySelectEl) {
-            return;
-        }
-
-        const currentValue = String(barangayTextEl?.value || '').trim();
-        const normalizedCurrentValue = normalizeBarangay(currentValue);
-
-        barangaySelectEl.innerHTML = '<option value="">Choose barangay</option>';
-
-        names.forEach((name) => {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-
-            if (normalizeBarangay(name) === normalizedCurrentValue) {
-                option.selected = true;
-            }
-
-            barangaySelectEl.appendChild(option);
-        });
-
-        if (currentValue && !names.some((name) => normalizeBarangay(name) === normalizedCurrentValue)) {
-            const fallbackOption = document.createElement('option');
-            fallbackOption.value = currentValue;
-            fallbackOption.textContent = currentValue;
-            fallbackOption.selected = true;
-            fallbackOption.dataset.custom = 'true';
-            barangaySelectEl.appendChild(fallbackOption);
-        }
-    }
-
     function setBarangayValue(name) {
-        const value = String(name || '').trim();
-
         if (barangayTextEl) {
-            barangayTextEl.value = value;
+            barangayTextEl.value = String(name || '').trim();
         }
-
-        if (!barangaySelectEl) {
-            return;
-        }
-
-        if (!value) {
-            barangaySelectEl.value = '';
-            return;
-        }
-
-        const normalizedValue = normalizeBarangay(value);
-        const matchingOption = Array.from(barangaySelectEl.options).find((option) => {
-            return normalizeBarangay(option.value || option.textContent) === normalizedValue;
-        });
-
-        if (matchingOption) {
-            barangaySelectEl.value = matchingOption.value;
-            return;
-        }
-
-        const customOption = document.createElement('option');
-        customOption.value = value;
-        customOption.textContent = value;
-        customOption.selected = true;
-        customOption.dataset.custom = 'true';
-        barangaySelectEl.appendChild(customOption);
     }
 
     function clearResults() {
@@ -1396,51 +1316,25 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function syncBarangaySelection(candidate) {
         const rawCandidate = String(candidate || '').trim();
-        const normalizedCandidate = normalizeBarangay(rawCandidate);
-
-        if (!normalizedCandidate || !barangayTextEl) {
+        if (!rawCandidate || !barangayTextEl) {
             return;
         }
-
-        if (!barangayCatalog.length) {
-            setBarangayValue(rawCandidate);
-            return;
-        }
-
-        const matchedOption = barangayCatalog.find((name) => {
-            return normalizeBarangay(name) === normalizedCandidate;
-        });
-
-        if (!matchedOption) {
-            setBarangayValue(rawCandidate);
-            return;
-        }
-
-        setBarangayValue(matchedOption);
+        setBarangayValue(rawCandidate);
     }
 
     function syncBarangayFromFormattedAddress(formattedAddress) {
         const normalizedAddress = String(formattedAddress || '').trim().toLowerCase();
-
-        if (!normalizedAddress || !barangayTextEl || !barangayCatalog.length) {
+        if (!normalizedAddress || !barangayTextEl) {
             return;
         }
-
-        const matchedOption = barangayCatalog.find((name) => {
-            const optionText = String(name).trim().toLowerCase();
-
-            if (!optionText) {
-                return false;
-            }
-
-            return normalizedAddress.includes(optionText);
-        });
-
-        if (!matchedOption) {
-            return;
+        const segments = normalizedAddress
+            .split(',')
+            .map((segment) => segment.trim())
+            .filter(Boolean);
+        const guess = segments.length > 1 ? segments[1] : '';
+        if (guess) {
+            setBarangayValue(guess);
         }
-
-        setBarangayValue(matchedOption);
     }
 
     function syncAdministrativeFields(result) {
@@ -1669,26 +1563,6 @@ window.addEventListener('DOMContentLoaded', () => {
             clearResults();
         }
     });
-
-    barangaySelectEl?.addEventListener('change', () => {
-        setBarangayValue(barangaySelectEl.value || '');
-    });
-
-    fetch('https://psgc.gitlab.io/api/cities-municipalities/160202000/barangays/')
-        .then((response) => response.json())
-        .then((rows) => {
-            barangayCatalog = Array.isArray(rows)
-                ? rows.map((row) => String(row.name || '').trim()).filter(Boolean)
-                : [];
-
-            buildBarangayOptions(barangayCatalog);
-            syncBarangaySelection(barangayTextEl?.value || '');
-        })
-        .catch(() => {
-            barangayCatalog = [];
-            buildBarangayOptions([]);
-            setBarangayValue(barangayTextEl?.value || '');
-        });
 
     const oldLatitude = Number(OLD_CUSTOMER_LATITUDE || 0);
     const oldLongitude = Number(OLD_CUSTOMER_LONGITUDE || 0);

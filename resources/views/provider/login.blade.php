@@ -249,9 +249,6 @@
     <div class="auth-card">
 
         <h4 class="text-center">Provider Login</h4>
-        <p class="auth-subtext text-center">
-            Manage your services and bookings.
-        </p>
 
         @if (session('success'))
             <div class="alert alert-success text-center">

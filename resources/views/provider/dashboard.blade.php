@@ -30,16 +30,16 @@
     justify-content:space-between;
     gap:1rem;
     flex-wrap:wrap;
-    margin-bottom: 1.25rem;
+    margin-bottom: .9rem;
 }
 
 .kpi-row{
     display:grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-    margin-bottom: 1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .85rem;
+    margin-bottom: .85rem;
 }
-@media (max-width: 1200px){ .kpi-row{ grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1320px){ .kpi-row{ grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px){ .kpi-row{ grid-template-columns: 1fr; } }
 
 .cardx{
@@ -47,7 +47,7 @@
                 linear-gradient(180deg, var(--bg-card), var(--bg-deep));
     border: 1px solid var(--border-soft);
     border-radius: 18px;
-    padding: 1.25rem;
+    padding: 1rem;
     box-shadow: 0 16px 40px rgba(0,0,0,.35);
 }
 
@@ -58,11 +58,12 @@
     color: var(--text-muted);
 }
 .kpi-value{
-    margin-top:.55rem;
-    font-size:1.55rem;
+    margin-top:.42rem;
+    font-size:1.22rem;
     font-weight: 950;
     color:#fff;
     word-break: break-word;
+    line-height:1.28;
 }
 .kpi-sub{
     margin-top:.25rem;
@@ -71,13 +72,16 @@
 }
 .kpi-accent{ color: var(--accent); }
 .kpi-good{ color: var(--good); }
+.kpi-value.email-value{
+    font-size:1rem;
+}
 
 .grid-analytics{
     display:grid;
     grid-template-columns: 1fr 1.15fr 1fr;
-    gap: 1rem;
-    margin-top: 1rem;
-    margin-bottom: 1.2rem;
+    gap: .85rem;
+    margin-top: .85rem;
+    margin-bottom: 1rem;
 }
 @media (max-width: 1200px){
     .grid-analytics{ grid-template-columns: 1fr; }
@@ -103,8 +107,8 @@
 
 .ring-wrap{
     display:grid;
-    grid-template-columns: 190px 1fr;
-    gap: 1rem;
+    grid-template-columns: 148px 1fr;
+    gap: .85rem;
     align-items:center;
 }
 @media (max-width: 600px){
@@ -113,13 +117,13 @@
 
 .ring{
     position: relative;
-    width: 180px;
-    height: 180px;
+    width: 140px;
+    height: 140px;
     margin: .25rem auto;
 }
 .ring svg{
-    width: 180px;
-    height: 180px;
+    width: 140px;
+    height: 140px;
     transform: rotate(-90deg);
 }
 .ring .center{
@@ -134,7 +138,7 @@
 }
 .ring .center .big{
     font-weight: 950;
-    font-size: 1.55rem;
+    font-size: 1.28rem;
     color:#fff;
     line-height: 1.05;
 }
@@ -148,7 +152,7 @@
 
 .legend{
     display:grid;
-    gap: .55rem;
+    gap: .45rem;
 }
 .legend-item{
     display:flex;
@@ -157,8 +161,8 @@
     gap: .75rem;
     border: 1px solid rgba(255,255,255,.06);
     background: rgba(2,6,23,.35);
-    border-radius: 14px;
-    padding:.6rem .75rem;
+    border-radius: 12px;
+    padding:.52rem .65rem;
 }
 .legend-left{
     display:flex;
@@ -172,14 +176,12 @@
     flex: 0 0 auto;
 }
 .legend-name{
-    font-size:.84rem;
+    font-size:.8rem;
     color: rgba(255,255,255,.82);
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
+    white-space:normal;
 }
 .legend-val{
-    font-size:.84rem;
+    font-size:.8rem;
     color: rgba(255,255,255,.75);
     font-weight: 900;
 }
@@ -246,7 +248,6 @@
 <div class="page-head">
     <div>
         <h4 class="mb-1">Welcome back, {{ $provider->first_name ?? 'Provider' }}</h4>
-        <div class="muted">Manage your availability, bookings, and earnings</div>
     </div>
 </div>
 
@@ -254,25 +255,21 @@
     <div class="cardx">
         <div class="kpi-label">Account Status</div>
         <div class="kpi-value kpi-good">{{ $provider->status ?? '—' }}</div>
-        <div class="kpi-sub">Provider verification</div>
     </div>
 
     <div class="cardx">
         <div class="kpi-label">Email</div>
-        <div class="kpi-value kpi-accent">{{ $provider->email ?? '—' }}</div>
-        <div class="kpi-sub">Primary account email</div>
+        <div class="kpi-value kpi-accent email-value">{{ $provider->email ?? '—' }}</div>
     </div>
 
     <div class="cardx">
         <div class="kpi-label">Phone</div>
         <div class="kpi-value">{{ $provider->phone ?? '—' }}</div>
-        <div class="kpi-sub">Contact number</div>
     </div>
 
     <div class="cardx">
         <div class="kpi-label">Today’s Earnings</div>
         <div class="kpi-value kpi-good">₱{{ number_format($todayEarnings ?? 0, 2) }}</div>
-        <div class="kpi-sub">Based on <b>paid + completed</b> updated today</div>
     </div>
 </div>
 
@@ -282,7 +279,6 @@
         <div class="panel-title">
             <div>
                 <h6>Today’s Activity</h6>
-                <div class="hint">Bookings updated today (status changes)</div>
             </div>
             <div class="muted" style="font-size:.85rem;">{{ \Carbon\Carbon::parse($today)->format('F d, Y') }}</div>
         </div>
@@ -343,7 +339,6 @@
         <div class="panel-title">
             <div>
                 <h6>Today Status Mix</h6>
-                <div class="hint">Distribution of bookings updated today</div>
             </div>
             <div class="muted" style="font-size:.85rem;">Totals</div>
         </div>
@@ -414,7 +409,6 @@
         <div class="panel-title">
             <div>
                 <h6>Today Earned</h6>
-                <div class="hint">Money recognized today (paid + completed)</div>
             </div>
             <div class="muted" style="font-size:.85rem;">₱</div>
         </div>
@@ -453,9 +447,6 @@
             </div>
         </div>
 
-        <div class="muted" style="margin-top:.75rem; font-size:.85rem;">
-            Based on bookings updated today to <b>paid</b> or <b>completed</b>.
-        </div>
     </div>
 </div>
 

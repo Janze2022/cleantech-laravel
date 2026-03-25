@@ -211,7 +211,6 @@
 
         <div class="profile-header">
             <h4>Profile Settings</h4>
-            <p>Manage your admin account details and security.</p>
         </div>
 
         @if(session('success'))
@@ -230,7 +229,6 @@
 
         <div class="profile-section">
             <h6>Profile Information</h6>
-            <p>Update your admin account details.</p>
 
             <form method="POST" action="{{ route('admin.profile.update') }}">
                 @csrf
@@ -278,7 +276,6 @@
 
         <div class="profile-section">
             <h6>Change Password</h6>
-            <p>Use a strong password to keep your account secure.</p>
 
             <form method="POST" action="{{ route('admin.profile.password') }}">
                 @csrf

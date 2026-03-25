@@ -270,7 +270,6 @@
 
         <div class="profile-header">
             <h4>Profile Settings</h4>
-            <p>Manage your account details and security.</p>
         </div>
 
         @if(session('success'))
@@ -289,7 +288,6 @@
 
         <div class="profile-section">
             <h6>Profile Picture</h6>
-            <p>Upload a JPG, PNG, or WEBP image up to 4MB.</p>
 
             <form method="POST" action="{{ route('customer.profile.image') }}" enctype="multipart/form-data">
                 @csrf
@@ -324,7 +322,6 @@
 
         <div class="profile-section">
             <h6>Profile Information</h6>
-            <p>Update your personal details.</p>
 
             <form method="POST" action="{{ route('customer.profile.update') }}">
                 @csrf
@@ -372,7 +369,6 @@
 
         <div class="profile-section">
             <h6>Change Password</h6>
-            <p>For security, use a strong password.</p>
 
             <form method="POST" action="{{ route('customer.profile.password') }}">
                 @csrf

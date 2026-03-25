@@ -61,7 +61,7 @@
 }
 
 .profile-shell{
-    padding:1.15rem;
+    padding:1rem 1.1rem;
 }
 
 .top-actions{
@@ -101,15 +101,15 @@
 
 .profile-hero{
     display:grid;
-    grid-template-columns: 112px minmax(0, 1fr);
-    gap:1rem;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap:1.1rem;
     align-items:center;
-    margin-top:1rem;
+    margin-top:.9rem;
 }
 
 .provider-avatar{
-    width:112px;
-    height:112px;
+    width:96px;
+    height:96px;
     border-radius:999px;
     object-fit:cover;
     border:2px solid rgba(255,255,255,.12);
@@ -119,7 +119,7 @@
 
 .provider-name{
     margin:0;
-    font-size:1.45rem;
+    font-size:1.55rem;
     font-weight:900;
     line-height:1.1;
 }
@@ -184,13 +184,16 @@
 
 .profile-grid{
     display:grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, .92fr);
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
     gap:1rem;
-    align-items:start;
+    align-items:stretch;
 }
 
 .section-card{
-    padding:1rem;
+    padding:1rem 1.05rem;
+    display:flex;
+    flex-direction:column;
+    gap:.95rem;
 }
 
 .section-title{
@@ -199,18 +202,10 @@
     font-weight:900;
 }
 
-.section-subtitle{
-    margin:.35rem 0 0;
-    color:var(--pp-muted);
-    font-size:.84rem;
-    line-height:1.45;
-}
-
 .detail-grid{
     display:grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap:.75rem;
-    margin-top:1rem;
 }
 
 .detail-card{
@@ -218,6 +213,7 @@
     border-radius:16px;
     border:1px solid rgba(255,255,255,.06);
     background: rgba(255,255,255,.03);
+    min-height:88px;
 }
 
 .detail-card.full{
@@ -249,7 +245,7 @@
     display:grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap:.75rem;
-    margin-top:1rem;
+    align-items:start;
 }
 
 .summary-box{
@@ -257,10 +253,16 @@
     border-radius:16px;
     border:1px solid rgba(255,255,255,.06);
     background: rgba(255,255,255,.03);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    min-height:94px;
 }
 
 .summary-box.wide{
     grid-column: 1 / -1;
+    min-height:auto;
+    justify-content:flex-start;
 }
 
 .summary-label{
@@ -329,7 +331,7 @@
 
 .reviews-toolbar{
     display:flex;
-    align-items:flex-end;
+    align-items:center;
     justify-content:space-between;
     gap:.75rem;
     flex-wrap:wrap;
@@ -355,6 +357,7 @@
     flex-direction:column;
     gap:.35rem;
     min-width:220px;
+    max-width:260px;
 }
 
 .toolbar-control label{
@@ -489,6 +492,11 @@
         justify-items:start;
     }
 
+    .top-actions{
+        flex-direction:column;
+        align-items:stretch;
+    }
+
     .detail-grid,
     .rating-summary-grid{
         grid-template-columns: 1fr;
@@ -575,7 +583,6 @@
         <section class="profile-grid">
             <article class="section-card">
                 <h2 class="section-title">Provider details</h2>
-                <p class="section-subtitle">Basic contact and location details for this provider.</p>
 
                 <div class="detail-grid">
                     <div class="detail-card">
@@ -621,19 +628,16 @@
 
             <aside class="section-card">
                 <h2 class="section-title">Rating summary</h2>
-                <p class="section-subtitle">A quick look at how customers have rated this provider.</p>
 
                 <div class="rating-summary-grid">
                     <div class="summary-box">
                         <div class="summary-label">Average rating</div>
                         <div class="summary-value">{{ $avgText }}</div>
-                        <div class="summary-note">{{ $count > 0 ? 'Based on customer reviews.' : 'No ratings yet.' }}</div>
                     </div>
 
                     <div class="summary-box">
                         <div class="summary-label">Total reviews</div>
                         <div class="summary-value">{{ $count }}</div>
-                        <div class="summary-note">Submitted customer feedback.</div>
                     </div>
 
                     <div class="summary-box wide">
@@ -662,7 +666,6 @@
 
         <section class="section-card">
             <h2 class="section-title">Customer feedback</h2>
-            <p class="section-subtitle">Recent reviews from customers who booked this provider.</p>
 
             @if(($reviews ?? collect())->isEmpty())
                 <div class="empty-card" style="margin-top:1rem;">

@@ -103,9 +103,7 @@
         }
 
         .panel-brand p{
-            margin:.2rem 0 0;
-            color:var(--muted);
-            font-size:.82rem;
+            display:none;
         }
 
         .panel-nav{
@@ -166,10 +164,7 @@
         }
 
         .panel-link-text span{
-            display:block;
-            margin-top:.18rem;
-            color:var(--muted);
-            font-size:.75rem;
+            display:none;
         }
 
         .customer-topbar{
@@ -722,7 +717,6 @@
         </div>
         <div>
             <h5>Customer Panel</h5>
-            <p>Bookings, services, and reviews</p>
         </div>
     </div>
 
@@ -731,7 +725,6 @@
             <span class="panel-link-icon"><i class="bi bi-grid"></i></span>
             <span class="panel-link-text">
                 <strong>Dashboard</strong>
-                <span>Overview and activity</span>
             </span>
         </a>
 
@@ -739,7 +732,6 @@
             <span class="panel-link-icon"><i class="bi bi-stars"></i></span>
             <span class="panel-link-text">
                 <strong>Services</strong>
-                <span>Pick and compare services</span>
             </span>
         </a>
 
@@ -747,7 +739,6 @@
             <span class="panel-link-icon"><i class="bi bi-calendar-check"></i></span>
             <span class="panel-link-text">
                 <strong>My Bookings</strong>
-                <span>Track active schedules</span>
             </span>
         </a>
 
@@ -755,7 +746,6 @@
             <span class="panel-link-icon"><i class="bi bi-clock-history"></i></span>
             <span class="panel-link-text">
                 <strong>Booking History</strong>
-                <span>Past and cancelled jobs</span>
             </span>
         </a>
 
@@ -763,7 +753,6 @@
             <span class="panel-link-icon"><i class="bi bi-chat-square-heart"></i></span>
             <span class="panel-link-text">
                 <strong>Reviews</strong>
-                <span>Your ratings and feedback</span>
             </span>
         </a>
     </nav>

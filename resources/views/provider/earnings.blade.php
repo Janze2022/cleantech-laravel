@@ -139,7 +139,6 @@
     <div class="hero-card">
         <div>
             <h4>Earnings Overview</h4>
-            <p class="mb-0 mt-2">A quick summary of paid and completed provider bookings.</p>
         </div>
 
         <a href="{{ route('provider.analytics') }}" class="btnx">Open Full Analytics</a>
@@ -182,7 +181,7 @@
                     </div>
                 </div>
             @empty
-                <div class="muted">No paid or completed bookings yet.</div>
+                <div class="muted">No bookings yet.</div>
             @endforelse
         </div>
     </div>
