@@ -211,9 +211,19 @@
 }
 
 .queue-total {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(56, 189, 248, 0.16);
+    background: rgba(56, 189, 248, 0.08);
     color: #f8fafc;
-    font-size: 0.84rem;
+    font-size: 0.8rem;
     font-weight: 900;
+    line-height: 1;
 }
 
 .status-grid {
@@ -311,10 +321,12 @@
 
 .revenue-panel {
     margin-top: 14px;
+    padding-bottom: 12px;
 }
 
 .revenue-panel .chart-wrap.tall {
-    min-height: 190px;
+    min-height: 150px;
+    height: 150px;
 }
 
 @media (max-width: 1220px) {
@@ -348,7 +360,8 @@
     }
 
     .revenue-panel .chart-wrap.tall {
-        min-height: 200px;
+        min-height: 165px;
+        height: 165px;
     }
 }
 
@@ -365,7 +378,8 @@
     }
 
     .revenue-panel .chart-wrap.tall {
-        min-height: 190px;
+        min-height: 150px;
+        height: 150px;
     }
 }
 </style>
