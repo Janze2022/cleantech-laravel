@@ -130,8 +130,9 @@
 }
 
 .panel-queue {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-height: 0;
 }
 
 .panel {
@@ -174,11 +175,10 @@
 }
 
 .queue-wrap {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    display: grid;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
     gap: 12px;
-    flex: 1;
+    height: 100%;
     min-height: 0;
 }
 
@@ -187,11 +187,11 @@
     border: 1px solid rgba(148, 163, 184, 0.1);
     background: rgba(255, 255, 255, 0.02);
     padding: 14px;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto 1fr;
     gap: 10px;
-    height: auto;
-    min-height: auto;
+    height: 100%;
+    min-height: 0;
 }
 
 .queue-head {
@@ -219,8 +219,9 @@
 .status-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(110px, 1fr));
+    grid-auto-rows: 1fr;
     gap: 10px;
-    flex: none;
+    height: 100%;
     align-items: stretch;
 }
 
@@ -233,11 +234,11 @@
     border: 1px solid rgba(148, 163, 184, 0.08);
     background: rgba(15, 23, 42, 0.88);
     padding: 12px;
-    min-height: 88px;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    height: auto;
+    height: 100%;
 }
 
 .status-card label {
@@ -312,6 +313,10 @@
     margin-top: 14px;
 }
 
+.revenue-panel .chart-wrap.tall {
+    min-height: 190px;
+}
+
 @media (max-width: 1220px) {
     .metric-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -341,6 +346,10 @@
     .chart-wrap.tall {
         min-height: 220px;
     }
+
+    .revenue-panel .chart-wrap.tall {
+        min-height: 200px;
+    }
 }
 
 @media (max-width: 520px) {
@@ -353,6 +362,10 @@
     .status-card,
     .activity-card {
         padding: 12px;
+    }
+
+    .revenue-panel .chart-wrap.tall {
+        min-height: 190px;
     }
 }
 </style>
