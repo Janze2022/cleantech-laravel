@@ -124,6 +124,11 @@
     align-items: start;
 }
 
+.dashboard-grid > .panel {
+    align-self: start;
+    height: auto;
+}
+
 .panel {
     border-radius: 20px;
     border: 1px solid rgba(148, 163, 184, 0.12);
