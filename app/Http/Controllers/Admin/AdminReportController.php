@@ -9,6 +9,62 @@ use Carbon\Carbon;
 
 class AdminReportController extends Controller
 {
+    private function normalizeStatus($status): string
+    {
+        $status = strtolower(trim((string) $status));
+        $status = str_replace(['-', ' '], '_', $status);
+
+        if ($status === 'inprogress') {
+            $status = 'in_progress';
+        }
+
+        if (in_array($status, ['canceled', 'cancel'], true)) {
+            $status = 'cancelled';
+        }
+
+        return $status;
+    }
+
+    private function normalizedStatusSql(string $column = 'status'): string
+    {
+        $normalized = "LOWER(REPLACE(REPLACE(COALESCE({$column}, ''),'-','_'),' ','_'))";
+
+        return "CASE
+            WHEN {$normalized} IN ('cancelled', 'canceled', 'cancel') THEN 'cancelled'
+            WHEN {$normalized} = 'inprogress' THEN 'in_progress'
+            ELSE {$normalized}
+        END";
+    }
+
+    private function bookingDateSql(string $column = 'b.booking_date'): string
+    {
+        return "DATE({$column})";
+    }
+
+    private function activityDateSql(
+        string $updatedAtColumn = 'b.updated_at',
+        string $createdAtColumn = 'b.created_at',
+        string $bookingDateColumn = 'b.booking_date'
+    ): string {
+        return "DATE(COALESCE({$updatedAtColumn}, {$createdAtColumn}, {$bookingDateColumn}))";
+    }
+
+    private function applyReportRange($query, string $start, string $end)
+    {
+        $statusSql = $this->normalizedStatusSql('b.status');
+        $bookingDateSql = $this->bookingDateSql('b.booking_date');
+        $activityDateSql = $this->activityDateSql('b.updated_at', 'b.created_at', 'b.booking_date');
+
+        return $query->where(function ($range) use ($start, $end, $statusSql, $bookingDateSql, $activityDateSql) {
+            $range->whereRaw("{$bookingDateSql} BETWEEN ? AND ?", [$start, $end])
+                ->orWhere(function ($cancelled) use ($start, $end, $statusSql, $activityDateSql) {
+                    $cancelled
+                        ->whereRaw("{$statusSql} = 'cancelled'")
+                        ->whereRaw("{$activityDateSql} BETWEEN ? AND ?", [$start, $end]);
+                });
+        });
+    }
+
     public function index(Request $request)
     {
         $tz = config('app.timezone') ?? 'Asia/Manila';
@@ -16,28 +72,28 @@ class AdminReportController extends Controller
 
         $start = $request->query('start', $now->copy()->subDays(29)->toDateString());
         $end   = $request->query('end', $now->toDateString());
+        $statusSql = $this->normalizedStatusSql('b.status');
+        $activityDateSql = $this->activityDateSql('b.updated_at', 'b.created_at', 'b.booking_date');
 
-        $base = DB::table('bookings as b')
-            ->whereDate('b.booking_date', '>=', $start)
-            ->whereDate('b.booking_date', '<=', $end);
+        $base = $this->applyReportRange(DB::table('bookings as b'), $start, $end);
 
         // Totals
         $rangeBookings = (clone $base)->count();
 
         $rangeIncome = (float) (clone $base)
-            ->whereIn('b.status', ['paid', 'completed'])
-            ->sum('b.price');
+            ->whereIn(DB::raw($statusSql), ['paid', 'completed'])
+            ->sum(DB::raw('COALESCE(b.price, 0)'));
 
         $cancelledLoss = (float) (clone $base)
-            ->where('b.status', 'cancelled')
-            ->sum('b.price');
+            ->whereRaw("{$statusSql} = 'cancelled'")
+            ->sum(DB::raw('COALESCE(b.price, 0)'));
 
         $netReport = $rangeIncome - $cancelledLoss;
 
         // Status counts
         $rows = (clone $base)
-            ->selectRaw('LOWER(b.status) as status, COUNT(*) as cnt')
-            ->groupBy(DB::raw('LOWER(b.status)'))
+            ->selectRaw("{$statusSql} as status, COUNT(*) as cnt")
+            ->groupBy(DB::raw($statusSql))
             ->get();
 
         $statusCounts = [
@@ -49,9 +105,9 @@ class AdminReportController extends Controller
         ];
 
         foreach ($rows as $r) {
-            $k = strtolower((string)($r->status ?? ''));
+            $k = $this->normalizeStatus($r->status ?? '');
             if (array_key_exists($k, $statusCounts)) {
-                $statusCounts[$k] = (int) $r->cnt;
+                $statusCounts[$k] += (int) $r->cnt;
             }
         }
 
@@ -72,14 +128,20 @@ class AdminReportController extends Controller
                 'b.status',
                 'b.price',
                 'b.created_at',
+                'b.updated_at',
                 'b.provider_id',
                 'b.service_id',
                 's.name as service_name',
                 DB::raw("COALESCE(o.label,'') as option_label"),
                 DB::raw("COALESCE(NULLIF(TRIM(c.name),''), NULLIF(TRIM(c.email),''), 'Customer') as customer_name"),
-                DB::raw("TRIM(CONCAT(COALESCE(sp.first_name,''),' ',COALESCE(sp.last_name,''))) as provider_name")
+                DB::raw("TRIM(CONCAT(COALESCE(sp.first_name,''),' ',COALESCE(sp.last_name,''))) as provider_name"),
+                DB::raw("{$activityDateSql} as report_date")
             )
-            ->get();
+            ->get()
+            ->map(function ($booking) {
+                $booking->status_key = $this->normalizeStatus($booking->status ?? '');
+                return $booking;
+            });
 
         // Last 7 days status trend
         $last7Dates = [];
@@ -103,8 +165,8 @@ class AdminReportController extends Controller
         }
 
         foreach ($bookings as $b) {
-            $d = substr((string)($b->booking_date ?? ''), 0, 10);
-            $st = strtolower((string)($b->status ?? ''));
+            $d = substr((string)($b->report_date ?? $b->booking_date ?? ''), 0, 10);
+            $st = $b->status_key ?? $this->normalizeStatus($b->status ?? '');
             if (isset($dailyMap[$d]) && isset($dailyMap[$d][$st])) {
                 $dailyMap[$d][$st]++;
             }
@@ -134,13 +196,13 @@ class AdminReportController extends Controller
         $monthRevenue = array_fill(0, count($months), 0.0);
 
         foreach ($bookings as $b) {
-            $st = strtolower((string)($b->status ?? ''));
+            $st = $b->status_key ?? $this->normalizeStatus($b->status ?? '');
             if (!in_array($st, ['paid', 'completed'])) {
                 continue;
             }
 
             try {
-                $dt = Carbon::parse($b->booking_date, $tz);
+                $dt = Carbon::parse($b->report_date ?? $b->booking_date, $tz);
             } catch (\Throwable $e) {
                 continue;
             }
@@ -162,9 +224,9 @@ class AdminReportController extends Controller
                 'b.provider_id',
                 DB::raw("TRIM(CONCAT(COALESCE(sp.first_name,''),' ',COALESCE(sp.last_name,''))) as provider_name"),
                 DB::raw("COUNT(*) as total_bookings"),
-                DB::raw("SUM(CASE WHEN LOWER(b.status) IN ('paid','completed') THEN 1 ELSE 0 END) as success_count"),
-                DB::raw("SUM(CASE WHEN LOWER(b.status) = 'cancelled' THEN 1 ELSE 0 END) as cancelled_count"),
-                DB::raw("SUM(CASE WHEN LOWER(b.status) IN ('paid','completed') THEN b.price ELSE 0 END) as revenue")
+                DB::raw("SUM(CASE WHEN {$statusSql} IN ('paid','completed') THEN 1 ELSE 0 END) as success_count"),
+                DB::raw("SUM(CASE WHEN {$statusSql} = 'cancelled' THEN 1 ELSE 0 END) as cancelled_count"),
+                DB::raw("SUM(CASE WHEN {$statusSql} IN ('paid','completed') THEN COALESCE(b.price, 0) ELSE 0 END) as revenue")
             )
             ->whereNotNull('b.provider_id')
             ->groupBy('b.provider_id', 'sp.first_name', 'sp.last_name')
@@ -196,8 +258,8 @@ class AdminReportController extends Controller
             ->select(
                 DB::raw("COALESCE(NULLIF(TRIM(s.name),''), 'Uncategorized Service') as service_name"),
                 DB::raw("COUNT(*) as total_bookings"),
-                DB::raw("SUM(CASE WHEN LOWER(b.status) IN ('paid','completed') THEN b.price ELSE 0 END) as revenue"),
-                DB::raw("SUM(CASE WHEN LOWER(b.status) = 'cancelled' THEN 1 ELSE 0 END) as cancelled_count")
+                DB::raw("SUM(CASE WHEN {$statusSql} IN ('paid','completed') THEN COALESCE(b.price, 0) ELSE 0 END) as revenue"),
+                DB::raw("SUM(CASE WHEN {$statusSql} = 'cancelled' THEN 1 ELSE 0 END) as cancelled_count")
             )
             ->groupBy('s.name')
             ->orderByDesc('total_bookings')
@@ -278,12 +340,10 @@ class AdminReportController extends Controller
         $start = $request->query('start', $now->copy()->subDays(29)->toDateString());
         $end   = $request->query('end', $now->toDateString());
 
-        $rows = DB::table('bookings as b')
+        $rows = $this->applyReportRange(DB::table('bookings as b'), $start, $end)
             ->leftJoin('services as s', 's.id', '=', 'b.service_id')
             ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
             ->leftJoin('service_providers as sp', 'sp.id', '=', 'b.provider_id')
-            ->whereDate('b.booking_date', '>=', $start)
-            ->whereDate('b.booking_date', '<=', $end)
             ->orderByDesc('b.booking_date')
             ->select(
                 'b.reference_code',

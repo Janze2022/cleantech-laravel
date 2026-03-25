@@ -823,7 +823,7 @@ body{
                                 <tbody>
                                 @forelse($bookings->take(15) as $b)
                                     @php
-                                        $st = strtolower((string)($b->status ?? 'unknown'));
+                                        $st = strtolower((string)($b->status_key ?? $b->status ?? 'unknown'));
                                         $dotClass = '';
                                         if (in_array($st, ['paid','completed'])) $dotClass = 'green';
                                         elseif (in_array($st, ['confirmed','in_progress'])) $dotClass = 'yellow';
