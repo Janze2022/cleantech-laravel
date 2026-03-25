@@ -250,6 +250,38 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 .chart-wrap.service{ height:240px; }
 .chart-wrap.status{ height:200px; }
 
+.status-donut-wrap{
+    position:relative;
+}
+
+.status-donut-center{
+    position:absolute;
+    inset:50% auto auto 50%;
+    transform:translate(-50%, -50%);
+    text-align:center;
+    pointer-events:none;
+    width:min(170px, 62%);
+}
+
+.status-donut-center strong{
+    display:block;
+    color:#fff;
+    font-size:1.45rem;
+    font-weight:950;
+    line-height:1;
+}
+
+.status-donut-center span{
+    display:block;
+    margin-top:.35rem;
+    color:var(--text-muted);
+    font-size:.78rem;
+    font-weight:800;
+    line-height:1.25;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+}
+
 canvas{
     width:100% !important;
     height:100% !important;
@@ -678,7 +710,9 @@ canvas{
     $topStatus = $statusCollection->sortByDesc(fn($x) => (int) ($x->cnt ?? 0))->first();
     $topStatusLabel = $topStatus ? strtoupper(str_replace('_', ' ', (string) ($topStatus->status ?? ''))) : '—';
 
-    $paidCnt = (int) (optional($statusCollection->firstWhere('status', 'paid'))->cnt ?? 0);
+    $topStatusHuman = $topStatus ? \Illuminate\Support\Str::headline(str_replace('_', ' ', (string) ($topStatus->status ?? ''))) : 'No status';
+    $topStatusCount = (int) ($topStatus->cnt ?? 0);
+
     $completedCnt = (int) (optional($statusCollection->firstWhere('status', 'completed'))->cnt ?? 0);
     $cancelCnt = (int) (optional($statusCollection->firstWhere('status', 'cancelled'))->cnt ?? 0);
 
@@ -885,23 +919,19 @@ canvas{
                 </div>
             </div>
 
-            <div class="chart-wrap status">
-                <canvas id="donutChart"></canvas>
+            <div class="status-donut-wrap">
+                <div class="chart-wrap status">
+                    <canvas id="donutChart"></canvas>
+                </div>
+                <div class="status-donut-center">
+                    <strong>{{ number_format($topStatusCount) }}</strong>
+                    <span>{{ $topStatusHuman }}</span>
+                </div>
             </div>
-
-            <div class="mini-legend" id="donutLegend"></div>
         </div>
 
         <div class="cardx tight">
             <div class="status-summary-grid">
-            <div class="legend-item">
-                <div class="legend-left">
-                    <span class="dot" style="background: var(--good);"></span>
-                    <div class="legend-name">Paid bookings</div>
-                </div>
-                <div class="legend-val">{{ $paidCnt }}</div>
-            </div>
-
             <div class="legend-item">
                 <div class="legend-left">
                     <span class="dot" style="background: var(--accent);"></span>
@@ -926,7 +956,7 @@ canvas{
                 <div class="legend-val">{{ $topStatusLabel }}</div>
             </div>
 
-            <div class="legend-item full">
+            <div class="legend-item">
                 <div class="legend-left">
                     <span class="dot" style="background: var(--warn);"></span>
                     <div class="legend-name">Total statuses</div>
