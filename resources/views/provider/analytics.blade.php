@@ -205,6 +205,10 @@ input[type="date"]::-webkit-calendar-picker-indicator{
     align-items:start;
 }
 
+.layout > .cardx{
+    align-self:start;
+}
+
 .stack{
     display:grid;
     gap:.75rem;
@@ -259,6 +263,13 @@ canvas{
     gap:.6rem;
 }
 
+.chart-insights{
+    margin-top:.6rem;
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:.6rem;
+}
+
 .chart-stat{
     border:1px solid rgba(255,255,255,.06);
     background:rgba(255,255,255,.03);
@@ -279,6 +290,31 @@ canvas{
     margin-top:.28rem;
     color:#fff;
     font-size:1rem;
+    font-weight:900;
+    line-height:1.3;
+    word-break:break-word;
+}
+
+.chart-insight{
+    border:1px solid rgba(255,255,255,.05);
+    background:rgba(2,6,23,.28);
+    border-radius:12px;
+    padding:.68rem .78rem;
+    min-width:0;
+}
+
+.chart-insight-label{
+    color:var(--text-muted);
+    font-size:.68rem;
+    font-weight:800;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+
+.chart-insight-value{
+    margin-top:.25rem;
+    color:#fff;
+    font-size:.98rem;
     font-weight:900;
     line-height:1.3;
     word-break:break-word;
@@ -508,7 +544,8 @@ canvas{
         grid-template-columns:1fr;
     }
 
-    .chart-stats{
+    .chart-stats,
+    .chart-insights{
         grid-template-columns:1fr;
     }
 
@@ -663,6 +700,9 @@ canvas{
         });
     }
     $selectedDateAmount = (float) ($selectedDateRow->amount ?? 0);
+    $trackedDatesCount = (int) $dateEarningsCollection->count();
+    $trackedBookingsCount = (int) $dateEarningsCollection->sum(fn($row) => (int) ($row->bookings_count ?? 0));
+    $topDateBookings = (int) ($topDate->bookings_count ?? 0);
 @endphp
 
 <div class="page-head">
@@ -817,6 +857,21 @@ canvas{
                         ₱{{ number_format($topDateAmount, 2) }}
                     @endif
                 </div>
+            </div>
+        </div>
+
+        <div class="chart-insights">
+            <div class="chart-insight">
+                <div class="chart-insight-label">Tracked dates</div>
+                <div class="chart-insight-value">{{ number_format($trackedDatesCount) }}</div>
+            </div>
+            <div class="chart-insight">
+                <div class="chart-insight-label">Paid jobs</div>
+                <div class="chart-insight-value">{{ number_format($trackedBookingsCount) }}</div>
+            </div>
+            <div class="chart-insight">
+                <div class="chart-insight-label">Top day jobs</div>
+                <div class="chart-insight-value">{{ number_format($topDateBookings) }}</div>
             </div>
         </div>
 
