@@ -236,7 +236,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 .chart-wrap{
     position:relative;
     width:100%;
-    height:280px;
+    height:250px;
     min-width:0;
 }
 
@@ -247,6 +247,38 @@ canvas{
     width:100% !important;
     height:100% !important;
     display:block;
+}
+
+.chart-stats{
+    margin-top:.8rem;
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:.6rem;
+}
+
+.chart-stat{
+    border:1px solid rgba(255,255,255,.06);
+    background:rgba(255,255,255,.03);
+    border-radius:12px;
+    padding:.7rem .78rem;
+    min-width:0;
+}
+
+.chart-stat-label{
+    color:var(--text-muted);
+    font-size:.68rem;
+    font-weight:800;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+
+.chart-stat-value{
+    margin-top:.28rem;
+    color:#fff;
+    font-size:1rem;
+    font-weight:900;
+    line-height:1.3;
+    word-break:break-word;
 }
 
 .mini-legend{
@@ -453,6 +485,10 @@ canvas{
         grid-template-columns:1fr;
     }
 
+    .chart-stats{
+        grid-template-columns:1fr;
+    }
+
     .legend-item{
         padding:.58rem .68rem;
     }
@@ -575,6 +611,7 @@ canvas{
 
     $dailySum   = $dailyCollection->sum(fn($x) => (float) ($x->amount ?? 0));
     $monthlySum = $monthlyCollection->sum(fn($x) => (float) ($x->amount ?? 0));
+    $dailyAvg   = $dailyCollection->count() > 0 ? ($dailySum / $dailyCollection->count()) : 0;
 
     $statusTotal = $statusCollection->sum(fn($x) => (int) ($x->cnt ?? 0));
     $topStatus = $statusCollection->sortByDesc(fn($x) => (int) ($x->cnt ?? 0))->first();
@@ -601,6 +638,7 @@ canvas{
             return (string) ($row->date ?? '') === (string) $selectedDate;
         });
     }
+    $selectedDateAmount = (float) ($selectedDateRow->amount ?? 0);
 @endphp
 
 <div class="page-head">
@@ -735,6 +773,27 @@ canvas{
 
         <div class="chart-wrap">
             <canvas id="dailyChart"></canvas>
+        </div>
+
+        <div class="chart-stats">
+            <div class="chart-stat">
+                <div class="chart-stat-label">Range total</div>
+                <div class="chart-stat-value">₱{{ number_format($dailySum, 2) }}</div>
+            </div>
+            <div class="chart-stat">
+                <div class="chart-stat-label">Average / day</div>
+                <div class="chart-stat-value">₱{{ number_format($dailyAvg, 2) }}</div>
+            </div>
+            <div class="chart-stat">
+                <div class="chart-stat-label">{{ !empty($selectedDate) ? 'Selected date' : 'Best day' }}</div>
+                <div class="chart-stat-value">
+                    @if(!empty($selectedDate))
+                        ₱{{ number_format($selectedDateAmount, 2) }}
+                    @else
+                        ₱{{ number_format($topDateAmount, 2) }}
+                    @endif
+                </div>
+            </div>
         </div>
 
     </div>

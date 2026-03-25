@@ -164,8 +164,9 @@
 
 .queue-wrap {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+    align-items: stretch;
 }
 
 .queue-block {
@@ -173,6 +174,10 @@
     border: 1px solid rgba(148, 163, 184, 0.1);
     background: rgba(255, 255, 255, 0.02);
     padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
 }
 
 .queue-head {
@@ -201,6 +206,7 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
+    flex: 1;
 }
 
 .status-grid.two {
@@ -299,6 +305,7 @@
         padding: 16px 14px 24px;
     }
 
+    .queue-wrap,
     .metric-grid,
     .status-grid,
     .status-grid.two,

@@ -77,18 +77,11 @@
     color: var(--services-text);
 }
 
-.services-subtitle{
-    margin-top: .35rem;
-    color: var(--services-muted);
-    max-width: 740px;
-    font-size: 1rem;
-}
-
 .services-chip-row{
     display: flex;
     flex-wrap: wrap;
     gap: .55rem;
-    margin-top: .9rem;
+    margin-top: .55rem;
 }
 
 .services-chip{
@@ -586,9 +579,6 @@
     <div class="services-topbar">
         <div>
             <h1 class="services-title">Services</h1>
-            <div class="services-subtitle">
-                Choose a service, then review the providers available on {{ $selectedDateLabel }}. The provider list updates instantly for the selected service and date.
-            </div>
             <div class="services-chip-row">
                 <span class="services-chip accent">Available date: {{ $selectedDateLabel }}</span>
                 <span class="services-chip">{{ $services->count() }} service{{ $services->count() === 1 ? '' : 's' }}</span>
