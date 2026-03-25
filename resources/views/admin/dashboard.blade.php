@@ -129,6 +129,11 @@
     height: 100%;
 }
 
+.panel-queue {
+    display: flex;
+    flex-direction: column;
+}
+
 .panel {
     border-radius: 20px;
     border: 1px solid rgba(148, 163, 184, 0.12);
@@ -169,13 +174,12 @@
 }
 
 .queue-wrap {
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     gap: 12px;
-    align-items: stretch;
-    min-height: 100%;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
 }
 
 .queue-block {
@@ -186,8 +190,8 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    height: 100%;
-    min-height: 0;
+    height: auto;
+    min-height: auto;
 }
 
 .queue-head {
@@ -216,7 +220,7 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(110px, 1fr));
     gap: 10px;
-    flex: 1;
+    flex: none;
     align-items: stretch;
 }
 
@@ -233,7 +237,7 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    height: 100%;
+    height: auto;
 }
 
 .status-card label {
@@ -383,7 +387,7 @@
     </div>
 
     <div class="dashboard-grid">
-        <section class="panel">
+        <section class="panel panel-queue">
             <div class="panel-title-row">
                 <h2 class="panel-title">Queue Now</h2>
                 <div class="mini-pill">{{ number_format($activeNow + $closedNow) }} bookings</div>
