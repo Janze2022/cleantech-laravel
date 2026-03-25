@@ -202,12 +202,14 @@ input[type="date"]::-webkit-calendar-picker-indicator{
     grid-template-columns: 1.1fr .9fr;
     gap:.9rem;
     margin-top:.9rem;
+    align-items:start;
 }
 
 .stack{
     display:grid;
-    gap:.9rem;
+    gap:.75rem;
     min-width:0;
+    align-content:start;
 }
 
 .panel-title{
@@ -236,12 +238,13 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 .chart-wrap{
     position:relative;
     width:100%;
-    height:250px;
+    height:220px;
     min-width:0;
 }
 
-.chart-wrap.tall{ height:300px; }
-.chart-wrap.service{ height:300px; }
+.chart-wrap.tall{ height:250px; }
+.chart-wrap.service{ height:240px; }
+.chart-wrap.status{ height:200px; }
 
 canvas{
     width:100% !important;
@@ -286,6 +289,20 @@ canvas{
     display:grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap:.5rem .65rem;
+}
+
+.status-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:.55rem;
+}
+
+.status-summary-grid .legend-item{
+    margin-top:0 !important;
+}
+
+.status-summary-grid .legend-item.full{
+    grid-column:1 / -1;
 }
 
 .legend-item{
@@ -406,7 +423,8 @@ canvas{
 
     .chart-wrap,
     .chart-wrap.tall,
-    .chart-wrap.service{
+    .chart-wrap.service,
+    .chart-wrap.status{
         height:260px;
     }
 }
@@ -477,11 +495,16 @@ canvas{
     }
 
     .chart-wrap.tall,
-    .chart-wrap.service{
+    .chart-wrap.service,
+    .chart-wrap.status{
         height:230px;
     }
 
     .mini-legend{
+        grid-template-columns:1fr;
+    }
+
+    .status-summary-grid{
         grid-template-columns:1fr;
     }
 
@@ -530,7 +553,8 @@ canvas{
     }
 
     .chart-wrap.tall,
-    .chart-wrap.service{
+    .chart-wrap.service,
+    .chart-wrap.status{
         height:220px;
     }
 
@@ -806,7 +830,7 @@ canvas{
                 </div>
             </div>
 
-            <div class="chart-wrap">
+            <div class="chart-wrap status">
                 <canvas id="donutChart"></canvas>
             </div>
 
@@ -814,6 +838,7 @@ canvas{
         </div>
 
         <div class="cardx tight">
+            <div class="status-summary-grid">
             <div class="legend-item">
                 <div class="legend-left">
                     <span class="dot" style="background: var(--good);"></span>
@@ -822,7 +847,7 @@ canvas{
                 <div class="legend-val">{{ $paidCnt }}</div>
             </div>
 
-            <div class="legend-item" style="margin-top:.55rem;">
+            <div class="legend-item">
                 <div class="legend-left">
                     <span class="dot" style="background: var(--accent);"></span>
                     <div class="legend-name">Completed bookings</div>
@@ -830,7 +855,7 @@ canvas{
                 <div class="legend-val">{{ $completedCnt }}</div>
             </div>
 
-            <div class="legend-item" style="margin-top:.55rem;">
+            <div class="legend-item">
                 <div class="legend-left">
                     <span class="dot" style="background: var(--bad);"></span>
                     <div class="legend-name">Cancelled bookings</div>
@@ -838,7 +863,7 @@ canvas{
                 <div class="legend-val">{{ $cancelCnt }}</div>
             </div>
 
-            <div class="legend-item" style="margin-top:.55rem;">
+            <div class="legend-item">
                 <div class="legend-left">
                     <span class="dot" style="background: var(--violet);"></span>
                     <div class="legend-name">Top status</div>
@@ -846,12 +871,13 @@ canvas{
                 <div class="legend-val">{{ $topStatusLabel }}</div>
             </div>
 
-            <div class="legend-item" style="margin-top:.55rem;">
+            <div class="legend-item full">
                 <div class="legend-left">
                     <span class="dot" style="background: var(--warn);"></span>
                     <div class="legend-name">Total statuses</div>
                 </div>
                 <div class="legend-val">{{ $statusTotal }}</div>
+            </div>
             </div>
         </div>
     </div>
