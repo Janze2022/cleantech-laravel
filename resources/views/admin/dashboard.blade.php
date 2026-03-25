@@ -174,6 +174,7 @@
     gap: 12px;
     align-items: stretch;
     min-height: 0;
+    align-content: start;
 }
 
 .queue-block {
@@ -184,8 +185,8 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    height: 100%;
-    min-height: 0;
+    height: auto;
+    min-height: auto;
 }
 
 .queue-head {
@@ -214,7 +215,7 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(110px, 1fr));
     gap: 10px;
-    flex: 1;
+    flex: none;
     align-items: stretch;
 }
 
