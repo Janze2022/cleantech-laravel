@@ -161,6 +161,15 @@
     font-weight: 900;
 }
 
+.panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
 .mini-pill {
     display: inline-flex;
     align-items: center;
@@ -170,6 +179,19 @@
     border: 1px solid rgba(56, 189, 248, 0.18);
     color: #bae6fd;
     font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.panel-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    background: rgba(14, 116, 144, 0.12);
+    color: #bae6fd;
+    font-size: 0.8rem;
     font-weight: 800;
 }
 
@@ -318,6 +340,36 @@
     font-weight: 900;
 }
 
+.activity-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.activity-pill {
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.activity-pill label {
+    display: block;
+    margin-bottom: 6px;
+    color: #94a3b8;
+    font-size: 0.74rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.activity-pill strong {
+    color: #f8fafc;
+    font-size: 1.3rem;
+    font-weight: 900;
+}
+
 .revenue-panel {
     margin-top: 14px;
     padding-bottom: 12px;
@@ -349,7 +401,8 @@
     .metric-grid,
     .status-grid,
     .status-grid.two,
-    .activity-metrics {
+    .activity-metrics,
+    .activity-strip {
         grid-template-columns: 1fr;
     }
 
@@ -453,27 +506,27 @@
         </section>
 
         <section class="panel">
-            <div class="panel-title-row">
+            <div class="panel-head">
                 <h2 class="panel-title">Weekly Activity</h2>
-                <div class="mini-pill">7 days</div>
+                <div class="panel-chip">7 days</div>
             </div>
 
             <div class="chart-wrap">
                 <canvas id="activityChart"></canvas>
             </div>
 
-            <div class="activity-metrics">
-                <div class="activity-card">
-                    <label>Booked Today</label>
-                    <strong>{{ number_format($bookingsToday) }}</strong>
+            <div class="activity-strip">
+                <div class="activity-pill">
+                    <label>Confirmed Today</label>
+                    <strong>{{ number_format($confirmedToday) }}</strong>
                 </div>
-                <div class="activity-card">
+                <div class="activity-pill">
                     <label>Completed Today</label>
                     <strong>{{ number_format($completedToday) }}</strong>
                 </div>
-                <div class="activity-card">
-                    <label>Week Total</label>
-                    <strong>{{ number_format($weekBooked + $weekCompleted) }}</strong>
+                <div class="activity-pill">
+                    <label>7-Day Total</label>
+                    <strong>{{ number_format(array_sum($dailyBooked) + array_sum($dailyCompleted)) }}</strong>
                 </div>
             </div>
         </section>
