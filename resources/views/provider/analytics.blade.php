@@ -363,19 +363,17 @@ canvas{
 .status-summary-grid{
     display:grid;
     grid-template-columns:repeat(2, minmax(0, 1fr));
-    grid-template-rows:repeat(2, minmax(0, 1fr));
-    gap:.55rem;
-    flex:1;
-    min-height:0;
+    gap:.65rem;
+    grid-auto-rows:minmax(76px, auto);
 }
 
 .status-summary-grid .legend-item{
     margin-top:0 !important;
-    min-height:96px;
-    height:100%;
-    padding:.9rem .95rem;
-    flex-direction:column;
-    align-items:stretch;
+    min-height:76px;
+    height:auto;
+    padding:.8rem .95rem;
+    flex-direction:row;
+    align-items:center;
     justify-content:space-between;
 }
 
@@ -384,16 +382,17 @@ canvas{
 }
 
 .status-summary-grid .legend-left{
-    align-items:flex-start;
+    align-items:center;
 }
 
 .status-summary-grid .legend-val{
-    align-self:flex-end;
+    align-self:auto;
+    min-width:48px;
+    text-align:right;
 }
 
 .status-summary-card{
-    display:flex;
-    min-height:0;
+    display:block;
 }
 
 .legend-item{
