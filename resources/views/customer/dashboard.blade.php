@@ -352,10 +352,12 @@
     }
 
     .step-link {
-        display: flex;
-        align-items: flex-start;
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+        align-items: center;
         gap: 0.75rem;
         padding: 0.9rem;
+        min-height: 92px;
         border-radius: 18px;
         text-decoration: none;
         color: inherit;
@@ -385,9 +387,18 @@
         font-size: 1rem;
     }
 
+    .step-body {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        min-height: 44px;
+    }
+
     .step-title {
         font-weight: 800;
         font-size: 0.94rem;
+        line-height: 1.35;
+        margin: 0;
     }
 
     .recent-card {
@@ -724,7 +735,7 @@
                         <div class="step-icon">
                             <i class="bi bi-grid-1x2"></i>
                         </div>
-                        <div>
+                        <div class="step-body">
                             <div class="step-title">Browse services</div>
                         </div>
                     </a>
@@ -733,7 +744,7 @@
                         <div class="step-icon">
                             <i class="bi bi-calendar-week"></i>
                         </div>
-                        <div>
+                        <div class="step-body">
                             <div class="step-title">Check active bookings</div>
                         </div>
                     </a>
@@ -742,7 +753,7 @@
                         <div class="step-icon">
                             <i class="bi bi-receipt"></i>
                         </div>
-                        <div>
+                        <div class="step-body">
                             <div class="step-title">Review past bookings</div>
                         </div>
                     </a>
@@ -751,7 +762,7 @@
                         <div class="step-icon">
                             <i class="bi bi-person-circle"></i>
                         </div>
-                        <div>
+                        <div class="step-body">
                             <div class="step-title">Update your profile</div>
                         </div>
                     </a>

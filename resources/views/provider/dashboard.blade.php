@@ -78,13 +78,19 @@
 
 .grid-analytics{
     display:grid;
-    grid-template-columns: 1fr 1.15fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: .85rem;
     margin-top: .85rem;
     margin-bottom: 1rem;
 }
 @media (max-width: 1200px){
     .grid-analytics{ grid-template-columns: 1fr; }
+}
+
+.analytics-card{
+    display:flex;
+    flex-direction:column;
+    min-height: 360px;
 }
 
 .panel-title{
@@ -107,19 +113,18 @@
 
 .ring-wrap{
     display:grid;
-    grid-template-columns: 148px 1fr;
-    gap: .85rem;
-    align-items:center;
-}
-@media (max-width: 600px){
-    .ring-wrap{ grid-template-columns: 1fr; }
+    grid-template-columns:1fr;
+    justify-items:center;
+    gap: .9rem;
+    align-items:start;
+    flex:1;
 }
 
 .ring{
     position: relative;
     width: 140px;
     height: 140px;
-    margin: .25rem auto;
+    margin: .15rem auto 0;
 }
 .ring svg{
     width: 140px;
@@ -152,7 +157,10 @@
 
 .legend{
     display:grid;
+    width:100%;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
     gap: .45rem;
+    align-content:start;
 }
 .legend-item{
     display:flex;
@@ -163,6 +171,7 @@
     background: rgba(2,6,23,.35);
     border-radius: 12px;
     padding:.52rem .65rem;
+    min-height:48px;
 }
 .legend-left{
     display:flex;
@@ -184,6 +193,16 @@
     font-size:.8rem;
     color: rgba(255,255,255,.75);
     font-weight: 900;
+}
+
+.analytics-card--earned .legend{
+    grid-template-columns:1fr;
+}
+
+@media (max-width: 900px){
+    .legend{
+        grid-template-columns:1fr;
+    }
 }
 
 .table-wrap{
@@ -252,17 +271,17 @@
 </div>
 
 <div class="kpi-row">
-    <div class="cardx">
+    <div class="cardx analytics-card">
         <div class="kpi-label">Account Status</div>
         <div class="kpi-value kpi-good">{{ $provider->status ?? '—' }}</div>
     </div>
 
-    <div class="cardx">
+    <div class="cardx analytics-card">
         <div class="kpi-label">Email</div>
         <div class="kpi-value kpi-accent email-value">{{ $provider->email ?? '—' }}</div>
     </div>
 
-    <div class="cardx">
+    <div class="cardx analytics-card analytics-card--earned">
         <div class="kpi-label">Phone</div>
         <div class="kpi-value">{{ $provider->phone ?? '—' }}</div>
     </div>
