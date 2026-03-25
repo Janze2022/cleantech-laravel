@@ -35,31 +35,64 @@
 
 .summary-strip-card{
     margin-bottom:.85rem;
-    padding:.85rem .95rem;
+    padding:.75rem .85rem;
 }
 
-.kpi-row .cardx{
-    padding:.8rem .9rem;
-    min-height:110px;
+.summary-strip{
+    display:grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap:.75rem;
 }
 
-.kpi-row .analytics-card,
-.kpi-row .analytics-card--earned{
-    display:block;
-    min-height:110px;
+.summary-item{
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    border-radius:14px;
+    padding:.75rem .85rem;
+    min-width:0;
+    min-height:96px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
 }
 
-.kpi-row .kpi-label{
+.summary-item .kpi-label{
     font-size:.68rem;
 }
 
-.kpi-row .kpi-value{
-    margin-top:.28rem;
+.summary-item .kpi-value{
+    margin-top:.32rem;
     font-size:1rem;
+    line-height:1.28;
 }
 
-.kpi-row .kpi-value.email-value{
-    font-size:.92rem;
+.summary-item .kpi-value.email-value{
+    font-size:.94rem;
+    word-break:break-all;
+}
+
+.summary-item-value{
+    margin-top:.32rem;
+    color:#fff;
+    font-size:1rem;
+    font-weight:900;
+    line-height:1.28;
+    word-break:break-word;
+}
+
+.summary-item-value.good{ color:var(--good); }
+.summary-item-value.accent{ color:var(--accent); }
+
+@media (max-width: 1200px){
+    .summary-strip{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px){
+    .summary-strip{
+        grid-template-columns: 1fr;
+    }
 }
 
 .cardx{
@@ -94,44 +127,6 @@
 .kpi-good{ color: var(--good); }
 .kpi-value.email-value{
     font-size:1rem;
-}
-
-.summary-strip{
-    display:grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap:.75rem;
-}
-
-.summary-item{
-    border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.03);
-    border-radius:14px;
-    padding:.72rem .82rem;
-    min-width:0;
-}
-
-.summary-item-value{
-    margin-top:.28rem;
-    color:#fff;
-    font-size:.98rem;
-    font-weight:900;
-    line-height:1.3;
-    word-break:break-word;
-}
-
-.summary-item-value.good{ color:var(--good); }
-.summary-item-value.accent{ color:var(--accent); }
-
-@media (max-width: 1320px){
-    .summary-strip{
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 600px){
-    .summary-strip{
-        grid-template-columns: 1fr;
-    }
 }
 
 .grid-analytics{
@@ -328,26 +323,28 @@
     </div>
 </div>
 
-<div class="kpi-row">
-    <div class="cardx analytics-card">
+<div class="cardx summary-strip-card">
+    <div class="summary-strip">
+        <div class="summary-item">
         <div class="kpi-label">Account Status</div>
         <div class="kpi-value kpi-good">{{ $provider->status ?? '—' }}</div>
     </div>
 
-    <div class="cardx analytics-card">
+        <div class="summary-item">
         <div class="kpi-label">Email</div>
         <div class="kpi-value kpi-accent email-value">{{ $provider->email ?? '—' }}</div>
     </div>
 
-    <div class="cardx analytics-card analytics-card--earned">
+        <div class="summary-item">
         <div class="kpi-label">Phone</div>
         <div class="kpi-value">{{ $provider->phone ?? '—' }}</div>
     </div>
 
-    <div class="cardx">
+        <div class="summary-item">
         <div class="kpi-label">Today’s Earnings</div>
         <div class="kpi-value kpi-good">₱{{ number_format($todayEarnings ?? 0, 2) }}</div>
     </div>
+</div>
 </div>
 
 <div class="grid-analytics">

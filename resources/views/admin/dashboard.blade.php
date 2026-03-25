@@ -121,6 +121,7 @@
     display: grid;
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
     gap: 14px;
+    align-items: start;
 }
 
 .panel {
@@ -164,20 +165,22 @@
 
 .queue-wrap {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 12px;
     align-items: stretch;
+    min-height: 0;
 }
 
 .queue-block {
     border-radius: 16px;
     border: 1px solid rgba(148, 163, 184, 0.1);
     background: rgba(255, 255, 255, 0.02);
-    padding: 12px;
+    padding: 14px;
     display: flex;
     flex-direction: column;
     gap: 10px;
     height: 100%;
+    min-height: 0;
 }
 
 .queue-head {
@@ -185,7 +188,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 2px;
 }
 
 .queue-label {
@@ -204,13 +207,14 @@
 
 .status-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(110px, 1fr));
     gap: 10px;
     flex: 1;
+    align-items: stretch;
 }
 
 .status-grid.two {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
 }
 
 .status-card {
@@ -218,14 +222,22 @@
     border: 1px solid rgba(148, 163, 184, 0.08);
     background: rgba(15, 23, 42, 0.88);
     padding: 12px;
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .status-card label {
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     color: #94a3b8;
     font-size: 0.76rem;
     font-weight: 800;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .status-card strong {
