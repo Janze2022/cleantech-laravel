@@ -211,6 +211,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 
 .stack{
     display:grid;
+    grid-template-rows:auto minmax(0, 1fr);
     gap:.75rem;
     min-width:0;
     align-content:start;
@@ -362,15 +363,37 @@ canvas{
 .status-summary-grid{
     display:grid;
     grid-template-columns:repeat(2, minmax(0, 1fr));
+    grid-template-rows:repeat(2, minmax(0, 1fr));
     gap:.55rem;
+    flex:1;
+    min-height:0;
 }
 
 .status-summary-grid .legend-item{
     margin-top:0 !important;
+    min-height:96px;
+    height:100%;
+    padding:.9rem .95rem;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:space-between;
 }
 
 .status-summary-grid .legend-item.full{
     grid-column:1 / -1;
+}
+
+.status-summary-grid .legend-left{
+    align-items:flex-start;
+}
+
+.status-summary-grid .legend-val{
+    align-self:flex-end;
+}
+
+.status-summary-card{
+    display:flex;
+    min-height:0;
 }
 
 .legend-item{
@@ -930,7 +953,7 @@ canvas{
             </div>
         </div>
 
-        <div class="cardx tight">
+        <div class="cardx tight status-summary-card">
             <div class="status-summary-grid">
             <div class="legend-item">
                 <div class="legend-left">
