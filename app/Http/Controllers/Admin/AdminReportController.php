@@ -49,20 +49,27 @@ class AdminReportController extends Controller
         return "DATE(COALESCE({$updatedAtColumn}, {$createdAtColumn}, {$bookingDateColumn}))";
     }
 
+    private function reportDateSql(
+        string $statusColumn = 'b.status',
+        string $updatedAtColumn = 'b.updated_at',
+        string $createdAtColumn = 'b.created_at',
+        string $bookingDateColumn = 'b.booking_date'
+    ): string {
+        $statusSql = $this->normalizedStatusSql($statusColumn);
+        $bookingDateSql = $this->bookingDateSql($bookingDateColumn);
+        $activityDateSql = $this->activityDateSql($updatedAtColumn, $createdAtColumn, $bookingDateColumn);
+
+        return "CASE
+            WHEN {$statusSql} IN ('paid', 'completed', 'cancelled') THEN {$activityDateSql}
+            ELSE COALESCE({$bookingDateSql}, {$activityDateSql})
+        END";
+    }
+
     private function applyReportRange($query, string $start, string $end)
     {
-        $statusSql = $this->normalizedStatusSql('b.status');
-        $bookingDateSql = $this->bookingDateSql('b.booking_date');
-        $activityDateSql = $this->activityDateSql('b.updated_at', 'b.created_at', 'b.booking_date');
+        $reportDateSql = $this->reportDateSql('b.status', 'b.updated_at', 'b.created_at', 'b.booking_date');
 
-        return $query->where(function ($range) use ($start, $end, $statusSql, $bookingDateSql, $activityDateSql) {
-            $range->whereRaw("{$bookingDateSql} BETWEEN ? AND ?", [$start, $end])
-                ->orWhere(function ($cancelled) use ($start, $end, $statusSql, $activityDateSql) {
-                    $cancelled
-                        ->whereRaw("{$statusSql} = 'cancelled'")
-                        ->whereRaw("{$activityDateSql} BETWEEN ? AND ?", [$start, $end]);
-                });
-        });
+        return $query->whereRaw("{$reportDateSql} BETWEEN ? AND ?", [$start, $end]);
     }
 
     public function index(Request $request)
@@ -73,7 +80,7 @@ class AdminReportController extends Controller
         $start = $request->query('start', $now->copy()->subDays(29)->toDateString());
         $end   = $request->query('end', $now->toDateString());
         $statusSql = $this->normalizedStatusSql('b.status');
-        $activityDateSql = $this->activityDateSql('b.updated_at', 'b.created_at', 'b.booking_date');
+        $reportDateSql = $this->reportDateSql('b.status', 'b.updated_at', 'b.created_at', 'b.booking_date');
 
         $base = $this->applyReportRange(DB::table('bookings as b'), $start, $end);
 
@@ -117,7 +124,8 @@ class AdminReportController extends Controller
             ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
             ->leftJoin('customers as c', 'c.id', '=', 'b.customer_id')
             ->leftJoin('service_providers as sp', 'sp.id', '=', 'b.provider_id')
-            ->orderByDesc('b.booking_date')
+            ->orderByDesc(DB::raw($reportDateSql))
+            ->orderByDesc('b.updated_at')
             ->orderByDesc('b.created_at')
             ->select(
                 'b.id',
@@ -135,7 +143,7 @@ class AdminReportController extends Controller
                 DB::raw("COALESCE(o.label,'') as option_label"),
                 DB::raw("COALESCE(NULLIF(TRIM(c.name),''), NULLIF(TRIM(c.email),''), 'Customer') as customer_name"),
                 DB::raw("TRIM(CONCAT(COALESCE(sp.first_name,''),' ',COALESCE(sp.last_name,''))) as provider_name"),
-                DB::raw("{$activityDateSql} as report_date")
+                DB::raw("{$reportDateSql} as report_date")
             )
             ->get()
             ->map(function ($booking) {
@@ -344,7 +352,7 @@ class AdminReportController extends Controller
             ->leftJoin('services as s', 's.id', '=', 'b.service_id')
             ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
             ->leftJoin('service_providers as sp', 'sp.id', '=', 'b.provider_id')
-            ->orderByDesc('b.booking_date')
+            ->orderByDesc(DB::raw($this->reportDateSql('b.status', 'b.updated_at', 'b.created_at', 'b.booking_date')))
             ->select(
                 'b.reference_code',
                 'b.booking_date',
@@ -354,7 +362,8 @@ class AdminReportController extends Controller
                 'b.price',
                 's.name as service',
                 DB::raw("COALESCE(o.label,'') as option_label"),
-                DB::raw("TRIM(CONCAT(COALESCE(sp.first_name,''),' ',COALESCE(sp.last_name,''))) as provider_name")
+                DB::raw("TRIM(CONCAT(COALESCE(sp.first_name,''),' ',COALESCE(sp.last_name,''))) as provider_name"),
+                DB::raw($this->reportDateSql('b.status', 'b.updated_at', 'b.created_at', 'b.booking_date') . " as report_date")
             )
             ->get();
 
@@ -367,11 +376,12 @@ class AdminReportController extends Controller
 
         $callback = function () use ($rows) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Reference', 'Date', 'Time Start', 'Time End', 'Status', 'Price', 'Service', 'Option', 'Provider']);
+            fputcsv($out, ['Reference', 'Report Date', 'Booking Date', 'Time Start', 'Time End', 'Status', 'Price', 'Service', 'Option', 'Provider']);
 
             foreach ($rows as $r) {
                 fputcsv($out, [
                     $r->reference_code,
+                    $r->report_date,
                     $r->booking_date,
                     $r->time_start,
                     $r->time_end,

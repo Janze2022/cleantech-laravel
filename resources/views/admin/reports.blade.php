@@ -39,12 +39,11 @@
     $completedCnt = (int)($statusCounts['completed'] ?? 0);
     $cancelledCnt = (int)($statusCounts['cancelled'] ?? 0);
 
-    $acceptedCount    = $confirmedCnt + $progressCnt + $paidCnt;
-    $finishedCount    = $completedCnt;
-    $allStatusesTotal = $confirmedCnt + $progressCnt + $paidCnt + $completedCnt + $cancelledCnt;
+    $finishedCount = $completedCnt;
+    $closedTotal   = $completedCnt + $cancelledCnt;
 
-    $completionRate = $allStatusesTotal > 0 ? round(($finishedCount / $allStatusesTotal) * 100, 1) : 0;
-    $cancelRate     = $allStatusesTotal > 0 ? round(($cancelledCnt / $allStatusesTotal) * 100, 1) : 0;
+    $completionRate = $closedTotal > 0 ? round(($finishedCount / $closedTotal) * 100, 1) : 0;
+    $cancelRate     = $closedTotal > 0 ? round(($cancelledCnt / $closedTotal) * 100, 1) : 0;
 @endphp
 
 
@@ -756,7 +755,7 @@ body{
             <div class="stack">
                 <div class="panel">
                     <div class="panel-head">
-                        <h4>Accepted / Finished / Cancelled</h4>
+                        <h4>Completed / Cancelled</h4>
                         <span class="badgex">Last 7 days</span>
                     </div>
                     <div class="panel-body">
@@ -813,7 +812,7 @@ body{
                                 <thead>
                                     <tr>
                                         <th>Reference</th>
-                                        <th>Date</th>
+                                        <th>Report Date</th>
                                         <th>Provider</th>
                                         <th>Service</th>
                                         <th>Status</th>
@@ -831,7 +830,7 @@ body{
                                     @endphp
                                     <tr>
                                         <td>{{ $b->reference_code ?? ('#'.$b->id) }}</td>
-                                        <td>{{ $b->booking_date ?? '-' }}</td>
+                                        <td>{{ $b->report_date ?? $b->booking_date ?? '-' }}</td>
                                         <td>{{ $b->provider_name ?: 'No provider' }}</td>
                                         <td>{{ $b->service_name ?: 'No service' }}</td>
                                         <td>
@@ -873,19 +872,19 @@ body{
                             <div class="summary-item">
                                 <div class="summary-label">Completion Rate</div>
                                 <div class="summary-value">{{ number_format($completionRate, 1) }}%</div>
-                                <div class="summary-sub">Finished out of all statuses</div>
+                                <div class="summary-sub">Completed out of closed bookings</div>
                             </div>
 
                             <div class="summary-item">
                                 <div class="summary-label">Cancel Rate</div>
                                 <div class="summary-value">{{ number_format($cancelRate, 1) }}%</div>
-                                <div class="summary-sub">Cancelled out of all statuses</div>
+                                <div class="summary-sub">Cancelled out of closed bookings</div>
                             </div>
 
                             <div class="summary-item">
-                                <div class="summary-label">Accepted Bookings</div>
-                                <div class="summary-value">{{ number_format($acceptedCount) }}</div>
-                                <div class="summary-sub">Confirmed + in progress + paid</div>
+                                <div class="summary-label">Completed Bookings</div>
+                                <div class="summary-value">{{ number_format($finishedCount) }}</div>
+                                <div class="summary-sub">Closed jobs marked completed</div>
                             </div>
                         </div>
                     </div>
@@ -1056,17 +1055,9 @@ body{
     Chart.defaults.borderColor = 'rgba(255,255,255,.08)';
 
     const labels7 = @json($last7Labels ?? []);
-    const confirmed = @json($dailyConfirmed ?? []);
-    const progress = @json($dailyProgress ?? []);
-    const paid = @json($dailyPaid ?? []);
     const completed = @json($dailyCompleted ?? []);
     const cancelled = @json($dailyCancelled ?? []);
-
-    const accepted = confirmed.map((v, i) => {
-        return Number(v || 0) + Number(progress[i] || 0) + Number(paid[i] || 0);
-    });
-
-    const finished = completed.map(v => Number(v || 0));
+    const completedOnly = completed.map(v => Number(v || 0));
     const cancelledOnly = cancelled.map(v => Number(v || 0));
 
     const monthLabels = @json($monthLabels ?? []);
@@ -1084,15 +1075,8 @@ body{
             labels: labels7,
             datasets: [
                 {
-                    label: 'Accepted',
-                    data: accepted,
-                    backgroundColor: 'rgba(56,189,248,.85)',
-                    borderRadius: 7,
-                    maxBarThickness: 34
-                },
-                {
-                    label: 'Finished',
-                    data: finished,
+                    label: 'Completed',
+                    data: completedOnly,
                     backgroundColor: 'rgba(34,197,94,.85)',
                     borderRadius: 7,
                     maxBarThickness: 34
