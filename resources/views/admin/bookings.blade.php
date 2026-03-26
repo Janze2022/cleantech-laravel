@@ -691,6 +691,15 @@ select.status-select option{
         align-items:stretch;
     }
 
+    .status-select{
+        flex:0 0 auto;
+        height:50px;
+        min-height:50px;
+        padding:0 14px;
+        font-size:.92rem;
+        line-height:1.2;
+    }
+
     .status-wrap .btnx,
     .booking-actions > .btnx,
     .booking-actions > form,
