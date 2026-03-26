@@ -656,7 +656,7 @@
             <div class="toolbar-top">
                 <div>
                     <h2 class="toolbar-title">Filter, Search, and Print</h2>
-                    <div class="toolbar-sub">Use the controls below to narrow the ledger or open a remittance printout.</div>
+                    <div class="toolbar-sub">Filter provider remittance rows or open a print-ready list.</div>
                 </div>
 
                 <div class="toolbar-pills">
@@ -672,8 +672,8 @@
                     <form method="GET" action="{{ route('admin.earnings') }}">
                         <div class="filter-grid">
                             <div class="field">
-                                <label for="earningsSearch">Provider</label>
-                                <input id="earningsSearch" type="text" name="q" value="{{ $search }}" placeholder="Search provider name">
+                                <label for="earningsSearch">Search</label>
+                                <input id="earningsSearch" type="text" name="q" value="{{ $search }}" placeholder="Provider, phone, service, option, or date">
                             </div>
 
                             <div class="field">
@@ -770,7 +770,7 @@
             <div class="ledger-head">
                 <div>
                     <h2 class="ledger-title">Daily Ledger</h2>
-                    <div class="ledger-sub">One row per provider per earning day.</div>
+                    <div class="ledger-sub">One row per provider per qualifying booking day.</div>
                 </div>
 
                 <div class="toolbar-pills">
@@ -810,7 +810,7 @@
 
                                     <td>
                                         <div class="value-strong">{{ number_format((int) $row->total_bookings) }}</div>
-                                        <div class="value-soft">paid/completed jobs</div>
+                                        <div class="value-soft">eligible bookings</div>
                                     </td>
 
                                     <td>

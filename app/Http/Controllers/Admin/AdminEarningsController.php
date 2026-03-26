@@ -31,18 +31,21 @@ class AdminEarningsController extends Controller
         $remittanceTableReady = Schema::hasTable('provider_remittances');
 
         $ledgerRows = $this->buildLedgerCollection($dateFrom, $dateTo);
-        $providerOptions = $ledgerRows
-            ->map(fn ($row) => (object) [
-                'id' => (int) $row->provider_id,
-                'name' => (string) $row->provider_name,
-            ])
-            ->unique('id')
-            ->sortBy('name')
-            ->values();
+        $providerOptions = $this->providerOptions();
 
         $filteredRows = $ledgerRows->filter(function ($row) use ($search, $remittanceFilter) {
-            $matchesSearch = $search === ''
-                || str_contains(strtolower((string) $row->provider_name), strtolower($search));
+            $needle = strtolower($search);
+            $haystack = strtolower(implode(' ', array_filter([
+                (string) $row->provider_name,
+                (string) $row->provider_phone,
+                (string) $row->service_names,
+                (string) $row->remit_date,
+                (string) $row->provider_id,
+                (string) $row->total_bookings,
+                number_format((float) $row->gross_amount, 2, '.', ''),
+            ])));
+
+            $matchesSearch = $needle === '' || str_contains($haystack, $needle);
 
             $matchesStatus = match ($remittanceFilter) {
                 'remitted' => $row->is_remitted,
@@ -254,17 +257,19 @@ class AdminEarningsController extends Controller
     private function buildLedgerCollection(string $dateFrom, string $dateTo): Collection
     {
         $providerNameExpr = $this->providerNameExpression('sp');
+        $statusSql = $this->normalizedStatusSql('b.status');
+        $bookingDateSql = $this->bookingDateSql('b.booking_date');
+        $earningStatuses = $this->earningStatusListSql();
 
         $query = DB::table('bookings as b')
             ->join('service_providers as sp', 'sp.id', '=', 'b.provider_id')
             ->whereNotNull('b.provider_id')
             ->whereNotNull('b.booking_date')
-            ->whereDate('b.booking_date', '>=', $dateFrom)
-            ->whereDate('b.booking_date', '<=', $dateTo)
-            ->whereRaw("LOWER(b.status) in ('paid', 'completed')")
-            ->groupBy('b.provider_id', 'b.booking_date')
+            ->whereRaw("{$bookingDateSql} >= ? AND {$bookingDateSql} <= ?", [$dateFrom, $dateTo])
+            ->whereRaw("{$statusSql} in ({$earningStatuses})")
+            ->groupBy('b.provider_id', DB::raw($bookingDateSql))
             ->selectRaw('b.provider_id')
-            ->selectRaw('b.booking_date as remit_date')
+            ->selectRaw("{$bookingDateSql} as remit_date")
             ->selectRaw('COUNT(*) as total_bookings')
             ->selectRaw('SUM(COALESCE(b.price, 0)) as gross_amount')
             ->selectRaw("COALESCE(MAX($providerNameExpr), CONCAT('Provider #', b.provider_id)) as provider_name");
@@ -279,24 +284,28 @@ class AdminEarningsController extends Controller
             $query->selectRaw("'' as provider_phone");
         }
 
-        if (Schema::hasTable('services') && Schema::hasColumn('bookings', 'service_id')) {
-            $query->leftJoin('services as s', 's.id', '=', 'b.service_id');
+        if (Schema::hasColumn('bookings', 'service_id') || Schema::hasColumn('bookings', 'service_option_id')) {
+            $serviceExpr = $this->serviceNameExpression('s', 'b');
+            $optionExpr = $this->serviceOptionExpression('o', 'b');
+            $serviceSummaryExpr = $this->serviceSummaryExpression($serviceExpr, $optionExpr);
 
-            if (Schema::hasColumn('services', 'name')) {
-                $query->selectRaw("GROUP_CONCAT(DISTINCT COALESCE(NULLIF(TRIM(s.name), ''), 'Service') ORDER BY s.name SEPARATOR ', ') as service_names");
-            } elseif (Schema::hasColumn('services', 'service_name')) {
-                $query->selectRaw("GROUP_CONCAT(DISTINCT COALESCE(NULLIF(TRIM(s.service_name), ''), 'Service') ORDER BY s.service_name SEPARATOR ', ') as service_names");
-            } else {
-                $query->selectRaw("'' as service_names");
+            if (Schema::hasTable('services') && Schema::hasColumn('bookings', 'service_id')) {
+                $query->leftJoin('services as s', 's.id', '=', 'b.service_id');
             }
+
+            if (Schema::hasTable('service_options') && Schema::hasColumn('bookings', 'service_option_id')) {
+                $query->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
+            }
+
+            $query->selectRaw("GROUP_CONCAT(DISTINCT {$serviceSummaryExpr} SEPARATOR ', ') as service_names");
         } else {
             $query->selectRaw("'' as service_names");
         }
 
         if (Schema::hasTable('provider_remittances')) {
-            $query->leftJoin('provider_remittances as pr', function ($join) {
+            $query->leftJoin('provider_remittances as pr', function ($join) use ($bookingDateSql) {
                 $join->on('pr.provider_id', '=', 'b.provider_id')
-                    ->on('pr.remit_date', '=', 'b.booking_date');
+                    ->whereRaw("pr.remit_date = {$bookingDateSql}");
             });
 
             $query->selectRaw("MAX(COALESCE(pr.status, 'pending')) as remittance_status")
@@ -318,31 +327,34 @@ class AdminEarningsController extends Controller
         }
 
         $providerNameExpr = $this->providerNameExpression('sp');
+        $statusSql = $this->normalizedStatusSql('b.status');
+        $bookingDateSql = $this->bookingDateSql('b.booking_date');
+        $earningStatuses = $this->earningStatusListSql();
+        $serviceExpr = $this->serviceNameExpression('s', 'b');
+        $optionExpr = $this->serviceOptionExpression('o', 'b');
+        $serviceSummaryExpr = $this->serviceSummaryExpression($serviceExpr, $optionExpr);
 
         $query = DB::table('bookings as b')
             ->join('service_providers as sp', 'sp.id', '=', 'b.provider_id')
-            ->leftJoin('provider_remittances as pr', function ($join) {
+            ->leftJoin('provider_remittances as pr', function ($join) use ($bookingDateSql) {
                 $join->on('pr.provider_id', '=', 'b.provider_id')
-                    ->on('pr.remit_date', '=', 'b.booking_date');
+                    ->whereRaw("pr.remit_date = {$bookingDateSql}");
             })
             ->whereNotNull('b.provider_id')
             ->whereNotNull('b.booking_date')
-            ->whereRaw("LOWER(b.status) in ('paid', 'completed')")
-            ->where(function ($builder) use ($dateFrom, $dateTo) {
+            ->whereRaw("{$statusSql} in ({$earningStatuses})")
+            ->where(function ($builder) use ($dateFrom, $dateTo, $bookingDateSql) {
                 $builder
-                    ->where(function ($dateQuery) use ($dateFrom, $dateTo) {
-                        $dateQuery->whereDate('b.booking_date', '>=', $dateFrom)
-                            ->whereDate('b.booking_date', '<=', $dateTo);
-                    })
+                    ->whereRaw("{$bookingDateSql} >= ? AND {$bookingDateSql} <= ?", [$dateFrom, $dateTo])
                     ->orWhere(function ($dateQuery) use ($dateFrom, $dateTo) {
                         $dateQuery->whereNotNull('pr.remitted_at')
                             ->whereDate('pr.remitted_at', '>=', $dateFrom)
                             ->whereDate('pr.remitted_at', '<=', $dateTo);
                     });
             })
-            ->groupBy('b.provider_id', 'b.booking_date')
+            ->groupBy('b.provider_id', DB::raw($bookingDateSql))
             ->selectRaw('b.provider_id')
-            ->selectRaw('b.booking_date as remit_date')
+            ->selectRaw("{$bookingDateSql} as remit_date")
             ->selectRaw('COUNT(*) as total_bookings')
             ->selectRaw('SUM(COALESCE(b.price, 0)) as gross_amount')
             ->selectRaw("COALESCE(MAX($providerNameExpr), CONCAT('Provider #', b.provider_id)) as provider_name")
@@ -362,14 +374,14 @@ class AdminEarningsController extends Controller
 
         if (Schema::hasTable('services') && Schema::hasColumn('bookings', 'service_id')) {
             $query->leftJoin('services as s', 's.id', '=', 'b.service_id');
+        }
 
-            if (Schema::hasColumn('services', 'name')) {
-                $query->selectRaw("GROUP_CONCAT(DISTINCT COALESCE(NULLIF(TRIM(s.name), ''), 'Service') ORDER BY s.name SEPARATOR ', ') as service_names");
-            } elseif (Schema::hasColumn('services', 'service_name')) {
-                $query->selectRaw("GROUP_CONCAT(DISTINCT COALESCE(NULLIF(TRIM(s.service_name), ''), 'Service') ORDER BY s.service_name SEPARATOR ', ') as service_names");
-            } else {
-                $query->selectRaw("'' as service_names");
-            }
+        if (Schema::hasTable('service_options') && Schema::hasColumn('bookings', 'service_option_id')) {
+            $query->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id');
+        }
+
+        if (Schema::hasColumn('bookings', 'service_id') || Schema::hasColumn('bookings', 'service_option_id')) {
+            $query->selectRaw("GROUP_CONCAT(DISTINCT {$serviceSummaryExpr} SEPARATOR ', ') as service_names");
         } else {
             $query->selectRaw("'' as service_names");
         }
@@ -470,6 +482,92 @@ class AdminEarningsController extends Controller
         }
 
         return "NULL";
+    }
+
+    private function serviceNameExpression(string $alias, string $bookingAlias): string
+    {
+        if (!Schema::hasTable('services')) {
+            return "CONCAT('Service #', {$bookingAlias}.service_id)";
+        }
+
+        if (Schema::hasColumn('services', 'name')) {
+            return "NULLIF(TRIM({$alias}.name), '')";
+        }
+
+        if (Schema::hasColumn('services', 'service_name')) {
+            return "NULLIF(TRIM({$alias}.service_name), '')";
+        }
+
+        if (Schema::hasColumn('services', 'title')) {
+            return "NULLIF(TRIM({$alias}.title), '')";
+        }
+
+        return "CONCAT('Service #', {$bookingAlias}.service_id)";
+    }
+
+    private function serviceOptionExpression(string $alias, string $bookingAlias): string
+    {
+        if (!Schema::hasColumn('bookings', 'service_option_id')) {
+            return "''";
+        }
+
+        if (!Schema::hasTable('service_options')) {
+            return "CONCAT('Option #', {$bookingAlias}.service_option_id)";
+        }
+
+        if (Schema::hasColumn('service_options', 'label')) {
+            return "NULLIF(TRIM({$alias}.label), '')";
+        }
+
+        if (Schema::hasColumn('service_options', 'name')) {
+            return "NULLIF(TRIM({$alias}.name), '')";
+        }
+
+        if (Schema::hasColumn('service_options', 'option_name')) {
+            return "NULLIF(TRIM({$alias}.option_name), '')";
+        }
+
+        if (Schema::hasColumn('service_options', 'title')) {
+            return "NULLIF(TRIM({$alias}.title), '')";
+        }
+
+        return "CONCAT('Option #', {$bookingAlias}.service_option_id)";
+    }
+
+    private function serviceSummaryExpression(string $serviceExpr, string $optionExpr): string
+    {
+        return "
+            TRIM(
+                CONCAT(
+                    COALESCE({$serviceExpr}, 'Service'),
+                    CASE
+                        WHEN COALESCE({$optionExpr}, '') <> '' THEN CONCAT(' / ', {$optionExpr})
+                        ELSE ''
+                    END
+                )
+            )
+        ";
+    }
+
+    private function normalizedStatusSql(string $column = 'b.status'): string
+    {
+        $normalized = "LOWER(REPLACE(REPLACE(COALESCE({$column}, ''),'-','_'),' ','_'))";
+
+        return "CASE
+            WHEN {$normalized} IN ('cancelled', 'canceled', 'cancel') THEN 'cancelled'
+            WHEN {$normalized} = 'inprogress' THEN 'in_progress'
+            ELSE {$normalized}
+        END";
+    }
+
+    private function bookingDateSql(string $column = 'b.booking_date'): string
+    {
+        return "DATE({$column})";
+    }
+
+    private function earningStatusListSql(): string
+    {
+        return "'" . implode("','", self::EARNING_STATUSES) . "'";
     }
 
     private function sanitizeDate(?string $value, string $fallback): string
