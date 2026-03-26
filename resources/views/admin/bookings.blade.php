@@ -835,7 +835,8 @@ select.status-select option{
                             $provName = $b->provider_name ?: ($b->provider_id ? 'Provider ID: '.$b->provider_id : 'Unassigned');
                             $serviceLabel = $b->service_name ?: 'Cleaning Service';
                             $serviceOptionLabel = trim((string) ($b->service_option_name ?? '')) ?: 'Selected booking option';
-                            $houseLabel = $b->house_type ? ucwords(str_replace('_', ' ', $b->house_type)) : 'Not specified';
+                            $houseLabel = $b->house_type ? ucwords(str_replace('_', ' ', $b->house_type)) : '';
+                            $serviceSummary = $serviceOptionLabel . ($houseLabel ? ' â€¢ ' . $houseLabel : '');
 
                             $details = [
                                 'id' => $b->id,
@@ -864,7 +865,7 @@ select.status-select option{
                         @endphp
 
                         <div class="booking-card booking-item"
-                             data-search="{{ strtolower(trim($ref.' '.$custName.' '.$provName.' '.$status.' '.$b->booking_date.' '.booking_time_12h($b->time_start).' '.booking_time_12h($b->time_end).' '.$b->address.' '.$b->contact_phone.' '.$serviceLabel.' '.$serviceOptionLabel.' '.$houseLabel)) }}">
+                             data-search="{{ strtolower(trim($ref.' '.$custName.' '.$provName.' '.$status.' '.$b->booking_date.' '.booking_time_12h($b->time_start).' '.booking_time_12h($b->time_end).' '.$b->address.' '.$b->contact_phone.' '.$serviceLabel.' '.$serviceSummary)) }}">
 
                             <div class="booking-top">
                                 <div class="booking-ref">
@@ -878,7 +879,7 @@ select.status-select option{
                                 <div class="summary-main">
                                     <div class="summary-title">{{ $serviceLabel }}</div>
                                     <div class="summary-sub">
-                                        {{ $serviceOptionLabel }} • {{ $houseLabel }}
+                                        {{ $serviceOptionLabel }}{{ $houseLabel ? ' / '.$houseLabel : '' }}
                                     </div>
                                 </div>
 
@@ -1021,7 +1022,7 @@ select.status-select option{
 
                             $serviceLabel = $b->service_name ?: 'Cleaning Service';
                             $serviceOptionLabel = trim((string) ($b->service_option_name ?? '')) ?: 'Selected booking option';
-                            $houseLabel = $b->house_type ? ucwords(str_replace('_', ' ', $b->house_type)) : 'Not specified';
+                            $houseLabel = $b->house_type ? ucwords(str_replace('_', ' ', $b->house_type)) : '';
 
                             $details = [
                                 'id' => $b->id,
@@ -1069,7 +1070,7 @@ select.status-select option{
                                 <div class="summary-main">
                                     <div class="summary-title">{{ $serviceLabel }}</div>
                                     <div class="summary-sub">
-                                        {{ $serviceOptionLabel }} • {{ $houseLabel }}
+                                        {{ $serviceOptionLabel }}{{ $houseLabel ? ' / '.$houseLabel : '' }}
                                     </div>
                                 </div>
 
@@ -1448,13 +1449,14 @@ function openBooking(b){
 
     const serviceName = b.service_name ? b.service_name : 'Cleaning Service';
     const optionName = b.service_option_name ? b.service_option_name : 'Selected booking option';
-    const houseType = b.house_type ? String(b.house_type).replaceAll('_', ' ') : '-';
+    const houseType = b.house_type ? String(b.house_type).replaceAll('_', ' ') : '';
+    const serviceParts = [serviceName, optionName];
 
-    const serviceText =
-        serviceName +
-        ' • ' +
-        optionName +
-        ' • House Type: ' + houseType;
+    if (houseType) {
+        serviceParts.push('House Type: ' + houseType);
+    }
+
+    const serviceText = serviceParts.join(' / ');
 
     document.getElementById('mCustomer').textContent = cust;
     document.getElementById('mProvider').textContent = prov;
