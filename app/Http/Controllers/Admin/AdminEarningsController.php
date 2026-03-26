@@ -258,18 +258,18 @@ class AdminEarningsController extends Controller
     {
         $providerNameExpr = $this->providerNameExpression('sp');
         $statusSql = $this->normalizedStatusSql('b.status');
-        $bookingDateSql = $this->bookingDateSql('b.booking_date');
+        $earningDateSql = $this->earningDateSql('b.updated_at', 'b.created_at', 'b.booking_date');
         $earningStatuses = $this->earningStatusListSql();
 
         $query = DB::table('bookings as b')
             ->join('service_providers as sp', 'sp.id', '=', 'b.provider_id')
             ->whereNotNull('b.provider_id')
             ->whereNotNull('b.booking_date')
-            ->whereRaw("{$bookingDateSql} >= ? AND {$bookingDateSql} <= ?", [$dateFrom, $dateTo])
+            ->whereRaw("{$earningDateSql} >= ? AND {$earningDateSql} <= ?", [$dateFrom, $dateTo])
             ->whereRaw("{$statusSql} in ({$earningStatuses})")
-            ->groupBy('b.provider_id', DB::raw($bookingDateSql))
+            ->groupBy('b.provider_id', DB::raw($earningDateSql))
             ->selectRaw('b.provider_id')
-            ->selectRaw("{$bookingDateSql} as remit_date")
+            ->selectRaw("{$earningDateSql} as remit_date")
             ->selectRaw('COUNT(*) as total_bookings')
             ->selectRaw('SUM(COALESCE(b.price, 0)) as gross_amount')
             ->selectRaw("COALESCE(MAX($providerNameExpr), CONCAT('Provider #', b.provider_id)) as provider_name");
@@ -303,9 +303,9 @@ class AdminEarningsController extends Controller
         }
 
         if (Schema::hasTable('provider_remittances')) {
-            $query->leftJoin('provider_remittances as pr', function ($join) use ($bookingDateSql) {
+            $query->leftJoin('provider_remittances as pr', function ($join) use ($earningDateSql) {
                 $join->on('pr.provider_id', '=', 'b.provider_id')
-                    ->whereRaw("pr.remit_date = {$bookingDateSql}");
+                    ->whereRaw("pr.remit_date = {$earningDateSql}");
             });
 
             $query->selectRaw("MAX(COALESCE(pr.status, 'pending')) as remittance_status")
@@ -328,7 +328,7 @@ class AdminEarningsController extends Controller
 
         $providerNameExpr = $this->providerNameExpression('sp');
         $statusSql = $this->normalizedStatusSql('b.status');
-        $bookingDateSql = $this->bookingDateSql('b.booking_date');
+        $earningDateSql = $this->earningDateSql('b.updated_at', 'b.created_at', 'b.booking_date');
         $earningStatuses = $this->earningStatusListSql();
         $serviceExpr = $this->serviceNameExpression('s', 'b');
         $optionExpr = $this->serviceOptionExpression('o', 'b');
@@ -336,25 +336,25 @@ class AdminEarningsController extends Controller
 
         $query = DB::table('bookings as b')
             ->join('service_providers as sp', 'sp.id', '=', 'b.provider_id')
-            ->leftJoin('provider_remittances as pr', function ($join) use ($bookingDateSql) {
+            ->leftJoin('provider_remittances as pr', function ($join) use ($earningDateSql) {
                 $join->on('pr.provider_id', '=', 'b.provider_id')
-                    ->whereRaw("pr.remit_date = {$bookingDateSql}");
+                    ->whereRaw("pr.remit_date = {$earningDateSql}");
             })
             ->whereNotNull('b.provider_id')
             ->whereNotNull('b.booking_date')
             ->whereRaw("{$statusSql} in ({$earningStatuses})")
-            ->where(function ($builder) use ($dateFrom, $dateTo, $bookingDateSql) {
+            ->where(function ($builder) use ($dateFrom, $dateTo, $earningDateSql) {
                 $builder
-                    ->whereRaw("{$bookingDateSql} >= ? AND {$bookingDateSql} <= ?", [$dateFrom, $dateTo])
+                    ->whereRaw("{$earningDateSql} >= ? AND {$earningDateSql} <= ?", [$dateFrom, $dateTo])
                     ->orWhere(function ($dateQuery) use ($dateFrom, $dateTo) {
                         $dateQuery->whereNotNull('pr.remitted_at')
                             ->whereDate('pr.remitted_at', '>=', $dateFrom)
                             ->whereDate('pr.remitted_at', '<=', $dateTo);
                     });
             })
-            ->groupBy('b.provider_id', DB::raw($bookingDateSql))
+            ->groupBy('b.provider_id', DB::raw($earningDateSql))
             ->selectRaw('b.provider_id')
-            ->selectRaw("{$bookingDateSql} as remit_date")
+            ->selectRaw("{$earningDateSql} as remit_date")
             ->selectRaw('COUNT(*) as total_bookings')
             ->selectRaw('SUM(COALESCE(b.price, 0)) as gross_amount')
             ->selectRaw("COALESCE(MAX($providerNameExpr), CONCAT('Provider #', b.provider_id)) as provider_name")
@@ -563,6 +563,14 @@ class AdminEarningsController extends Controller
     private function bookingDateSql(string $column = 'b.booking_date'): string
     {
         return "DATE({$column})";
+    }
+
+    private function earningDateSql(
+        string $updatedAtColumn = 'b.updated_at',
+        string $createdAtColumn = 'b.created_at',
+        string $bookingDateColumn = 'b.booking_date'
+    ): string {
+        return "DATE(COALESCE({$updatedAtColumn}, {$createdAtColumn}, {$bookingDateColumn}))";
     }
 
     private function earningStatusListSql(): string
