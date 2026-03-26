@@ -275,7 +275,7 @@
 
         <form method="POST" action="{{ route('provider.verify.submit') }}">
             @csrf
-            <input type="hidden" name="email" value="{{ request('email') }}">
+            <input type="hidden" name="email" value="{{ $email }}">
 
             <div class="mb-3">
                 <input
@@ -284,7 +284,7 @@
                     maxlength="6"
                     inputmode="numeric"
                     autocomplete="one-time-code"
-                    placeholder="• • • • • •"
+                    placeholder="0 0 0 0 0 0"
                     required
                     autofocus
                 >
@@ -295,13 +295,12 @@
             </button>
         </form>
 
-        {{-- RESEND --}}
         <div class="auth-footer">
             <form method="POST" action="{{ route('provider.otp.resend') }}" id="resendForm">
                 @csrf
-                <input type="hidden" name="email" value="{{ request('email') }}">
+                <input type="hidden" name="email" value="{{ $email }}">
                 <button type="submit" id="resendBtn">
-                    Didn’t receive the code? Resend OTP
+                    Didn't receive the code? Resend OTP
                 </button>
                 <div id="cooldownText" class="text-muted mt-1" style="font-size:.85rem;"></div>
             </form>
@@ -311,38 +310,73 @@
 </div>
 
 <script>
-const COOLDOWN_SECONDS = 60;
-const resendBtn = document.getElementById('resendBtn');
-const cooldownText = document.getElementById('cooldownText');
+(() => {
+    const resendForm = document.getElementById('resendForm');
+    const resendBtn = document.getElementById('resendBtn');
+    const cooldownText = document.getElementById('cooldownText');
+    const email = @json($email);
+    const initialCooldown = Number(@json((int) ($otpCooldown ?? 0)));
+    const storageKey = `providerOtpCooldown:${email}`;
 
-let remaining = sessionStorage.getItem('otpCooldown');
+    if (!resendForm || !resendBtn || !cooldownText) {
+        return;
+    }
 
-if (remaining && remaining > 0) {
-    startCooldown(parseInt(remaining));
-}
+    let countdownTimer = null;
+    let activeUntil = Number(sessionStorage.getItem(storageKey) || 0);
+    const serverUntil = initialCooldown > 0 ? Date.now() + (initialCooldown * 1000) : 0;
 
-document.getElementById('resendForm').addEventListener('submit', () => {
-    sessionStorage.setItem('otpCooldown', COOLDOWN_SECONDS);
-});
+    if (serverUntil > activeUntil) {
+        activeUntil = serverUntil;
+        sessionStorage.setItem(storageKey, String(activeUntil));
+    }
 
-function startCooldown(seconds) {
-    remaining = seconds;
-    resendBtn.disabled = true;
+    const formatCooldown = (seconds) => {
+        if (seconds < 60) {
+            return `${seconds}s`;
+        }
 
-    const interval = setInterval(() => {
-        remaining--;
-        sessionStorage.setItem('otpCooldown', remaining);
+        const minutes = Math.floor(seconds / 60);
+        const remaining = seconds % 60;
 
-        cooldownText.textContent = `Resend available in ${remaining}s`;
+        if (remaining === 0) {
+            return `${minutes}m`;
+        }
+
+        return `${minutes}m ${remaining}s`;
+    };
+
+    const renderCountdown = () => {
+        const remaining = Math.max(0, Math.ceil((activeUntil - Date.now()) / 1000));
 
         if (remaining <= 0) {
-            clearInterval(interval);
             resendBtn.disabled = false;
             cooldownText.textContent = '';
-            sessionStorage.removeItem('otpCooldown');
+            sessionStorage.removeItem(storageKey);
+
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+
+            return;
         }
-    }, 1000);
-}
+
+        resendBtn.disabled = true;
+        cooldownText.textContent = `Resend available in ${formatCooldown(remaining)}`;
+    };
+
+    if (activeUntil > Date.now()) {
+        renderCountdown();
+        countdownTimer = window.setInterval(renderCountdown, 1000);
+    }
+
+    resendForm.addEventListener('submit', () => {
+        const nextUntil = Date.now() + (60 * 1000);
+
+        sessionStorage.setItem(storageKey, String(nextUntil));
+    });
+})();
 </script>
 
 @endsection

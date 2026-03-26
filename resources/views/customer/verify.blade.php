@@ -162,6 +162,11 @@
     cursor: pointer;
 }
 
+.auth-footer button[disabled] {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
 /* =========================
    ALERTS
 ========================= */
@@ -230,7 +235,7 @@
                     class="form-control otp-input"
                     maxlength="6"
                     inputmode="numeric"
-                    placeholder="• • • • • •"
+                    placeholder="0 0 0 0 0 0"
                     required
                 >
             </div>
@@ -241,16 +246,87 @@
         </form>
 
         <div class="auth-footer">
-            <form method="POST" action="{{ route('customer.otp.resend') }}">
+            <form method="POST" action="{{ route('customer.otp.resend') }}" id="resendForm">
                 @csrf
                 <input type="hidden" name="email" value="{{ $email }}">
-                <button type="submit">
-                    Didn’t receive the code? Resend OTP
+                <button type="submit" id="resendBtn">
+                    Didn't receive the code? Resend OTP
                 </button>
+                <div id="cooldownText" class="text-muted mt-1" style="font-size:.85rem;"></div>
             </form>
         </div>
 
     </div>
 </div>
+
+<script>
+(() => {
+    const resendForm = document.getElementById('resendForm');
+    const resendBtn = document.getElementById('resendBtn');
+    const cooldownText = document.getElementById('cooldownText');
+    const email = @json($email);
+    const initialCooldown = Number(@json((int) ($otpCooldown ?? 0)));
+    const storageKey = `customerOtpCooldown:${email}`;
+
+    if (!resendForm || !resendBtn || !cooldownText) {
+        return;
+    }
+
+    let countdownTimer = null;
+    let activeUntil = Number(sessionStorage.getItem(storageKey) || 0);
+    const serverUntil = initialCooldown > 0 ? Date.now() + (initialCooldown * 1000) : 0;
+
+    if (serverUntil > activeUntil) {
+        activeUntil = serverUntil;
+        sessionStorage.setItem(storageKey, String(activeUntil));
+    }
+
+    const formatCooldown = (seconds) => {
+        if (seconds < 60) {
+            return `${seconds}s`;
+        }
+
+        const minutes = Math.floor(seconds / 60);
+        const remaining = seconds % 60;
+
+        if (remaining === 0) {
+            return `${minutes}m`;
+        }
+
+        return `${minutes}m ${remaining}s`;
+    };
+
+    const renderCountdown = () => {
+        const remaining = Math.max(0, Math.ceil((activeUntil - Date.now()) / 1000));
+
+        if (remaining <= 0) {
+            resendBtn.disabled = false;
+            cooldownText.textContent = '';
+            sessionStorage.removeItem(storageKey);
+
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+
+            return;
+        }
+
+        resendBtn.disabled = true;
+        cooldownText.textContent = `Resend available in ${formatCooldown(remaining)}`;
+    };
+
+    if (activeUntil > Date.now()) {
+        renderCountdown();
+        countdownTimer = window.setInterval(renderCountdown, 1000);
+    }
+
+    resendForm.addEventListener('submit', () => {
+        const nextUntil = Date.now() + (60 * 1000);
+
+        sessionStorage.setItem(storageKey, String(nextUntil));
+    });
+})();
+</script>
 
 @endsection

@@ -4,11 +4,16 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Carbon\Carbon;
 use App\Services\OtpMailer;
 
 class CustomerOtpController extends Controller
 {
+    private const RESEND_COOLDOWN_SECONDS = 60;
+    private const RESEND_MAX_ATTEMPTS = 5;
+    private const RESEND_WINDOW_SECONDS = 600;
+
     public function show(Request $request)
     {
         $email = $request->query('email');
@@ -17,7 +22,9 @@ class CustomerOtpController extends Controller
             abort(404);
         }
 
-        return view('customer.verify', compact('email'));
+        $otpCooldown = max(0, (int) session('otp_cooldown', 0));
+
+        return view('customer.verify', compact('email', 'otpCooldown'));
     }
 
     public function verify(Request $request)
@@ -72,6 +79,28 @@ class CustomerOtpController extends Controller
             'email' => 'required|email',
         ])['email'];
 
+        ['cooldown' => $cooldownKey, 'window' => $windowKey] = $this->resendLimiterKeys($request, $email);
+
+        if (RateLimiter::tooManyAttempts($cooldownKey, 1)) {
+            $seconds = RateLimiter::availableIn($cooldownKey);
+
+            return $this->cooldownRedirect(
+                $email,
+                $seconds,
+                'Please wait ' . $this->formatCooldown($seconds) . ' before resending a new OTP.'
+            );
+        }
+
+        if (RateLimiter::tooManyAttempts($windowKey, self::RESEND_MAX_ATTEMPTS)) {
+            $seconds = RateLimiter::availableIn($windowKey);
+
+            return $this->cooldownRedirect(
+                $email,
+                $seconds,
+                'Too many resend attempts. Please try again in ' . $this->formatCooldown($seconds) . '.'
+            );
+        }
+
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $expiresAt = Carbon::now()->addMinutes(5);
 
@@ -91,9 +120,46 @@ class CustomerOtpController extends Controller
 
         OtpMailer::sendRegister($email, $otp);
 
+        RateLimiter::hit($cooldownKey, self::RESEND_COOLDOWN_SECONDS);
+        RateLimiter::hit($windowKey, self::RESEND_WINDOW_SECONDS);
+
         return redirect()->route('customer.verify', [
             'email' => $email,
             'resent' => 1
-        ]);
+        ])->with('otp_cooldown', self::RESEND_COOLDOWN_SECONDS);
+    }
+
+    private function resendLimiterKeys(Request $request, string $email): array
+    {
+        $identity = sha1(strtolower(trim($email)) . '|' . $request->ip());
+
+        return [
+            'cooldown' => 'customer-verify-resend-cooldown:' . $identity,
+            'window' => 'customer-verify-resend-window:' . $identity,
+        ];
+    }
+
+    private function cooldownRedirect(string $email, int $seconds, string $message)
+    {
+        return redirect()
+            ->route('customer.verify', ['email' => $email])
+            ->withErrors(['otp' => $message])
+            ->with('otp_cooldown', $seconds);
+    }
+
+    private function formatCooldown(int $seconds): string
+    {
+        if ($seconds < 60) {
+            return $seconds . ' seconds';
+        }
+
+        $minutes = intdiv($seconds, 60);
+        $remaining = $seconds % 60;
+
+        if ($remaining === 0) {
+            return $minutes . ' minute' . ($minutes === 1 ? '' : 's');
+        }
+
+        return $minutes . 'm ' . $remaining . 's';
     }
 }
