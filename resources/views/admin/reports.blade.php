@@ -662,7 +662,7 @@ body{
             <div class="title-wrap">
                 <h2 class="page-title">Reports Dashboard</h2>
                 <div class="page-subtitle">
-                    CleanTech admin analytics, income reports, service insights, and provider performance overview.
+                    CleanTech admin analytics, income reports, and performance totals based on the selected report date range.
                 </div>
             </div>
         </div>
@@ -756,7 +756,7 @@ body{
                 <div class="panel">
                     <div class="panel-head">
                         <h4>Completed / Cancelled</h4>
-                        <span class="badgex">Last 7 days</span>
+                        <span class="badgex">7 days to {{ Carbon::parse($endStr, $tz)->format('M d, Y') }}</span>
                     </div>
                     <div class="panel-body">
                         <div class="chart-box">
@@ -768,7 +768,7 @@ body{
                 <div class="panel">
                     <div class="panel-head">
                         <h4>Income Trend</h4>
-                        <span class="badgex">Last 6 months</span>
+                        <span class="badgex">6 months to {{ Carbon::parse($endStr, $tz)->format('M Y') }}</span>
                     </div>
                     <div class="panel-body">
                         <div class="chart-box">

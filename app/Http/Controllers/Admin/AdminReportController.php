@@ -72,13 +72,25 @@ class AdminReportController extends Controller
         return $query->whereRaw("{$reportDateSql} BETWEEN ? AND ?", [$start, $end]);
     }
 
+    private function defaultReportStartDate(string $fallbackDate): string
+    {
+        $reportDateSql = $this->reportDateSql('b.status', 'b.updated_at', 'b.created_at', 'b.booking_date');
+
+        return (string) (
+            DB::table('bookings as b')
+                ->selectRaw("MIN({$reportDateSql}) as first_report_date")
+                ->value('first_report_date') ?: $fallbackDate
+        );
+    }
+
     public function index(Request $request)
     {
         $tz = config('app.timezone') ?? 'Asia/Manila';
         $now = Carbon::now($tz);
-
-        $start = $request->query('start', $now->copy()->subDays(29)->toDateString());
-        $end   = $request->query('end', $now->toDateString());
+        $fallbackEnd = $now->toDateString();
+        $end = $request->query('end', $fallbackEnd);
+        $start = $request->query('start', $this->defaultReportStartDate($fallbackEnd));
+        $rangeEnd = Carbon::parse($end, $tz);
         $statusSql = $this->normalizedStatusSql('b.status');
         $reportDateSql = $this->reportDateSql('b.status', 'b.updated_at', 'b.created_at', 'b.booking_date');
 
@@ -154,7 +166,7 @@ class AdminReportController extends Controller
         // Last 7 days status trend
         $last7Dates = [];
         for ($i = 6; $i >= 0; $i--) {
-            $last7Dates[] = $now->copy()->subDays($i)->toDateString();
+            $last7Dates[] = $rangeEnd->copy()->subDays($i)->toDateString();
         }
 
         $last7Labels = array_map(function ($d) use ($tz) {
@@ -197,7 +209,7 @@ class AdminReportController extends Controller
         // Monthly revenue for last 6 months
         $months = [];
         for ($i = 5; $i >= 0; $i--) {
-            $months[] = $now->copy()->subMonths($i)->startOfMonth();
+            $months[] = $rangeEnd->copy()->subMonths($i)->startOfMonth();
         }
 
         $monthLabels = array_map(fn($m) => $m->format('M'), $months);
@@ -344,9 +356,9 @@ class AdminReportController extends Controller
     {
         $tz = config('app.timezone') ?? 'Asia/Manila';
         $now = Carbon::now($tz);
-
-        $start = $request->query('start', $now->copy()->subDays(29)->toDateString());
-        $end   = $request->query('end', $now->toDateString());
+        $fallbackEnd = $now->toDateString();
+        $end = $request->query('end', $fallbackEnd);
+        $start = $request->query('start', $this->defaultReportStartDate($fallbackEnd));
 
         $rows = $this->applyReportRange(DB::table('bookings as b'), $start, $end)
             ->leftJoin('services as s', 's.id', '=', 'b.service_id')
