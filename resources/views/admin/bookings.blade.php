@@ -687,6 +687,7 @@ select.status-select option{
     .status-wrap{
         width:100%;
         min-width:0;
+        flex:none;
         flex-direction:column;
         align-items:stretch;
     }
@@ -705,6 +706,10 @@ select.status-select option{
     .booking-actions > form,
     .booking-actions > form .btnx{
         width:100%;
+    }
+
+    .booking-actions > form{
+        flex:none;
     }
 
     .filter-actions .btnx{
