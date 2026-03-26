@@ -49,6 +49,31 @@
         gap:10px;
         line-height:1.2;
     }
+    .ct-title-row,
+    .ct-bar-title,
+    .ct-btn-label{
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+    }
+    .ct-inline-icon{
+        width:18px;
+        height:18px;
+        flex:0 0 18px;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        color:#7dd3fc;
+    }
+    .ct-inline-icon svg{
+        width:100%;
+        height:100%;
+        stroke:currentColor;
+        fill:none;
+        stroke-width:1.9;
+        stroke-linecap:round;
+        stroke-linejoin:round;
+    }
     .ct-chip,
     .ct-breadcrumb{
         font-size:12px;
@@ -227,6 +252,22 @@
         color:#fff !important;
     }
     .btn-primary:hover{ filter:brightness(1.05); }
+    .ct-btn-icon{
+        width:16px;
+        height:16px;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+    }
+    .ct-btn-icon svg{
+        width:100%;
+        height:100%;
+        stroke:currentColor;
+        fill:none;
+        stroke-width:2;
+        stroke-linecap:round;
+        stroke-linejoin:round;
+    }
 
     .alert{ border-radius:12px !important; }
 
@@ -269,7 +310,15 @@
     <div class="ct-wrap">
         <div class="ct-top">
             <div class="ct-top-left">
-                <span>⚙️ Provider Onboarding</span>
+                <span class="ct-title-row">
+                    <span class="ct-inline-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 3l1.9 2.4 3-.1.8 2.9 2.7 1.3-1.1 2.8 1.1 2.8-2.7 1.3-.8 2.9-3-.1L12 21l-1.9-2.4-3 .1-.8-2.9-2.7-1.3 1.1-2.8-1.1-2.8 2.7-1.3.8-2.9 3 .1L12 3z"></path>
+                            <circle cx="12" cy="12" r="3.2"></circle>
+                        </svg>
+                    </span>
+                    <span>Provider Onboarding</span>
+                </span>
                 <span class="ct-chip">Terms Acceptance</span>
             </div>
             <div class="ct-breadcrumb">Home / Provider / Pre-Register / Terms</div>
@@ -277,7 +326,17 @@
 
         <div class="ct-box">
             <div class="ct-bar">
-                <div>☰ TERMS AND CONDITIONS</div>
+                <div class="ct-bar-title">
+                    <span class="ct-inline-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M7 4.5h10a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2z"></path>
+                            <path d="M9 9h6"></path>
+                            <path d="M9 13h6"></path>
+                            <path d="M9 17h4"></path>
+                        </svg>
+                    </span>
+                    <span>TERMS AND CONDITIONS</span>
+                </div>
                 <div class="ct-step">Step 0 of 2</div>
             </div>
 
@@ -423,8 +482,27 @@
                         </div>
 
                         <div class="ct-actions">
-                            <a class="btn btn-danger" href="{{ route('home') }}">Decline ✖</a>
-                            <button class="btn btn-primary" type="submit">I Agree ✔</button>
+                            <a class="btn btn-danger" href="{{ route('home') }}">
+                                <span class="ct-btn-label">
+                                    <span class="ct-btn-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24">
+                                            <path d="M6 6l12 12"></path>
+                                            <path d="M18 6L6 18"></path>
+                                        </svg>
+                                    </span>
+                                    <span>Decline</span>
+                                </span>
+                            </a>
+                            <button class="btn btn-primary" type="submit">
+                                <span class="ct-btn-label">
+                                    <span class="ct-btn-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24">
+                                            <path d="M5 12.5l4.2 4.2L19 7"></path>
+                                        </svg>
+                                    </span>
+                                    <span>I Agree</span>
+                                </span>
+                            </button>
                         </div>
                     </div>
                 </form>

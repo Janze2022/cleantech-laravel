@@ -10,11 +10,12 @@
 ========================= */
 .auth-page {
     position: relative;
-    min-height: calc(100vh - 120px);
+    min-height: clamp(520px, calc(100vh - var(--nav-h, 72px)), 720px);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    padding: clamp(24px, 5vh, 48px) 16px;
 }
 
 /* =========================
@@ -163,7 +164,7 @@
     box-shadow:
         0 30px 80px rgba(2,6,23,.65),
         inset 0 1px 0 rgba(255,255,255,.06);
-    padding: 2.3rem 2.1rem;
+    padding: 2.1rem 2rem;
 }
 
 .auth-card h4 {
@@ -221,6 +222,18 @@
 
 .auth-footer a:hover {
     text-decoration: underline;
+}
+
+@media (max-width: 576px) {
+    .auth-page {
+        min-height: calc(100vh - var(--nav-h, 72px));
+        padding: 22px 14px 28px;
+    }
+
+    .auth-card {
+        max-width: 100%;
+        padding: 1.85rem 1.15rem;
+    }
 }
 </style>
 

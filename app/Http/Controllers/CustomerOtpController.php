@@ -101,22 +101,32 @@ class CustomerOtpController extends Controller
             );
         }
 
+        $customer = DB::table('customers')
+            ->where('email', $email)
+            ->first();
+
+        if (!$customer) {
+            return back()->withErrors([
+                'otp' => 'Account not found.'
+            ]);
+        }
+
+        if ((int) ($customer->is_verified ?? 0) === 1 || $customer->status === 'active') {
+            return back()->withErrors([
+                'otp' => 'Account already verified.'
+            ]);
+        }
+
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $expiresAt = Carbon::now()->addMinutes(5);
 
-        $updated = DB::table('customers')
-            ->where('email', $email)
-            ->where('is_verified', 0)
+        DB::table('customers')
+            ->where('id', $customer->id)
             ->update([
                 'otp' => $otp,
                 'otp_expires_at' => $expiresAt,
+                'updated_at' => now(),
             ]);
-
-        if (!$updated) {
-            return back()->withErrors([
-                'otp' => 'Account already verified or not found.'
-            ]);
-        }
 
         OtpMailer::sendRegister($email, $otp);
 
