@@ -495,6 +495,12 @@ body{
     width:100%;
 }
 
+.table-wrap.scroll-y{
+    max-height:560px;
+    min-height:0;
+    overflow:auto;
+}
+
 .table-darkx{
     width:100%;
     min-width:680px;
@@ -756,7 +762,7 @@ body{
                 <div class="panel">
                     <div class="panel-head">
                         <h4>Completed / Cancelled</h4>
-                        <span class="badgex">7 days to {{ Carbon::parse($endStr, $tz)->format('M d, Y') }}</span>
+                        <span class="badgex">{{ Carbon::parse($startStr, $tz)->format('M d') }} - {{ Carbon::parse($endStr, $tz)->format('M d, Y') }}</span>
                     </div>
                     <div class="panel-body">
                         <div class="chart-box">
@@ -807,7 +813,7 @@ body{
                         <span class="badgex">Recent activity</span>
                     </div>
                     <div class="panel-body no-pad">
-                        <div class="table-wrap">
+                        <div class="table-wrap scroll-y">
                             <table class="table-darkx">
                                 <thead>
                                     <tr>
@@ -820,7 +826,7 @@ body{
                                     </tr>
                                 </thead>
                                 <tbody>
-                                @forelse($bookings->take(15) as $b)
+                                @forelse($bookings as $b)
                                     @php
                                         $st = strtolower((string)($b->status_key ?? $b->status ?? 'unknown'));
                                         $dotClass = '';

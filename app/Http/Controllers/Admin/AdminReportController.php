@@ -163,18 +163,27 @@ class AdminReportController extends Controller
                 return $booking;
             });
 
-        // Last 7 days status trend
-        $last7Dates = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $last7Dates[] = $rangeEnd->copy()->subDays($i)->toDateString();
+        // Status trend across the selected report range
+        $rangeStart = Carbon::parse($start, $tz)->startOfDay();
+        $rangeEndDay = Carbon::parse($end, $tz)->startOfDay();
+        $rangeDates = [];
+
+        for ($cursor = $rangeStart->copy(); $cursor->lte($rangeEndDay); $cursor->addDay()) {
+            $rangeDates[] = $cursor->toDateString();
         }
 
-        $last7Labels = array_map(function ($d) use ($tz) {
-            return Carbon::parse($d, $tz)->format('D');
-        }, $last7Dates);
+        $last7Labels = array_map(function ($d) use ($tz, $rangeStart, $rangeEndDay) {
+            $date = Carbon::parse($d, $tz);
+
+            if ($rangeStart->equalTo($rangeEndDay)) {
+                return $date->format('M d');
+            }
+
+            return $date->format('M d');
+        }, $rangeDates);
 
         $dailyMap = [];
-        foreach ($last7Dates as $d) {
+        foreach ($rangeDates as $d) {
             $dailyMap[$d] = [
                 'confirmed'   => 0,
                 'in_progress' => 0,
@@ -198,7 +207,7 @@ class AdminReportController extends Controller
         $dailyCompleted = [];
         $dailyCancelled = [];
 
-        foreach ($last7Dates as $d) {
+        foreach ($rangeDates as $d) {
             $dailyConfirmed[] = (int) $dailyMap[$d]['confirmed'];
             $dailyProgress[]  = (int) $dailyMap[$d]['in_progress'];
             $dailyPaid[]      = (int) $dailyMap[$d]['paid'];

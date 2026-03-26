@@ -293,10 +293,13 @@
 
 .panel-scroll{
     flex:1;
+    min-height:0;
     overflow:auto;
     padding:12px 14px 14px;
     scrollbar-width:thin;
     scrollbar-color:rgba(148,163,184,.35) transparent;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
 }
 .panel-scroll::-webkit-scrollbar{
     width:8px;
