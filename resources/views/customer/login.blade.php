@@ -15,7 +15,7 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    padding: 22px 16px 28px;
+    padding: 16px;
 }
 
 /* =========================
@@ -156,7 +156,7 @@
     position: relative;
     z-index: 3;
     width: 100%;
-    max-width: 420px;
+    max-width: 400px;
     background: linear-gradient(180deg, rgba(15, 23, 42, .85), rgba(30, 41, 59, .82));
     backdrop-filter: blur(14px);
     border-radius: 20px;
@@ -164,7 +164,7 @@
     box-shadow:
         0 30px 80px rgba(2,6,23,.65),
         inset 0 1px 0 rgba(255,255,255,.06);
-    padding: 2rem 1.95rem;
+    padding: 1.85rem 1.8rem 1.65rem;
 }
 
 .auth-card h4 {
@@ -226,17 +226,11 @@
 
 @media (min-width: 992px) {
     .auth-page {
-        min-height: 560px;
-        padding: 18px 16px 26px;
-    }
-
-    .auth-card {
-        max-width: 400px;
-        padding: 1.85rem 1.85rem 1.65rem;
+        padding: 12px 16px;
     }
 
     .auth-subtext {
-        margin-bottom: 1.35rem;
+        margin-bottom: 1.3rem;
     }
 }
 
