@@ -265,6 +265,9 @@ Route::prefix('customer')
         Route::post('/forgot-password/verify', [CustomerForgotPasswordController::class, 'verifyOtp'])
             ->name('forgot.verify.submit');
 
+        Route::post('/forgot-password/verify/resend', [CustomerForgotPasswordController::class, 'resendOtp'])
+            ->name('forgot.verify.resend');
+
         Route::get('/forgot-password/reset', [CustomerForgotPasswordController::class, 'showResetForm'])
             ->name('forgot.reset');
 

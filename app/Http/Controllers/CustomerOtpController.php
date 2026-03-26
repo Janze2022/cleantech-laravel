@@ -118,13 +118,12 @@ class CustomerOtpController extends Controller
         }
 
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $expiresAt = Carbon::now()->addMinutes(5);
 
         DB::table('customers')
             ->where('id', $customer->id)
             ->update([
                 'otp' => $otp,
-                'otp_expires_at' => $expiresAt,
+                'otp_expires_at' => Carbon::now()->addMinutes(5),
                 'updated_at' => now(),
             ]);
 
