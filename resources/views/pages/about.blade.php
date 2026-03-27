@@ -39,7 +39,7 @@
                     <article class="ct-card ct-reveal">
                         <div class="ct-kicker">Mission</div>
                         <h3>What drives CleanTech</h3>
-                        <p>To provide reliable and affordable home cleaning, repair, and maintenance services that help make everyday living easier. We aim to deliver services with honesty, convenience, and customer care at the center of what we do.</p>
+                        <p>To provide reliable, affordable, and quality cleaning and maintenance services that make everyday living easier, while upholding honesty, convenience, and customer satisfaction in every service we deliver.</p>
                     </article>
 
                     <article class="ct-card ct-reveal delay-1">
