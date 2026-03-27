@@ -4,6 +4,8 @@
         'providers_count' => 0,
         'entry_count' => 0,
         'gross_amount' => 0,
+        'commission_amount' => 0,
+        'net_amount' => 0,
         'remitted_amount' => 0,
         'outstanding_amount' => 0,
         'total_bookings' => 0,
@@ -186,7 +188,7 @@
         .summary-grid{
             margin-top:1rem;
             display:grid;
-            grid-template-columns:repeat(4, minmax(0, 1fr));
+            grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
             gap:.75rem;
         }
 
@@ -624,8 +626,12 @@
                     <div class="summary-value">PHP {{ number_format((float) ($totals['gross_amount'] ?? 0), 2) }}</div>
                 </div>
                 <div class="summary-box">
-                    <div class="summary-label">Outstanding</div>
-                    <div class="summary-value">PHP {{ number_format((float) ($totals['outstanding_amount'] ?? 0), 2) }}</div>
+                    <div class="summary-label">Commission (10%)</div>
+                    <div class="summary-value">PHP {{ number_format((float) ($totals['commission_amount'] ?? 0), 2) }}</div>
+                </div>
+                <div class="summary-box">
+                    <div class="summary-label">Net remittance</div>
+                    <div class="summary-value">PHP {{ number_format((float) ($totals['net_amount'] ?? 0), 2) }}</div>
                 </div>
             </div>
         </section>
@@ -647,13 +653,13 @@
                         <thead>
                             <tr>
                                 <th style="width: 11%;">Earned day</th>
-                                <th style="width: 27%;">Provider</th>
+                                <th style="width: 25%;">Provider</th>
                                 <th style="width: 8%;">Jobs</th>
                                 <th style="width: 10%;">Gross</th>
-                                <th style="width: 10%;">Remitted</th>
-                                <th style="width: 11%;">Outstanding</th>
-                                <th style="width: 13%;">Recorded on</th>
-                                <th style="width: 10%;">Status</th>
+                                <th style="width: 10%;">Commission</th>
+                                <th style="width: 10%;">Net</th>
+                                <th style="width: 14%;">Recorded on</th>
+                                <th style="width: 12%;">Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -669,13 +675,13 @@
                                     </td>
                                     <td class="cell-compact">{{ number_format((int) $row->total_bookings) }}</td>
                                     <td class="cell-compact">PHP {{ number_format((float) $row->gross_amount, 2) }}</td>
-                                    <td class="cell-compact">PHP {{ number_format($row->is_remitted ? (float) $row->gross_amount : 0, 2) }}</td>
-                                    <td class="cell-compact">PHP {{ number_format(!$row->is_remitted ? (float) $row->gross_amount : 0, 2) }}</td>
+                                    <td class="cell-compact">PHP {{ number_format((float) $row->commission_amount, 2) }}</td>
+                                    <td class="cell-compact">PHP {{ number_format((float) $row->net_amount, 2) }}</td>
                                     <td>
                                         @if($row->is_remitted && !empty($row->remitted_at))
                                             {{ \Carbon\Carbon::parse($row->remitted_at)->format('M d, Y h:i A') }}
                                         @else
-                                            Waiting for payment
+                                            Due: PHP {{ number_format((float) $row->outstanding_amount, 2) }}
                                         @endif
                                     </td>
                                     <td>
@@ -692,8 +698,8 @@
                                 <td>{{ number_format((int) ($totals['providers_count'] ?? 0)) }} provider{{ (int) ($totals['providers_count'] ?? 0) === 1 ? '' : 's' }}</td>
                                 <td>{{ number_format((int) ($totals['total_bookings'] ?? 0)) }}</td>
                                 <td>PHP {{ number_format((float) ($totals['gross_amount'] ?? 0), 2) }}</td>
-                                <td>PHP {{ number_format((float) ($totals['remitted_amount'] ?? 0), 2) }}</td>
-                                <td>PHP {{ number_format((float) ($totals['outstanding_amount'] ?? 0), 2) }}</td>
+                                <td>PHP {{ number_format((float) ($totals['commission_amount'] ?? 0), 2) }}</td>
+                                <td>PHP {{ number_format((float) ($totals['net_amount'] ?? 0), 2) }}</td>
                                 <td>{{ number_format((int) $printRows->where('is_remitted', true)->count()) }} remitted row{{ $printRows->where('is_remitted', true)->count() === 1 ? '' : 's' }}</td>
                                 <td></td>
                             </tr>
@@ -734,8 +740,12 @@
                                     <div class="mini-value">PHP {{ number_format((float) $row->gross_amount, 2) }}</div>
                                 </div>
                                 <div>
-                                    <div class="mini-label">Outstanding</div>
-                                    <div class="mini-value">PHP {{ number_format(!$row->is_remitted ? (float) $row->gross_amount : 0, 2) }}</div>
+                                    <div class="mini-label">Commission</div>
+                                    <div class="mini-value">PHP {{ number_format((float) $row->commission_amount, 2) }}</div>
+                                </div>
+                                <div>
+                                    <div class="mini-label">Net remittance</div>
+                                    <div class="mini-value">PHP {{ number_format((float) $row->net_amount, 2) }}</div>
                                 </div>
                                 <div style="grid-column:1 / -1;">
                                     <div class="mini-label">Recorded on</div>
@@ -743,7 +753,7 @@
                                         @if($row->is_remitted && !empty($row->remitted_at))
                                             {{ \Carbon\Carbon::parse($row->remitted_at)->format('M d, Y h:i A') }}
                                         @else
-                                            Waiting for payment
+                                            Due: PHP {{ number_format((float) $row->outstanding_amount, 2) }}
                                         @endif
                                     </div>
                                 </div>

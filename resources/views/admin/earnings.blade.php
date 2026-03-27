@@ -10,6 +10,8 @@
         'providers_count' => 0,
         'ledger_count' => 0,
         'gross_total' => 0,
+        'commission_total' => 0,
+        'net_total' => 0,
         'remitted_total' => 0,
         'outstanding_total' => 0,
     ];
@@ -115,7 +117,7 @@
 
 .stats{
     display:grid;
-    grid-template-columns:repeat(4, minmax(0, 1fr));
+    grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
     gap:10px;
     margin-bottom:12px;
 }
@@ -547,10 +549,6 @@
 }
 
 @media (max-width: 1200px){
-    .stats{
-        grid-template-columns:repeat(2, minmax(0, 1fr));
-    }
-
     .filter-grid{
         grid-template-columns:repeat(3, minmax(0, 1fr));
     }
@@ -632,23 +630,28 @@
 
         <div class="stats">
             <div class="stat-card">
-                <div class="stat-k">Earned</div>
+                <div class="stat-k">Gross Sales</div>
                 <div class="stat-v accent">PHP {{ number_format((float) ($summary['gross_total'] ?? 0), 2) }}</div>
             </div>
 
             <div class="stat-card">
-                <div class="stat-k">Outstanding</div>
+                <div class="stat-k">Commission (10%)</div>
+                <div class="stat-v warn">PHP {{ number_format((float) ($summary['commission_total'] ?? 0), 2) }}</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-k">Net Remittance</div>
+                <div class="stat-v">PHP {{ number_format((float) ($summary['net_total'] ?? 0), 2) }}</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-k">Outstanding Net</div>
                 <div class="stat-v warn">PHP {{ number_format((float) ($summary['outstanding_total'] ?? 0), 2) }}</div>
             </div>
 
             <div class="stat-card">
-                <div class="stat-k">Received</div>
+                <div class="stat-k">Remitted Net</div>
                 <div class="stat-v success">PHP {{ number_format((float) ($summary['remitted_total'] ?? 0), 2) }}</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-k">Providers</div>
-                <div class="stat-v">{{ number_format((int) ($summary['providers_count'] ?? 0)) }}</div>
             </div>
         </div>
 
@@ -788,7 +791,9 @@
                                 <th>Date</th>
                                 <th>Provider</th>
                                 <th>Jobs</th>
-                                <th>Amount</th>
+                                <th>Gross</th>
+                                <th>Commission</th>
+                                <th>Net</th>
                                 <th>Remittance</th>
                                 <th>Action</th>
                             </tr>
@@ -821,15 +826,25 @@
                                     </td>
 
                                     <td>
+                                        <div class="value-strong">PHP {{ number_format((float) $row->commission_amount, 2) }}</div>
+                                        <div class="value-soft">{{ number_format((float) $row->commission_percentage, 0) }}% commission</div>
+                                    </td>
+
+                                    <td>
+                                        <div class="value-strong">PHP {{ number_format((float) $row->net_amount, 2) }}</div>
+                                        <div class="value-soft">provider remittance</div>
+                                    </td>
+
+                                    <td>
                                         <div class="status-pill {{ $row->is_remitted ? 'remitted' : 'outstanding' }}">
                                             <i class="fa {{ $row->is_remitted ? 'fa-check-circle' : 'fa-clock' }}"></i>
                                             <span>{{ $row->is_remitted ? 'Remitted' : 'Outstanding' }}</span>
                                         </div>
                                         <div class="value-soft">
                                             @if($row->is_remitted && !empty($row->remitted_at))
-                                                {{ \Carbon\Carbon::parse($row->remitted_at)->format('M d, Y h:i A') }}
+                                                {{ \Carbon\Carbon::parse($row->remitted_at)->format('M d, Y h:i A') }} · PHP {{ number_format((float) $row->remitted_amount, 2) }}
                                             @else
-                                                Waiting for payment
+                                                Due: PHP {{ number_format((float) $row->outstanding_amount, 2) }}
                                             @endif
                                         </div>
                                     </td>
@@ -875,13 +890,23 @@
 
                             <div class="mobile-grid">
                                 <div>
-                                    <div class="mobile-k">Amount</div>
+                                    <div class="mobile-k">Gross</div>
                                     <div class="mobile-v">PHP {{ number_format((float) $row->gross_amount, 2) }}</div>
                                 </div>
 
                                 <div>
                                     <div class="mobile-k">Jobs</div>
                                     <div class="mobile-v">{{ number_format((int) $row->total_bookings) }}</div>
+                                </div>
+
+                                <div>
+                                    <div class="mobile-k">Commission</div>
+                                    <div class="mobile-v">PHP {{ number_format((float) $row->commission_amount, 2) }}</div>
+                                </div>
+
+                                <div>
+                                    <div class="mobile-k">Net</div>
+                                    <div class="mobile-v">PHP {{ number_format((float) $row->net_amount, 2) }}</div>
                                 </div>
 
                                 <div>

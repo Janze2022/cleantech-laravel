@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Schema;
 class AdminEarningsController extends Controller
 {
     private const EARNING_STATUSES = ['paid', 'completed'];
+    private const COMMISSION_RATE = 0.10;
 
     public function index(Request $request)
     {
@@ -60,8 +61,10 @@ class AdminEarningsController extends Controller
             'providers_count' => $filteredRows->pluck('provider_id')->unique()->count(),
             'ledger_count' => $filteredRows->count(),
             'gross_total' => round((float) $filteredRows->sum('gross_amount'), 2),
-            'remitted_total' => round((float) $filteredRows->where('is_remitted', true)->sum('gross_amount'), 2),
-            'outstanding_total' => round((float) $filteredRows->where('is_remitted', false)->sum('gross_amount'), 2),
+            'commission_total' => round((float) $filteredRows->sum('commission_amount'), 2),
+            'net_total' => round((float) $filteredRows->sum('net_amount'), 2),
+            'remitted_total' => round((float) $filteredRows->sum('remitted_amount'), 2),
+            'outstanding_total' => round((float) $filteredRows->sum('outstanding_amount'), 2),
         ];
 
         $sortedRows = $filteredRows->sort(function ($a, $b) {
@@ -152,8 +155,10 @@ class AdminEarningsController extends Controller
             'providers_count' => $printRows->pluck('provider_id')->unique()->count(),
             'entry_count' => $printRows->count(),
             'gross_amount' => round((float) $printRows->sum('gross_amount'), 2),
-            'remitted_amount' => round((float) $printRows->where('is_remitted', true)->sum('gross_amount'), 2),
-            'outstanding_amount' => round((float) $printRows->where('is_remitted', false)->sum('gross_amount'), 2),
+            'commission_amount' => round((float) $printRows->sum('commission_amount'), 2),
+            'net_amount' => round((float) $printRows->sum('net_amount'), 2),
+            'remitted_amount' => round((float) $printRows->sum('remitted_amount'), 2),
+            'outstanding_amount' => round((float) $printRows->sum('outstanding_amount'), 2),
             'total_bookings' => (int) $printRows->sum('total_bookings'),
         ];
 
@@ -190,10 +195,26 @@ class AdminEarningsController extends Controller
 
         $payload = [
             'status' => 'remitted',
-            'recorded_amount' => $ledgerRow->gross_amount,
+            'recorded_amount' => $ledgerRow->net_amount,
             'remitted_at' => now(),
             'updated_at' => now(),
         ];
+
+        if (Schema::hasColumn('provider_remittances', 'gross_amount')) {
+            $payload['gross_amount'] = $ledgerRow->gross_amount;
+        }
+
+        if (Schema::hasColumn('provider_remittances', 'commission_rate')) {
+            $payload['commission_rate'] = $ledgerRow->commission_rate;
+        }
+
+        if (Schema::hasColumn('provider_remittances', 'commission_amount')) {
+            $payload['commission_amount'] = $ledgerRow->commission_amount;
+        }
+
+        if (Schema::hasColumn('provider_remittances', 'net_amount')) {
+            $payload['net_amount'] = $ledgerRow->net_amount;
+        }
 
         if (Schema::hasColumn('provider_remittances', 'remitted_by_admin_id') && session()->has('admin_id')) {
             $payload['remitted_by_admin_id'] = session('admin_id');
@@ -303,6 +324,11 @@ class AdminEarningsController extends Controller
         }
 
         if (Schema::hasTable('provider_remittances')) {
+            $hasGrossAmount = Schema::hasColumn('provider_remittances', 'gross_amount');
+            $hasCommissionRate = Schema::hasColumn('provider_remittances', 'commission_rate');
+            $hasCommissionAmount = Schema::hasColumn('provider_remittances', 'commission_amount');
+            $hasNetAmount = Schema::hasColumn('provider_remittances', 'net_amount');
+
             $query->leftJoin('provider_remittances as pr', function ($join) use ($earningDateSql) {
                 $join->on('pr.provider_id', '=', 'b.provider_id')
                     ->whereRaw("pr.remit_date = {$earningDateSql}");
@@ -311,10 +337,38 @@ class AdminEarningsController extends Controller
             $query->selectRaw("MAX(COALESCE(pr.status, 'pending')) as remittance_status")
                 ->selectRaw('MAX(pr.recorded_amount) as recorded_amount')
                 ->selectRaw('MAX(pr.remitted_at) as remitted_at');
+
+            if ($hasGrossAmount) {
+                $query->selectRaw('MAX(pr.gross_amount) as recorded_gross_amount');
+            } else {
+                $query->selectRaw('NULL as recorded_gross_amount');
+            }
+
+            if ($hasCommissionRate) {
+                $query->selectRaw('MAX(pr.commission_rate) as commission_rate');
+            } else {
+                $query->selectRaw('NULL as commission_rate');
+            }
+
+            if ($hasCommissionAmount) {
+                $query->selectRaw('MAX(pr.commission_amount) as recorded_commission_amount');
+            } else {
+                $query->selectRaw('NULL as recorded_commission_amount');
+            }
+
+            if ($hasNetAmount) {
+                $query->selectRaw('MAX(pr.net_amount) as recorded_net_amount');
+            } else {
+                $query->selectRaw('NULL as recorded_net_amount');
+            }
         } else {
             $query->selectRaw("'pending' as remittance_status")
                 ->selectRaw('NULL as recorded_amount')
-                ->selectRaw('NULL as remitted_at');
+                ->selectRaw('NULL as remitted_at')
+                ->selectRaw('NULL as recorded_gross_amount')
+                ->selectRaw('NULL as commission_rate')
+                ->selectRaw('NULL as recorded_commission_amount')
+                ->selectRaw('NULL as recorded_net_amount');
         }
 
         return $this->normalizeLedgerRows($query->get());
@@ -362,6 +416,30 @@ class AdminEarningsController extends Controller
             ->selectRaw('MAX(pr.recorded_amount) as recorded_amount')
             ->selectRaw('MAX(pr.remitted_at) as remitted_at');
 
+        if (Schema::hasColumn('provider_remittances', 'gross_amount')) {
+            $query->selectRaw('MAX(pr.gross_amount) as recorded_gross_amount');
+        } else {
+            $query->selectRaw('NULL as recorded_gross_amount');
+        }
+
+        if (Schema::hasColumn('provider_remittances', 'commission_rate')) {
+            $query->selectRaw('MAX(pr.commission_rate) as commission_rate');
+        } else {
+            $query->selectRaw('NULL as commission_rate');
+        }
+
+        if (Schema::hasColumn('provider_remittances', 'commission_amount')) {
+            $query->selectRaw('MAX(pr.commission_amount) as recorded_commission_amount');
+        } else {
+            $query->selectRaw('NULL as recorded_commission_amount');
+        }
+
+        if (Schema::hasColumn('provider_remittances', 'net_amount')) {
+            $query->selectRaw('MAX(pr.net_amount) as recorded_net_amount');
+        } else {
+            $query->selectRaw('NULL as recorded_net_amount');
+        }
+
         if (Schema::hasColumn('service_providers', 'status')) {
             $query->whereRaw("LOWER(COALESCE(sp.status, '')) = 'approved'");
         }
@@ -398,9 +476,29 @@ class AdminEarningsController extends Controller
             $row->total_bookings = (int) ($row->total_bookings ?? 0);
             $row->gross_amount = (float) ($row->gross_amount ?? 0);
             $row->recorded_amount = $row->recorded_amount !== null ? (float) $row->recorded_amount : null;
+            $row->recorded_gross_amount = $row->recorded_gross_amount !== null ? (float) $row->recorded_gross_amount : null;
+            $row->recorded_commission_amount = $row->recorded_commission_amount !== null ? (float) $row->recorded_commission_amount : null;
+            $row->recorded_net_amount = $row->recorded_net_amount !== null ? (float) $row->recorded_net_amount : null;
             $row->remittance_status = strtolower(trim((string) ($row->remittance_status ?? 'pending')));
             $row->is_remitted = $row->remittance_status === 'remitted';
-            $row->amount_changed = $row->recorded_amount !== null && abs($row->recorded_amount - $row->gross_amount) > 0.009;
+
+            $commissionRate = $row->commission_rate !== null ? (float) $row->commission_rate : self::COMMISSION_RATE;
+            if ($commissionRate <= 0) {
+                $commissionRate = self::COMMISSION_RATE;
+            }
+
+            $row->commission_rate = $commissionRate;
+            $row->commission_percentage = $commissionRate * 100;
+            $row->commission_amount = $row->recorded_commission_amount !== null
+                ? $row->recorded_commission_amount
+                : round($row->gross_amount * $commissionRate, 2);
+            $row->net_amount = $row->recorded_net_amount !== null
+                ? $row->recorded_net_amount
+                : round($row->gross_amount - $row->commission_amount, 2);
+            $row->remitted_amount = $row->is_remitted ? $row->net_amount : 0.0;
+            $row->outstanding_amount = $row->is_remitted ? 0.0 : $row->net_amount;
+            $row->amount_changed = $row->recorded_gross_amount !== null
+                && abs($row->recorded_gross_amount - $row->gross_amount) > 0.009;
 
             return $row;
         });
