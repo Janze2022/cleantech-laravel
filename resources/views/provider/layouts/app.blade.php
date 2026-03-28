@@ -757,13 +757,10 @@
 
                 <div class="provider-user-divider"></div>
 
-                <form method="POST" action="{{ route('provider.logout') }}">
-                    @csrf
-                    <button type="submit" class="provider-user-item logout">
-                        <i class="bi bi-box-arrow-right"></i>
-                        <span>Logout</span>
-                    </button>
-                </form>
+                <a class="provider-user-item logout" href="{{ route('provider.logout') }}">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>Logout</span>
+                </a>
             </div>
         </div>
     </div>

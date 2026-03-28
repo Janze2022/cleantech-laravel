@@ -455,13 +455,10 @@
 
             <div class="admin-user-divider"></div>
 
-            <form method="POST" action="{{ route('admin.logout') }}">
-                @csrf
-                <button type="submit" class="admin-user-item logout">
-                    <i class="fa fa-right-from-bracket"></i>
-                    <span>Logout</span>
-                </button>
-            </form>
+            <a class="admin-user-item logout" href="{{ route('admin.logout') }}">
+                <i class="fa fa-right-from-bracket"></i>
+                <span>Logout</span>
+            </a>
         </div>
     </div>
 </div>

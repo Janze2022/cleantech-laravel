@@ -102,6 +102,7 @@ Route::get('/customer-rating-attachment/{filename}', [ProviderCustomerRatingCont
     ->where('filename', '.*')
     ->name('customer.ratings.attachment');
 
+
 /*
 |--------------------------------------------------------------------------
 | ADMIN — GUEST
@@ -133,7 +134,7 @@ Route::prefix('admin')
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])
             ->name('dashboard');
 
-        Route::post('/logout', [AdminAuthController::class, 'logout'])
+        Route::match(['get', 'post'], '/logout', [AdminAuthController::class, 'logout'])
             ->name('logout');
 
         // =====================
@@ -374,7 +375,7 @@ Route::prefix('customer')
             ->name('profile.password');
 
         // LOGOUT
-        Route::post('/logout', [CustomerLogoutController::class, 'logout'])
+        Route::match(['get', 'post'], '/logout', [CustomerLogoutController::class, 'logout'])
             ->name('logout');
     });
 
@@ -547,6 +548,6 @@ Route::prefix('provider')
             ->name('profile.image');
 
         // LOGOUT
-        Route::post('/logout', [ProviderLogoutController::class, 'logout'])
+        Route::match(['get', 'post'], '/logout', [ProviderLogoutController::class, 'logout'])
             ->name('logout');
     });

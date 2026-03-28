@@ -406,17 +406,8 @@ html{
                             <li><a class="dropdown-item" href="{{ route('customer.dashboard') }}">Dashboard</a></li>
                             <li><a class="dropdown-item" href="{{ route('customer.profile') }}">Profile</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a
-                                    class="dropdown-item text-danger"
-                                    href="#"
-                                    onclick="event.preventDefault();document.getElementById('customerLogout').submit();"
-                                >
-                                    Logout
-                                </a>
-                            </li>
+                            <li><a class="dropdown-item text-danger" href="{{ route('customer.logout') }}">Logout</a></li>
                         </ul>
-                        <form id="customerLogout" method="POST" action="{{ route('customer.logout') }}" class="d-none">@csrf</form>
                     </li>
                 @elseif (session()->has('provider_id'))
                     <li class="nav-item dropdown">
@@ -428,17 +419,8 @@ html{
                             <li><a class="dropdown-item" href="{{ route('provider.profile') }}">Profile</a></li>
                             <li><a class="dropdown-item" href="{{ route('provider.pending') }}">Approval Status</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a
-                                    class="dropdown-item text-danger"
-                                    href="#"
-                                    onclick="event.preventDefault();document.getElementById('providerLogout').submit();"
-                                >
-                                    Logout
-                                </a>
-                            </li>
+                            <li><a class="dropdown-item text-danger" href="{{ route('provider.logout') }}">Logout</a></li>
                         </ul>
-                        <form id="providerLogout" method="POST" action="{{ route('provider.logout') }}" class="d-none">@csrf</form>
                     </li>
                 @endif
             </ul>
