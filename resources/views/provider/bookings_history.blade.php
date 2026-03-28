@@ -365,7 +365,6 @@
                     <tbody>
                         @foreach($bookings as $b)
                             @php($statusKey = data_get($b, 'status_key') ?? strtolower((string) data_get($b, 'status')))
-                            @php($canOpenRating = \Illuminate\Support\Facades\Route::has('provider.customer-ratings') && !empty(data_get($b, 'id')) && in_array($statusKey, ['completed', 'paid'], true))
                             <tr>
                                 <td>
                                     <div class="person-name">{{ $b->name }}</div>
@@ -384,24 +383,13 @@
                                 </td>
                                 <td>
                                     <div class="action-stack">
-                                        @if(\Illuminate\Support\Facades\Route::has('provider.bookings.show'))
-                                            <a class="btn-view" href="{{ route('provider.bookings.show', $b->reference_code) }}">View Details</a>
+                                        @if(!empty($b->show_url))
+                                            <a class="btn-view" href="{{ $b->show_url }}">View Details</a>
                                         @endif
 
-                                        @if($canOpenRating)
-                                            @php
-                                                $hasCustomerRating = (bool) data_get($b, 'has_customer_rating', false);
-                                                $canEditCustomerRating = (bool) data_get($b, 'can_edit_customer_rating', false);
-                                                $rateLabel = !$hasCustomerRating
-                                                    ? 'Rate Customer'
-                                                    : ($canEditCustomerRating ? 'Edit Rating' : 'View Rating');
-                                                $rateClass = !$hasCustomerRating
-                                                    ? 'btn-rate'
-                                                    : ($canEditCustomerRating ? 'btn-rate edit' : 'btn-rate view');
-                                            @endphp
-
-                                            <a class="{{ $rateClass }}" href="{{ route('provider.customer-ratings', ['booking' => data_get($b, 'id')]) }}">
-                                                {{ $rateLabel }}
+                                        @if(!empty($b->customer_rating_url))
+                                            <a class="{{ $b->customer_rating_class }}" href="{{ $b->customer_rating_url }}">
+                                                {{ $b->customer_rating_label }}
                                             </a>
                                         @endif
                                     </div>
@@ -415,7 +403,6 @@
             <div class="mobile-list">
                 @foreach($bookings as $b)
                     @php($statusKey = data_get($b, 'status_key') ?? strtolower((string) data_get($b, 'status')))
-                    @php($canOpenRating = \Illuminate\Support\Facades\Route::has('provider.customer-ratings') && !empty(data_get($b, 'id')) && in_array($statusKey, ['completed', 'paid'], true))
                     <div class="history-card">
                         <div class="history-card-head">
                             <div>
@@ -450,24 +437,13 @@
                         </div>
 
                         <div class="history-actions">
-                            @if(\Illuminate\Support\Facades\Route::has('provider.bookings.show'))
-                                <a class="btn-view" href="{{ route('provider.bookings.show', $b->reference_code) }}">View Details</a>
+                            @if(!empty($b->show_url))
+                                <a class="btn-view" href="{{ $b->show_url }}">View Details</a>
                             @endif
 
-                            @if($canOpenRating)
-                                @php
-                                    $hasCustomerRating = (bool) data_get($b, 'has_customer_rating', false);
-                                    $canEditCustomerRating = (bool) data_get($b, 'can_edit_customer_rating', false);
-                                    $rateLabel = !$hasCustomerRating
-                                        ? 'Rate Customer'
-                                        : ($canEditCustomerRating ? 'Edit Rating' : 'View Rating');
-                                    $rateClass = !$hasCustomerRating
-                                        ? 'btn-rate'
-                                        : ($canEditCustomerRating ? 'btn-rate edit' : 'btn-rate view');
-                                @endphp
-
-                                <a class="{{ $rateClass }}" href="{{ route('provider.customer-ratings', ['booking' => data_get($b, 'id')]) }}">
-                                    {{ $rateLabel }}
+                            @if(!empty($b->customer_rating_url))
+                                <a class="{{ $b->customer_rating_class }}" href="{{ $b->customer_rating_url }}">
+                                    {{ $b->customer_rating_label }}
                                 </a>
                             @endif
                         </div>

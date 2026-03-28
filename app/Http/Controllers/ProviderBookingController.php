@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 
 class ProviderBookingController extends Controller
@@ -506,6 +507,46 @@ class ProviderBookingController extends Controller
             $booking->can_edit_customer_rating = $customerRating
                 && !empty($customerRating->editable_until)
                 && now()->lt(Carbon::parse($customerRating->editable_until));
+            $booking->show_url = null;
+            $booking->customer_rating_url = null;
+            $booking->customer_rating_label = null;
+            $booking->customer_rating_class = null;
+
+            try {
+                if (
+                    Route::has('provider.bookings.show') &&
+                    !empty($booking->reference_code)
+                ) {
+                    $booking->show_url = route('provider.bookings.show', $booking->reference_code);
+                }
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+
+            try {
+                $canOpenRating = Route::has('provider.customer-ratings')
+                    && !empty($booking->id)
+                    && in_array($statusKey, ['completed', 'paid'], true);
+
+                if ($canOpenRating) {
+                    $booking->customer_rating_url = route('provider.customer-ratings', [
+                        'booking' => $booking->id,
+                    ]);
+
+                    if (!$booking->has_customer_rating) {
+                        $booking->customer_rating_label = 'Rate Customer';
+                        $booking->customer_rating_class = 'btn-rate';
+                    } elseif ($booking->can_edit_customer_rating) {
+                        $booking->customer_rating_label = 'Edit Rating';
+                        $booking->customer_rating_class = 'btn-rate edit';
+                    } else {
+                        $booking->customer_rating_label = 'View Rating';
+                        $booking->customer_rating_class = 'btn-rate view';
+                    }
+                }
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
 
             return $booking;
         })->values();
