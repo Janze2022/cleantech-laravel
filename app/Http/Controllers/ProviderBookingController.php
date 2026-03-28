@@ -7,11 +7,16 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProviderBookingController extends Controller
 {
+    private const ADJUSTMENT_MAX_INCREASE_PERCENT = 35.0;
+
     private function columnOrDefault(string $table, string $column, string $alias, ?string $as = null, string $default = 'NULL')
     {
         $as ??= $column;
@@ -50,6 +55,45 @@ class ProviderBookingController extends Controller
             'is_tracking',
             'tracked_at',
             'stopped_at',
+        ]);
+    }
+
+    private function bookingAdjustmentTableAvailable(): bool
+    {
+        return $this->tableHasColumns('booking_adjustments', [
+            'id',
+            'booking_id',
+            'provider_id',
+            'customer_id',
+            'original_service_name',
+            'original_option_summary',
+            'original_price',
+            'proposed_service_name',
+            'proposed_scope_summary',
+            'additional_fee',
+            'proposed_total',
+            'price_increase_percent',
+            'reason_payload',
+            'other_reason',
+            'provider_note',
+            'customer_response_note',
+            'evidence_path',
+            'evidence_name',
+            'evidence_mime',
+            'status',
+        ]);
+    }
+
+    private function bookingAdjustmentLogTableAvailable(): bool
+    {
+        return $this->tableHasColumns('booking_adjustment_logs', [
+            'booking_adjustment_id',
+            'booking_id',
+            'actor_role',
+            'actor_id',
+            'action',
+            'note',
+            'payload',
         ]);
     }
 
@@ -226,6 +270,9 @@ class ProviderBookingController extends Controller
                 $this->columnOrDefault('bookings', 'price', 'b', null, '0'),
                 $this->columnOrDefault('bookings', 'address', 'b'),
                 $this->columnOrDefault('bookings', 'contact_phone', 'b'),
+                $this->columnOrDefault('bookings', 'cancellation_reason', 'b'),
+                $this->columnOrDefault('bookings', 'cancelled_by_role', 'b'),
+                $this->columnOrDefault('bookings', 'adjustment_status', 'b'),
                 $this->columnOrDefault('bookings', 'created_at', 'b'),
                 $this->columnOrDefault('bookings', 'updated_at', 'b')
             );
@@ -249,9 +296,22 @@ class ProviderBookingController extends Controller
             ->where('reference_code', $reference)
             ->first([
                 'id',
+                'customer_id',
                 'provider_id',
                 'reference_code',
+                'booking_date',
+                'time_start',
+                'time_end',
                 'status',
+                Schema::hasColumn('bookings', 'cancellation_reason')
+                    ? 'cancellation_reason'
+                    : DB::raw('NULL as cancellation_reason'),
+                Schema::hasColumn('bookings', 'cancelled_by_role')
+                    ? 'cancelled_by_role'
+                    : DB::raw('NULL as cancelled_by_role'),
+                Schema::hasColumn('bookings', 'adjustment_status')
+                    ? 'adjustment_status'
+                    : DB::raw('NULL as adjustment_status'),
                 Schema::hasColumn('bookings', 'customer_latitude')
                     ? 'customer_latitude'
                     : DB::raw('NULL as customer_latitude'),
@@ -283,6 +343,203 @@ class ProviderBookingController extends Controller
                 'stopped_at'
             )
             ->first();
+    }
+
+    private function bookingAdjustmentByBookingId(int $bookingId): ?object
+    {
+        if (!$this->bookingAdjustmentTableAvailable()) {
+            return null;
+        }
+
+        return DB::table('booking_adjustments')
+            ->where('booking_id', $bookingId)
+            ->first();
+    }
+
+    private function normalizeAdjustmentEvidencePath($value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        $value = str_replace('\\', '/', trim((string) $value));
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            $value = parse_url($value, PHP_URL_PATH) ?: $value;
+        }
+
+        $value = ltrim($value, '/');
+
+        if (Str::startsWith($value, 'storage/')) {
+            $value = substr($value, 8);
+        }
+
+        if (Str::startsWith($value, 'booking-adjustments/evidence/')) {
+            return $value;
+        }
+
+        return 'booking-adjustments/evidence/' . basename($value);
+    }
+
+    private function normalizeTime(string $time): string
+    {
+        $time = trim($time);
+
+        if (preg_match('/^\d{2}:\d{2}$/', $time)) {
+            return $time . ':00';
+        }
+
+        if (preg_match('/^\d{2}:\d{2}:\d{2}$/', $time)) {
+            return $time;
+        }
+
+        return $time;
+    }
+
+    private function adjustmentReasonLabel(string $code): string
+    {
+        return match ($this->normalizeStatusKey($code)) {
+            'larger_area' => 'Larger area than declared',
+            'additional_rooms' => 'Additional rooms or sections',
+            'heavy_soiling' => 'Heavily soiled or deep cleaning required',
+            'other' => 'Other onsite issue',
+            default => ucwords(str_replace('_', ' ', $code)),
+        };
+    }
+
+    private function formatAdjustmentRecord(?object $adjustment): ?object
+    {
+        if (!$adjustment) {
+            return null;
+        }
+
+        $adjustment->reason_codes = collect(json_decode((string) ($adjustment->reason_payload ?? '[]'), true))
+            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
+            ->values()
+            ->all();
+
+        $adjustment->reason_labels = collect($adjustment->reason_codes)
+            ->map(fn ($code) => $this->adjustmentReasonLabel((string) $code))
+            ->values()
+            ->all();
+
+        $adjustment->status_key = trim((string) ($adjustment->status ?? ''));
+        $adjustment->status_label = ucwords(str_replace('_', ' ', $adjustment->status_key));
+        $adjustment->original_price_display = number_format((float) ($adjustment->original_price ?? 0), 2);
+        $adjustment->additional_fee_display = number_format((float) ($adjustment->additional_fee ?? 0), 2);
+        $adjustment->proposed_total_display = number_format((float) ($adjustment->proposed_total ?? 0), 2);
+        $adjustment->price_increase_percent_display = number_format((float) ($adjustment->price_increase_percent ?? 0), 1);
+        $adjustment->evidence_url = !empty($adjustment->evidence_path)
+            ? route('booking.adjustments.attachment', ['filename' => basename((string) $adjustment->evidence_path)])
+            : null;
+        $adjustment->resolved_at_label = !empty($adjustment->resolved_at)
+            ? Carbon::parse($adjustment->resolved_at)->format('M d, Y h:i A')
+            : null;
+
+        return $adjustment;
+    }
+
+    private function restoreAvailabilitySlot(object $booking): void
+    {
+        if (!Schema::hasTable('provider_availability')) {
+            return;
+        }
+
+        $providerId = (int) ($booking->provider_id ?? 0);
+        $bookingDate = trim((string) ($booking->booking_date ?? ''));
+        $slotStart = $this->normalizeTime((string) ($booking->time_start ?? ''));
+        $slotEnd = $this->normalizeTime((string) ($booking->time_end ?? ''));
+
+        if (!$providerId || $bookingDate === '' || $slotStart === '' || $slotEnd === '') {
+            return;
+        }
+
+        $today = now(config('app.timezone') ?? 'Asia/Manila')->toDateString();
+        if ($bookingDate < $today) {
+            return;
+        }
+
+        $conflictingBookingExists = DB::table('bookings')
+            ->where('provider_id', $providerId)
+            ->whereDate('booking_date', $bookingDate)
+            ->where('id', '!=', $booking->id)
+            ->get(['status', 'time_start', 'time_end'])
+            ->contains(function ($row) use ($slotStart, $slotEnd) {
+                $status = $this->normalizeStatusKey((string) ($row->status ?? ''));
+
+                return $status !== 'cancelled'
+                    && $this->normalizeTime((string) ($row->time_start ?? '')) === $slotStart
+                    && $this->normalizeTime((string) ($row->time_end ?? '')) === $slotEnd;
+            });
+
+        if ($conflictingBookingExists) {
+            return;
+        }
+
+        $matchingSlot = DB::table('provider_availability')
+            ->where('provider_id', $providerId)
+            ->whereDate('date', $bookingDate)
+            ->get()
+            ->first(function ($slot) use ($slotStart, $slotEnd) {
+                return $this->normalizeTime((string) ($slot->time_start ?? '')) === $slotStart
+                    && $this->normalizeTime((string) ($slot->time_end ?? '')) === $slotEnd;
+            });
+
+        if ($matchingSlot) {
+            DB::table('provider_availability')
+                ->where('id', $matchingSlot->id)
+                ->update([
+                    'status' => 'active',
+                    'updated_at' => now(),
+                ]);
+
+            return;
+        }
+
+        DB::table('provider_availability')->insert([
+            'provider_id' => $providerId,
+            'date' => $bookingDate,
+            'time_start' => $slotStart,
+            'time_end' => $slotEnd,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    private function insertCustomerNotification(
+        int $customerId,
+        string $referenceCode,
+        string $message,
+        ?string $type = null
+    ): void {
+        if (
+            !Schema::hasTable('notifications') ||
+            !Schema::hasColumns('notifications', ['user_id', 'reference_code', 'message', 'is_read'])
+        ) {
+            return;
+        }
+
+        $payload = [
+            'user_id' => $customerId,
+            'reference_code' => $referenceCode,
+            'message' => $message,
+            'is_read' => 0,
+        ];
+
+        if ($type !== null && Schema::hasColumn('notifications', 'type')) {
+            $payload['type'] = $type;
+        }
+
+        if (Schema::hasColumn('notifications', 'created_at')) {
+            $payload['created_at'] = now();
+        }
+
+        if (Schema::hasColumn('notifications', 'updated_at')) {
+            $payload['updated_at'] = now();
+        }
+
+        DB::table('notifications')->insert($payload);
     }
 
     private function bookingCanTrack(?string $status): bool
@@ -731,6 +988,9 @@ class ProviderBookingController extends Controller
                         $this->columnOrDefault('bookings', 'price', 'b', null, '0'),
                         $this->columnOrDefault('bookings', 'address', 'b'),
                         $this->columnOrDefault('bookings', 'contact_phone', 'b'),
+                        $this->columnOrDefault('bookings', 'cancellation_reason', 'b'),
+                        $this->columnOrDefault('bookings', 'cancelled_by_role', 'b'),
+                        $this->columnOrDefault('bookings', 'adjustment_status', 'b'),
                         $this->columnOrDefault('bookings', 'created_at', 'b'),
                         $this->columnOrDefault('bookings', 'updated_at', 'b'),
                         $this->selectBookingLocationColumn('customer_latitude'),
@@ -770,8 +1030,235 @@ class ProviderBookingController extends Controller
         $booking->provider_location = $booking->tracking_enabled && $booking->id
             ? $this->latestProviderLocation((int) $booking->id)
             : null;
+        $adjustment = $this->formatAdjustmentRecord(
+            $this->bookingAdjustmentByBookingId((int) $booking->id)
+        );
 
-        return view('provider.bookings.show', compact('booking'));
+        return view('provider.bookings.show', compact('booking', 'adjustment'));
+    }
+
+    public function adjustmentEvidence(string $filename)
+    {
+        $path = $this->normalizeAdjustmentEvidencePath($filename);
+
+        if (!$path || !Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        return Storage::disk('public')->response($path);
+    }
+
+    public function submitAdjustment(Request $request, string $reference)
+    {
+        $providerId = $this->providerId();
+
+        if (!$this->bookingAdjustmentTableAvailable()) {
+            return back()->withErrors([
+                'general' => 'Booking adjustments are not available right now.',
+            ]);
+        }
+
+        $data = $request->validate([
+            'reason_codes' => ['required', 'array', 'min:1'],
+            'reason_codes.*' => ['required', 'string', 'in:larger_area,additional_rooms,heavy_soiling,other'],
+            'other_reason' => ['nullable', 'string', 'max:600'],
+            'proposed_scope_summary' => ['required', 'string', 'max:1200'],
+            'additional_fee' => ['required', 'numeric', 'min:0'],
+            'proposed_total' => ['required', 'numeric', 'min:0'],
+            'provider_note' => ['nullable', 'string', 'max:1200'],
+            'evidence' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $booking = DB::table('bookings as b')
+                ->join('services as s', 's.id', '=', 'b.service_id')
+                ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
+                ->leftJoinSub($this->bookingAreasSubquery(), 'areas', function ($join) {
+                    $join->on('areas.booking_id', '=', 'b.id');
+                })
+                ->where('b.provider_id', $providerId)
+                ->where('b.reference_code', $reference)
+                ->lockForUpdate()
+                ->select(
+                    'b.id',
+                    'b.provider_id',
+                    'b.customer_id',
+                    'b.reference_code',
+                    'b.status',
+                    'b.price',
+                    's.name as service_name',
+                    DB::raw("COALESCE(areas.areas_label, o.label) as option_name")
+                )
+                ->first();
+
+            if (!$booking) {
+                DB::rollBack();
+                abort(404);
+            }
+
+            if ($this->normalizeStatusKey((string) ($booking->status ?? '')) !== 'in_progress') {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    'general' => 'Mismatch reporting is only available while the booking is in progress.',
+                ]);
+            }
+
+            $reasonCodes = collect($data['reason_codes'] ?? [])
+                ->map(fn ($value) => trim((string) $value))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            if (in_array('other', $reasonCodes, true) && trim((string) ($data['other_reason'] ?? '')) === '') {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    'other_reason' => 'Please describe the other onsite issue.',
+                ]);
+            }
+
+            $originalPrice = round((float) ($booking->price ?? 0), 2);
+            $additionalFee = round((float) $data['additional_fee'], 2);
+            $proposedTotal = round((float) $data['proposed_total'], 2);
+
+            if ($proposedTotal < $originalPrice) {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    'proposed_total' => 'The proposed total cannot be lower than the original booking price.',
+                ]);
+            }
+
+            if (abs(($originalPrice + $additionalFee) - $proposedTotal) > 0.01) {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    'proposed_total' => 'The proposed total must match the original price plus the added fee.',
+                ]);
+            }
+
+            $increasePercent = $originalPrice > 0
+                ? round((($proposedTotal - $originalPrice) / $originalPrice) * 100, 2)
+                : 0.0;
+
+            if ($increasePercent > self::ADJUSTMENT_MAX_INCREASE_PERCENT) {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    'proposed_total' => 'Price adjustments cannot increase by more than ' . (int) self::ADJUSTMENT_MAX_INCREASE_PERCENT . '%.',
+                ]);
+            }
+
+            $existingAdjustment = DB::table('booking_adjustments')
+                ->where('booking_id', $booking->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($existingAdjustment && ($existingAdjustment->status ?? '') === 'adjustment_accepted') {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    'general' => 'This booking adjustment was already accepted and cannot be changed again.',
+                ]);
+            }
+
+            $file = $request->file('evidence');
+            $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+            $filename = 'adjustment_' . $providerId . '_' . $booking->id . '_' . Str::uuid() . '.' . $extension;
+            $path = str_replace('\\', '/', $file->storeAs('booking-adjustments/evidence', $filename, 'public'));
+
+            if ($existingAdjustment && !empty($existingAdjustment->evidence_path)) {
+                $oldPath = $this->normalizeAdjustmentEvidencePath($existingAdjustment->evidence_path);
+
+                if ($oldPath && Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+
+            $payload = [
+                'booking_id' => $booking->id,
+                'provider_id' => $providerId,
+                'customer_id' => $booking->customer_id,
+                'original_service_name' => $booking->service_name,
+                'original_option_summary' => trim((string) ($booking->option_name ?? '')) ?: null,
+                'original_price' => $originalPrice,
+                'proposed_service_name' => $booking->service_name,
+                'proposed_scope_summary' => trim((string) $data['proposed_scope_summary']),
+                'additional_fee' => $additionalFee,
+                'proposed_total' => $proposedTotal,
+                'price_increase_percent' => $increasePercent,
+                'reason_payload' => json_encode($reasonCodes),
+                'other_reason' => trim((string) ($data['other_reason'] ?? '')) ?: null,
+                'provider_note' => trim((string) ($data['provider_note'] ?? '')) ?: null,
+                'evidence_path' => $path,
+                'evidence_name' => $file->getClientOriginalName(),
+                'evidence_mime' => $file->getClientMimeType(),
+                'status' => 'pending_adjustment_approval',
+                'resolved_at' => null,
+                'updated_at' => now(),
+            ];
+
+            if ($existingAdjustment) {
+                DB::table('booking_adjustments')
+                    ->where('id', $existingAdjustment->id)
+                    ->update($payload);
+
+                $adjustmentId = (int) $existingAdjustment->id;
+                $action = 'updated';
+            } else {
+                $payload['created_at'] = now();
+                $adjustmentId = DB::table('booking_adjustments')->insertGetId($payload);
+                $action = 'created';
+            }
+
+            DB::table('bookings')
+                ->where('id', $booking->id)
+                ->update([
+                    'adjustment_status' => 'pending_adjustment_approval',
+                    'updated_at' => now(),
+                ]);
+
+            $this->logBookingAdjustmentActivity(
+                $adjustmentId,
+                (int) $booking->id,
+                'provider',
+                $providerId,
+                $action,
+                trim((string) ($data['provider_note'] ?? '')) ?: null,
+                [
+                    'reference_code' => $booking->reference_code,
+                    'original_price' => $originalPrice,
+                    'proposed_total' => $proposedTotal,
+                    'reason_codes' => $reasonCodes,
+                ]
+            );
+
+            $this->insertCustomerNotification(
+                (int) $booking->customer_id,
+                (string) $booking->reference_code,
+                'The provider reported a booking mismatch and requested an updated total of PHP ' . number_format($proposedTotal, 2) . '. Please review the adjustment.',
+                'booking_adjustment'
+            );
+
+            DB::commit();
+
+            return redirect()
+                ->route('provider.bookings.show', $booking->reference_code)
+                ->with('success', 'Mismatch reported. The customer was asked to review the adjustment.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            DB::rollBack();
+            report($exception);
+
+            return back()->withErrors([
+                'general' => 'Unable to submit the mismatch report right now. Please try again.',
+            ]);
+        }
     }
 
     public function updateLocation(Request $request, string $reference, GeoapifyService $geoapify): JsonResponse
@@ -859,12 +1346,25 @@ class ProviderBookingController extends Controller
 
         $data = $request->validate([
             'status' => 'required|string|in:confirmed,in_progress,paid,completed,cancelled',
+            'cancellation_reason' => 'nullable|string|max:600',
         ]);
 
         $booking = DB::table('bookings')
             ->where('provider_id', $providerId)
             ->where('reference_code', $reference)
-            ->select('id', 'status', 'customer_id', 'reference_code')
+            ->select(
+                'id',
+                'provider_id',
+                'customer_id',
+                'reference_code',
+                'booking_date',
+                'time_start',
+                'time_end',
+                'status',
+                Schema::hasColumn('bookings', 'adjustment_status')
+                    ? 'adjustment_status'
+                    : DB::raw('NULL as adjustment_status')
+            )
             ->first();
 
         abort_if(!$booking, 404);
@@ -891,16 +1391,67 @@ class ProviderBookingController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($booking, $next) {
+        $reason = trim((string) ($data['cancellation_reason'] ?? ''));
+
+        if ($next === 'cancelled' && $reason === '') {
+            return back()->withErrors([
+                'cancellation_reason' => 'Please provide a reason before cancelling the booking.',
+            ]);
+        }
+
+        DB::transaction(function () use ($booking, $next, $providerId, $reason) {
             $update = ['status' => $next];
+            $adjustment = $this->bookingAdjustmentByBookingId((int) $booking->id);
 
             if (Schema::hasColumn('bookings', 'updated_at')) {
                 $update['updated_at'] = now();
             }
 
+            if ($next === 'cancelled') {
+                if (Schema::hasColumn('bookings', 'cancellation_reason')) {
+                    $update['cancellation_reason'] = $reason;
+                }
+
+                if (Schema::hasColumn('bookings', 'cancelled_by_role')) {
+                    $update['cancelled_by_role'] = 'provider';
+                }
+
+                if (
+                    Schema::hasColumn('bookings', 'adjustment_status') &&
+                    $adjustment &&
+                    ($adjustment->status ?? '') === 'pending_adjustment_approval'
+                ) {
+                    $update['adjustment_status'] = 'adjustment_rejected';
+                }
+            }
+
             DB::table('bookings')
                 ->where('id', $booking->id)
                 ->update($update);
+
+            if ($adjustment && ($adjustment->status ?? '') === 'pending_adjustment_approval' && $next === 'cancelled') {
+                DB::table('booking_adjustments')
+                    ->where('id', $adjustment->id)
+                    ->update([
+                        'status' => 'adjustment_rejected',
+                        'customer_response_note' => 'Provider cancelled the booking.',
+                        'resolved_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                $this->logBookingAdjustmentActivity(
+                    (int) $adjustment->id,
+                    (int) $booking->id,
+                    'provider',
+                    $providerId,
+                    'cancelled_booking',
+                    'Provider cancelled the booking after an adjustment request.',
+                    [
+                        'reference_code' => $booking->reference_code,
+                        'cancellation_reason' => $reason,
+                    ]
+                );
+            }
 
             // Close live tracking once the booking leaves its active tracking states.
             if (!$this->bookingCanTrack($next) && $this->providerLocationTableAvailable()) {
@@ -911,6 +1462,12 @@ class ProviderBookingController extends Controller
                         'stopped_at' => now(),
                         'updated_at' => now(),
                     ]);
+            }
+
+            if ($next === 'cancelled') {
+                $booking->cancellation_reason = $reason;
+                $booking->cancelled_by_role = 'provider';
+                $this->restoreAvailabilitySlot($booking);
             }
 
             $statusLabel = match ($next) {
@@ -926,50 +1483,17 @@ class ProviderBookingController extends Controller
                 'in_progress' => 'Your booking is now in progress.',
                 'paid'        => 'Your booking has been marked as paid.',
                 'completed'   => 'Your service has been completed. Please leave a review.',
-                'cancelled'   => 'Your booking has been marked as cancelled by the provider.',
+                'cancelled'   => 'Your booking has been marked as cancelled by the provider.' . ($reason !== '' ? ' Reason: ' . $reason : ''),
                 'confirmed'   => 'Your booking has been confirmed.',
                 default       => 'Your booking status has been updated to ' . $statusLabel . '.',
             };
 
-            if (
-                Schema::hasTable('notifications') &&
-                Schema::hasColumns('notifications', ['user_id', 'reference_code', 'message', 'is_read'])
-            ) {
-                $type = Schema::hasColumn('notifications', 'type')
-                    ? ($next === 'completed' ? 'review' : 'booking_status')
-                    : null;
-
-                $hasUpdatedAt = Schema::hasColumn('notifications', 'updated_at');
-                $hasCreatedAt = Schema::hasColumn('notifications', 'created_at');
-
-                $uniqueKeys = [
-                    'user_id'        => $booking->customer_id,
-                    'reference_code' => $booking->reference_code,
-                ];
-
-                if ($type !== null) {
-                    $uniqueKeys['type'] = $type;
-                }
-
-                $values = [
-                    'message' => $message,
-                    'is_read' => 0,
-                ];
-
-                if ($type !== null) {
-                    $values['type'] = $type;
-                }
-
-                if ($hasCreatedAt) {
-                    $values['created_at'] = now();
-                }
-
-                if ($hasUpdatedAt) {
-                    $values['updated_at'] = now();
-                }
-
-                DB::table('notifications')->updateOrInsert($uniqueKeys, $values);
-            }
+            $this->insertCustomerNotification(
+                (int) $booking->customer_id,
+                (string) $booking->reference_code,
+                $message,
+                $next === 'completed' ? 'review' : ($next === 'cancelled' ? 'booking_cancelled' : 'booking_status')
+            );
         });
 
         return back()->with('success', 'Booking status updated to ' . strtoupper($next) . '.');

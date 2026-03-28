@@ -102,6 +102,10 @@ Route::get('/customer-rating-attachment/{filename}', [ProviderCustomerRatingCont
     ->where('filename', '.*')
     ->name('customer.ratings.attachment');
 
+Route::get('/booking-adjustment-evidence/{filename}', [ProviderBookingController::class, 'adjustmentEvidence'])
+    ->where('filename', '.*')
+    ->name('booking.adjustments.attachment');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -344,6 +348,9 @@ Route::prefix('customer')
         Route::post('/bookings/{reference}/cancel', [CustomerBookingController::class, 'cancel'])
             ->name('bookings.cancel');
 
+        Route::post('/bookings/{reference}/adjustment/respond', [CustomerBookingController::class, 'respondToAdjustment'])
+            ->name('bookings.adjustment.respond');
+
         // REVIEWS
         Route::get('/reviews', [CustomerReviewController::class, 'index'])
             ->name('reviews');
@@ -488,6 +495,9 @@ Route::prefix('provider')
 
         Route::post('/bookings/{reference}/status', [ProviderBookingController::class, 'updateStatus'])
             ->name('bookings.status');
+
+        Route::post('/bookings/{reference}/adjustment', [ProviderBookingController::class, 'submitAdjustment'])
+            ->name('bookings.adjustment.submit');
 
         Route::post('/bookings/{reference}/location', [ProviderBookingController::class, 'updateLocation'])
             ->name('bookings.location.update');

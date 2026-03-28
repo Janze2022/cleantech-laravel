@@ -63,6 +63,10 @@
     $customerLatitude = is_numeric($booking->customer_latitude ?? null) ? (float) $booking->customer_latitude : null;
     $customerLongitude = is_numeric($booking->customer_longitude ?? null) ? (float) $booking->customer_longitude : null;
     $customerPinnedAddress = trim((string) ($booking->formatted_address ?? $address ?? ''));
+    $cancellationReason = trim((string) ($booking->cancellation_reason ?? ''));
+    $cancelledByRole = trim((string) ($booking->cancelled_by_role ?? ''));
+    $cancelledByLabel = $cancelledByRole !== '' ? ucfirst(str_replace('_', ' ', $cancelledByRole)) : 'System';
+    $bookingAdjustmentStatus = trim((string) ($booking->adjustment_status ?? ''));
 @endphp
 
 <style>
@@ -295,6 +299,102 @@
     line-height:1.4;
 }
 
+.adjustment-card{
+    margin-top:1.25rem;
+    padding:1rem;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(2,6,23,.35);
+}
+
+.adjustment-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:.75rem;
+    flex-wrap:wrap;
+}
+
+.adjustment-head h4{
+    margin:0;
+    color:var(--text-strong);
+    font-weight:950;
+}
+
+.adjustment-copy{
+    margin-top:.35rem;
+    color:var(--text-muted);
+    line-height:1.5;
+}
+
+.adjustment-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:.85rem;
+    margin-top:1rem;
+}
+
+.adjustment-box{
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(2,6,23,.32);
+    border-radius:14px;
+    padding:.9rem;
+}
+
+.reason-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.55rem;
+    margin-top:.85rem;
+}
+
+.reason-chip{
+    display:inline-flex;
+    align-items:center;
+    padding:.38rem .72rem;
+    border-radius:999px;
+    border:1px solid rgba(56,189,248,.20);
+    background:rgba(56,189,248,.10);
+    color:#bae6fd;
+    font-size:.8rem;
+    font-weight:800;
+}
+
+.response-form{
+    display:grid;
+    gap:.85rem;
+    margin-top:1rem;
+}
+
+.response-form textarea,
+.cancel-form textarea{
+    width:100%;
+    min-height:110px;
+    resize:vertical;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(2,6,23,.35);
+    color:#fff;
+    padding:.85rem .95rem;
+}
+
+.form-help{
+    color:var(--text-muted);
+    font-size:.84rem;
+    line-height:1.45;
+}
+
+.field-error{
+    color:#fca5a5;
+    font-size:.82rem;
+    font-weight:800;
+}
+
+.cancel-form{
+    display:grid;
+    gap:.85rem;
+}
+
 .btnx{
     padding:.75rem 1rem;
     border-radius:12px;
@@ -410,6 +510,7 @@
     .preview-shell{ padding: .85rem; }
     .tracking-map{ height:280px; }
     .tracking-grid{ grid-template-columns:1fr; }
+    .adjustment-grid{ grid-template-columns:1fr; }
 }
 
 @media print{
@@ -530,6 +631,87 @@
             </div>
         </div>
 
+        @if($cancellationReason !== '')
+            <div class="adjustment-card">
+                <div class="adjustment-head">
+                    <div>
+                        <h4>Cancellation Reason</h4>
+                        <div class="adjustment-copy">Cancelled by {{ $cancelledByLabel }}</div>
+                    </div>
+                    <div class="pill bad">Cancelled</div>
+                </div>
+                <div class="adjustment-copy">{{ $cancellationReason }}</div>
+            </div>
+        @endif
+
+        @if($adjustment)
+            <div class="adjustment-card">
+                <div class="adjustment-head">
+                    <div>
+                        <h4>Booking Adjustment</h4>
+                        <div class="adjustment-copy">Review the provider's onsite update before the booking continues.</div>
+                    </div>
+                    <div class="pill {{ ($adjustment->status_key ?? '') === 'adjustment_accepted' ? 'paid' : ((($adjustment->status_key ?? '') === 'adjustment_rejected') ? 'bad' : 'unpaid') }}">
+                        {{ $adjustment->status_label ?: 'Pending' }}
+                    </div>
+                </div>
+
+                <div class="adjustment-grid">
+                    <div class="adjustment-box">
+                        <div class="label">Original Booking</div>
+                        <div class="value">{{ $optionName }}</div>
+                        <div class="sub">Original total: PHP {{ $adjustment->original_price_display }}</div>
+                    </div>
+                    <div class="adjustment-box">
+                        <div class="label">Requested Update</div>
+                        <div class="value">{{ $adjustment->proposed_scope_summary ?: 'No scope summary provided.' }}</div>
+                        <div class="sub">
+                            Additional fee: PHP {{ $adjustment->additional_fee_display }}<br>
+                            Proposed total: PHP {{ $adjustment->proposed_total_display }}
+                        </div>
+                    </div>
+                </div>
+
+                @if(!empty($adjustment->reason_labels))
+                    <div class="reason-row">
+                        @foreach($adjustment->reason_labels as $label)
+                            <span class="reason-chip">{{ $label }}</span>
+                        @endforeach
+                    </div>
+                @endif
+
+                @if(!empty($adjustment->provider_note))
+                    <div class="adjustment-copy"><strong>Provider note:</strong> {{ $adjustment->provider_note }}</div>
+                @endif
+
+                @if(!empty($adjustment->evidence_url))
+                    <div class="adjustment-copy">
+                        <a class="btnx" href="{{ $adjustment->evidence_url }}" target="_blank" rel="noopener">View Evidence</a>
+                    </div>
+                @endif
+
+                @if(($adjustment->status_key ?? '') === 'pending_adjustment_approval')
+                    <form method="POST" action="{{ route('customer.bookings.adjustment.respond', $ref) }}" class="response-form">
+                        @csrf
+                        <div>
+                            <label class="label" for="customer_response_note">Reply to Provider</label>
+                            <textarea id="customer_response_note" name="customer_response_note" placeholder="Optional note for the provider.">{{ old('customer_response_note', $adjustment->customer_response_note ?? '') }}</textarea>
+                            <div class="form-help">Accept to continue with the updated total, or reject to keep the original booking amount.</div>
+                            @error('customer_response_note')
+                                <div class="field-error">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="actions">
+                            <button type="submit" class="btnx primary" name="response" value="accept">Accept Adjustment</button>
+                            <button type="submit" class="btnx danger" name="response" value="reject">Reject Adjustment</button>
+                        </div>
+                    </form>
+                @elseif(!empty($adjustment->customer_response_note))
+                    <div class="adjustment-copy"><strong>Your response:</strong> {{ $adjustment->customer_response_note }}</div>
+                @endif
+            </div>
+        @endif
+
         @if($trackingReady || $trackingWaiting)
             <div class="tracking-card">
                 <div class="tracking-head">
@@ -582,15 +764,6 @@
         <div class="actions">
             <a href="{{ route('customer.bookings') }}" class="btnx primary">Back</a>
 
-            @if($canCancel)
-                <form method="POST"
-                      action="{{ route('customer.bookings.cancel', $ref) }}"
-                      onsubmit="return confirm('Cancel this booking?');">
-                    @csrf
-                    <button type="submit" class="btnx danger">Cancel Booking</button>
-                </form>
-            @endif
-
             <button type="button" class="btnx" onclick="toggleReceiptPreview()">
                 Preview Receipt
             </button>
@@ -599,6 +772,26 @@
                 Print Receipt
             </button>
         </div>
+
+        @if($canCancel)
+            <form method="POST"
+                  action="{{ route('customer.bookings.cancel', $ref) }}"
+                  onsubmit="return confirm('Cancel this booking?');"
+                  class="cancel-form"
+                  style="margin-top:1rem;">
+                @csrf
+                <div>
+                    <label class="label" for="cancellation_reason">Cancellation Reason</label>
+                    <textarea id="cancellation_reason" name="cancellation_reason" placeholder="Tell the provider why you need to cancel.">{{ old('cancellation_reason') }}</textarea>
+                    @error('cancellation_reason')
+                        <div class="field-error">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div class="actions" style="margin-top:0;">
+                    <button type="submit" class="btnx danger">Cancel Booking</button>
+                </div>
+            </form>
+        @endif
 
         @if($canCancel)
             <div class="action-note">You can still cancel this booking while it is confirmed and waiting to start.</div>

@@ -486,14 +486,14 @@ select.status-select option{
 }
 
 .status-wrap{
-    display:flex;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
     gap:8px;
-    align-items:center;
+    align-items:start;
     flex:1 1 230px;
     min-width:210px;
 }
 .status-select{
-    flex:1;
     min-width:0;
     padding:10px 12px;
     border-radius:12px;
@@ -503,6 +503,33 @@ select.status-select option{
     font-weight:800;
     outline:none;
     min-height:40px;
+}
+.status-reason{
+    grid-column:1 / -1;
+    width:100%;
+    min-height:78px;
+    resize:vertical;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid var(--line);
+    background:#0b1220;
+    color:var(--text);
+    font-weight:700;
+    line-height:1.45;
+}
+.status-reason::placeholder{
+    color:rgba(148,163,184,.78);
+}
+.status-help{
+    grid-column:1 / -1;
+    color:var(--muted);
+    font-size:.76rem;
+    font-weight:700;
+    margin-top:-2px;
+}
+.status-wrap[data-cancelled="0"] .status-reason,
+.status-wrap[data-cancelled="0"] .status-help{
+    display:none;
 }
 
 .lock-note{
@@ -691,12 +718,11 @@ select.status-select option{
         width:100%;
         min-width:0;
         flex:none;
-        flex-direction:column;
+        grid-template-columns:1fr;
         align-items:stretch;
     }
 
     .status-select{
-        flex:0 0 auto;
         height:50px;
         min-height:50px;
         padding:0 14px;
@@ -859,13 +885,16 @@ select.status-select option{
                                 'time_end' => $b->time_end,
                                 'price' => $b->price,
                                 'status' => $b->status,
+                                'cancellation_reason' => $b->cancellation_reason,
+                                'cancelled_by_role' => $b->cancelled_by_role,
+                                'adjustment_status' => $b->adjustment_status,
                                 'created_at' => $b->created_at,
                                 'updated_at' => $b->updated_at,
                             ];
                         @endphp
 
                         <div class="booking-card booking-item"
-                             data-search="{{ strtolower(trim($ref.' '.$custName.' '.$provName.' '.$status.' '.$b->booking_date.' '.booking_time_12h($b->time_start).' '.booking_time_12h($b->time_end).' '.$b->address.' '.$b->contact_phone.' '.$serviceLabel.' '.$serviceSummary)) }}">
+                             data-search="{{ strtolower(trim($ref.' '.$custName.' '.$provName.' '.$status.' '.$b->booking_date.' '.booking_time_12h($b->time_start).' '.booking_time_12h($b->time_end).' '.$b->address.' '.$b->contact_phone.' '.$serviceLabel.' '.$serviceSummary.' '.($b->adjustment_status ?? '').' '.($b->cancellation_reason ?? ''))) }}">
 
                             <div class="booking-top">
                                 <div class="booking-ref">
@@ -914,17 +943,35 @@ select.status-select option{
                                 </div>
                             </div>
 
+                            @if(!empty($b->adjustment_status) || !empty($b->cancellation_reason))
+                                <div class="meta-box full-span" style="margin-top:12px;">
+                                    <div class="meta-label">Booking Notes</div>
+                                    @if(!empty($b->adjustment_status))
+                                        <div class="meta-value small">Adjustment: {{ ucwords(str_replace('_', ' ', $b->adjustment_status)) }}</div>
+                                    @endif
+                                    @if(!empty($b->cancellation_reason))
+                                        <div class="meta-value small">Cancellation reason: {{ $b->cancellation_reason }}</div>
+                                    @endif
+                                </div>
+                            @endif
+
                             <div class="booking-actions">
-                                <button type="button" class="btnx" onclick='openBooking(@json($details))'>View</button>
+                                <button type="button" class="btnx" onclick='openBookingCard(@json($details))'>View</button>
                                 <button type="button" class="btnx primary" onclick='openEditModal(@json($details))'>Edit</button>
 
-                                <form method="POST" action="{{ route('admin.bookings.status', $b->id) }}" class="status-wrap">
+                                <form method="POST" action="{{ route('admin.bookings.status', $b->id) }}" class="status-wrap" data-cancelled="0">
                                     @csrf
-                                    <select class="status-select" name="status" @disabled($isLocked)>
+                                    <select class="status-select js-status-select" name="status" @disabled($isLocked)>
                                         @foreach(['confirmed','in_progress','paid','completed','cancelled'] as $st)
                                             <option value="{{ $st }}" @selected($status === $st)>{{ str_replace('_', ' ', $st) }}</option>
                                         @endforeach
                                     </select>
+                                    <textarea class="status-reason js-status-reason"
+                                              name="cancellation_reason"
+                                              rows="3"
+                                              placeholder="Reason if cancelling"
+                                              @disabled($isLocked)>{{ old('cancellation_reason', $status === 'cancelled' ? ($b->cancellation_reason ?? '') : '') }}</textarea>
+                                    <div class="status-help js-status-help">Required when status is cancelled.</div>
                                     <button class="btnx" type="submit" @disabled($isLocked)>
                                         {{ $isLocked ? 'Locked' : 'Save' }}
                                     </button>
@@ -1045,13 +1092,16 @@ select.status-select option{
                                 'time_end' => $b->time_end,
                                 'price' => $b->price,
                                 'status' => $b->status,
+                                'cancellation_reason' => $b->cancellation_reason,
+                                'cancelled_by_role' => $b->cancelled_by_role,
+                                'adjustment_status' => $b->adjustment_status,
                                 'created_at' => $b->created_at,
                                 'updated_at' => $b->updated_at,
                             ];
                         @endphp
 
                         <div class="booking-card booking-item history-item"
-                             data-search="{{ strtolower(trim($ref.' '.$custName.' '.$provName.' '.$status.' '.$b->booking_date.' '.$historyDate.' '.booking_time_12h($b->time_start).' '.booking_time_12h($b->time_end).' '.$b->address.' '.$b->contact_phone.' '.$b->customer_phone.' '.$b->provider_phone.' '.$serviceLabel.' '.$serviceOptionLabel.' '.$houseLabel)) }}"
+                             data-search="{{ strtolower(trim($ref.' '.$custName.' '.$provName.' '.$status.' '.$b->booking_date.' '.$historyDate.' '.booking_time_12h($b->time_start).' '.booking_time_12h($b->time_end).' '.$b->address.' '.$b->contact_phone.' '.$b->customer_phone.' '.$b->provider_phone.' '.$serviceLabel.' '.$serviceOptionLabel.' '.$houseLabel.' '.($b->adjustment_status ?? '').' '.($b->cancellation_reason ?? ''))) }}"
                              data-status="{{ strtolower($status) }}"
                              data-history-date="{{ $historyDate }}"
                              data-reference="{{ strtolower($ref) }}"
@@ -1113,17 +1163,35 @@ select.status-select option{
                                 </div>
                             </div>
 
+                            @if(!empty($b->adjustment_status) || !empty($b->cancellation_reason))
+                                <div class="meta-box full-span" style="margin-top:12px;">
+                                    <div class="meta-label">Booking Notes</div>
+                                    @if(!empty($b->adjustment_status))
+                                        <div class="meta-value small">Adjustment: {{ ucwords(str_replace('_', ' ', $b->adjustment_status)) }}</div>
+                                    @endif
+                                    @if(!empty($b->cancellation_reason))
+                                        <div class="meta-value small">Cancellation reason: {{ $b->cancellation_reason }}</div>
+                                    @endif
+                                </div>
+                            @endif
+
                             <div class="booking-actions">
-                                <button type="button" class="btnx" onclick='openBooking(@json($details))'>View</button>
+                                <button type="button" class="btnx" onclick='openBookingCard(@json($details))'>View</button>
                                 <button type="button" class="btnx primary" onclick='openEditModal(@json($details))'>Edit</button>
 
-                                <form method="POST" action="{{ route('admin.bookings.status', $b->id) }}" class="status-wrap">
+                                <form method="POST" action="{{ route('admin.bookings.status', $b->id) }}" class="status-wrap" data-cancelled="0">
                                     @csrf
-                                    <select class="status-select" name="status" @disabled($isLocked)>
+                                    <select class="status-select js-status-select" name="status" @disabled($isLocked)>
                                         @foreach(['confirmed','in_progress','paid','completed','cancelled'] as $st)
                                             <option value="{{ $st }}" @selected($status === $st)>{{ str_replace('_', ' ', $st) }}</option>
                                         @endforeach
                                     </select>
+                                    <textarea class="status-reason js-status-reason"
+                                              name="cancellation_reason"
+                                              rows="3"
+                                              placeholder="Reason if cancelling"
+                                              @disabled($isLocked)>{{ old('cancellation_reason', $status === 'cancelled' ? ($b->cancellation_reason ?? '') : '') }}</textarea>
+                                    <div class="status-help js-status-help">Required when status is cancelled.</div>
                                     <button class="btnx" type="submit" @disabled($isLocked)>
                                         {{ $isLocked ? 'Locked' : 'Save' }}
                                     </button>
@@ -1211,6 +1279,16 @@ select.status-select option{
             <div class="detail-box full">
                 <div class="detail-label">Created / Updated</div>
                 <div class="detail-value" id="mDates"></div>
+            </div>
+
+            <div class="detail-box full" id="mAdjustmentWrap" style="display:none;">
+                <div class="detail-label">Adjustment Status</div>
+                <div class="detail-value" id="mAdjustment"></div>
+            </div>
+
+            <div class="detail-box full" id="mCancellationWrap" style="display:none;">
+                <div class="detail-label">Cancellation Reason</div>
+                <div class="detail-value" id="mCancellation"></div>
             </div>
         </div>
 
@@ -1397,6 +1475,30 @@ document.getElementById('historyStatus')?.addEventListener('change', applyHistor
 document.getElementById('historyDateFrom')?.addEventListener('change', applyHistoryFilters);
 document.getElementById('historyDateTo')?.addEventListener('change', applyHistoryFilters);
 
+function syncCancellationReason(form){
+    const select = form.querySelector('.js-status-select');
+    const reason = form.querySelector('.js-status-reason');
+    const help = form.querySelector('.js-status-help');
+
+    if(!select || !reason || !help){
+        return;
+    }
+
+    const show = String(select.value || '').trim().toLowerCase() === 'cancelled';
+    form.dataset.cancelled = show ? '1' : '0';
+    reason.required = show && !select.disabled;
+}
+
+document.querySelectorAll('.status-wrap').forEach((form) => {
+    const select = form.querySelector('.js-status-select');
+    if(!select){
+        return;
+    }
+
+    syncCancellationReason(form);
+    select.addEventListener('change', () => syncCancellationReason(form));
+});
+
 function openModal(id){
     document.getElementById(id).style.display = 'block';
     document.body.style.overflow = 'hidden';
@@ -1471,6 +1573,77 @@ function openBooking(b){
     const created = b.created_at ? String(b.created_at) : '-';
     const updated = b.updated_at ? String(b.updated_at) : '-';
     document.getElementById('mDates').textContent = 'Created: ' + created + ' • Updated: ' + updated;
+
+    document.getElementById('viewEditBtn').onclick = function(){
+        closeModal('bookingModal');
+        openEditModal(b);
+    };
+
+    openModal('bookingModal');
+}
+
+function openBookingCard(b){
+    const ref = b.reference_code ? b.reference_code : ('#' + b.id);
+    document.getElementById('mTitle').textContent = 'Booking Details - ' + ref;
+    document.getElementById('mRef').textContent = ref;
+    document.getElementById('mStatus').textContent = b.status || '-';
+
+    const customerParts = [
+        b.customer_name ? b.customer_name : ('Customer ID: ' + (b.customer_id ?? '-')),
+        b.customer_phone ? b.customer_phone : ''
+    ].filter(Boolean);
+
+    const providerParts = [
+        b.provider_name ? b.provider_name : (b.provider_id ? ('Provider ID: ' + b.provider_id) : 'Unassigned'),
+        b.provider_phone ? b.provider_phone : ''
+    ].filter(Boolean);
+
+    const serviceName = b.service_name ? b.service_name : 'Cleaning Service';
+    const optionName = b.service_option_name ? b.service_option_name : 'Selected booking option';
+    const houseType = b.house_type ? String(b.house_type).replaceAll('_', ' ') : '';
+    const serviceParts = [serviceName, optionName];
+
+    if (houseType) {
+        serviceParts.push('House Type: ' + houseType);
+    }
+
+    document.getElementById('mCustomer').textContent = customerParts.join(' / ');
+    document.getElementById('mProvider').textContent = providerParts.join(' / ');
+    document.getElementById('mDate').textContent = b.booking_date || '-';
+    document.getElementById('mTime').textContent = format12Hour(b.time_start) + ' - ' + format12Hour(b.time_end);
+    document.getElementById('mHouse').textContent = houseType || '-';
+    document.getElementById('mPrice').textContent = 'PHP ' + Number(b.price || 0).toFixed(2);
+    document.getElementById('mService').textContent = serviceParts.join(' / ');
+    document.getElementById('mAddress').textContent = b.address || '-';
+    document.getElementById('mContact').textContent = b.contact_phone || '-';
+
+    const created = b.created_at ? String(b.created_at) : '-';
+    const updated = b.updated_at ? String(b.updated_at) : '-';
+    document.getElementById('mDates').textContent = 'Created: ' + created + ' / Updated: ' + updated;
+
+    const adjustmentWrap = document.getElementById('mAdjustmentWrap');
+    const adjustmentValue = document.getElementById('mAdjustment');
+    const cancellationWrap = document.getElementById('mCancellationWrap');
+    const cancellationValue = document.getElementById('mCancellation');
+
+    if ((b.adjustment_status || '').trim() !== '') {
+        adjustmentValue.textContent = String(b.adjustment_status).replaceAll('_', ' ');
+        adjustmentWrap.style.display = '';
+    } else {
+        adjustmentValue.textContent = '';
+        adjustmentWrap.style.display = 'none';
+    }
+
+    if ((b.cancellation_reason || '').trim() !== '') {
+        const cancelledBy = (b.cancelled_by_role || '').trim();
+        cancellationValue.textContent = cancelledBy
+            ? ('Cancelled by ' + cancelledBy.replaceAll('_', ' ') + ': ' + b.cancellation_reason)
+            : b.cancellation_reason;
+        cancellationWrap.style.display = '';
+    } else {
+        cancellationValue.textContent = '';
+        cancellationWrap.style.display = 'none';
+    }
 
     document.getElementById('viewEditBtn').onclick = function(){
         closeModal('bookingModal');

@@ -138,6 +138,28 @@
     $providerLatitude = is_numeric($providerLocationRow->latitude ?? null) ? (float) $providerLocationRow->latitude : null;
     $providerLongitude = is_numeric($providerLocationRow->longitude ?? null) ? (float) $providerLocationRow->longitude : null;
     $providerTrackedAddress = trim((string) ($providerLocationRow->formatted_address ?? ''));
+
+    $cancellationReason = trim((string) ($booking->cancellation_reason ?? ''));
+    $cancelledByRole = trim((string) ($booking->cancelled_by_role ?? ''));
+    $cancelledByLabel = $cancelledByRole !== '' ? ucfirst(str_replace('_', ' ', $cancelledByRole)) : 'System';
+    $bookingAdjustmentStatus = trim((string) ($booking->adjustment_status ?? ''));
+    $canReportMismatch = $stLower === 'in_progress' && (($adjustment->status_key ?? '') !== 'adjustment_accepted');
+    $selectedReasonCodes = collect(old('reason_codes', $adjustment->reason_codes ?? []))
+        ->map(fn ($value) => trim((string) $value))
+        ->filter()
+        ->values()
+        ->all();
+    $scopeSummaryValue = old('proposed_scope_summary', $adjustment->proposed_scope_summary ?? '');
+    $additionalFeeValue = old(
+        'additional_fee',
+        isset($adjustment->additional_fee) ? number_format((float) $adjustment->additional_fee, 2, '.', '') : ''
+    );
+    $proposedTotalValue = old(
+        'proposed_total',
+        isset($adjustment->proposed_total) ? number_format((float) $adjustment->proposed_total, 2, '.', '') : ''
+    );
+    $otherReasonValue = old('other_reason', $adjustment->other_reason ?? '');
+    $providerNoteValue = old('provider_note', $adjustment->provider_note ?? '');
 @endphp
 
 <style>
@@ -345,6 +367,176 @@
 }
 .btnx:hover{ filter: brightness(1.05); }
 
+.notice{
+    margin-bottom: 12px;
+    padding: .9rem 1rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.08);
+    font-weight: 800;
+}
+
+.notice.success{
+    border-color: rgba(34,197,94,.26);
+    background: rgba(34,197,94,.12);
+    color: #bbf7d0;
+}
+
+.notice.error{
+    border-color: rgba(239,68,68,.26);
+    background: rgba(239,68,68,.12);
+    color: #fecaca;
+}
+
+.detail-stack{
+    display:grid;
+    gap: 12px;
+}
+
+.adjustment-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
+.compare-grid{
+    margin-top: 12px;
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.compare-box{
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(2,6,23,.22);
+    border-radius: 16px;
+    padding: 12px;
+}
+
+.meta-pills{
+    margin-top: 10px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+}
+
+.meta-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:.4rem .7rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.03);
+    color: rgba(255,255,255,.88);
+    font-size:.82rem;
+    font-weight:800;
+}
+
+.reason-list{
+    margin-top: 12px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+}
+
+.reason-chip{
+    display:inline-flex;
+    align-items:center;
+    padding:.42rem .72rem;
+    border-radius:999px;
+    border:1px solid rgba(56,189,248,.20);
+    background: rgba(56,189,248,.10);
+    color:#bae6fd;
+    font-size:.8rem;
+    font-weight:800;
+}
+
+.adjustment-copy{
+    margin-top: 12px;
+    color: rgba(255,255,255,.74);
+    font-size: .92rem;
+    line-height: 1.6;
+}
+
+.adjustment-form{
+    margin-top: 12px;
+    display:grid;
+    gap: 12px;
+}
+
+.choice-grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.choice-card{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(2,6,23,.20);
+}
+
+.choice-card input{
+    margin-top: 3px;
+}
+
+.field-grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.field-block{
+    display:grid;
+    gap: 8px;
+}
+
+.field-block.full{
+    grid-column: 1 / -1;
+}
+
+.field-label{
+    color: var(--muted);
+    font-size: .78rem;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.field-input,
+.field-textarea,
+.field-file{
+    width: 100%;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.10);
+    background: rgba(2,6,23,.35);
+    color: #fff;
+    padding: .82rem .95rem;
+}
+
+.field-textarea{
+    min-height: 110px;
+    resize: vertical;
+}
+
+.field-error{
+    color: #fca5a5;
+    font-size: .82rem;
+    font-weight: 800;
+}
+
+.field-help{
+    color: var(--muted);
+    font-size: .82rem;
+    line-height: 1.5;
+}
+
 .tracking-card{
     margin-top: 12px;
 }
@@ -432,6 +624,9 @@
     .container.page{ padding-left: 10px; padding-right: 10px; }
     .pill{ width:100%; justify-content:center; }
     .kvGrid{ grid-template-columns: 1fr; }
+    .compare-grid,
+    .choice-grid,
+    .field-grid{ grid-template-columns: 1fr; }
     .btnx{ width:100%; }
     .tracking-controls{
         width:100%;
@@ -463,6 +658,14 @@
         </div>
 
         <div class="content">
+            @if(session('success'))
+                <div class="notice success">{{ session('success') }}</div>
+            @endif
+
+            @if($errors->has('general'))
+                <div class="notice error">{{ $errors->first('general') }}</div>
+            @endif
+
             <div class="grid">
 
                 {{-- LEFT: BOOKING INFO --}}
@@ -522,6 +725,186 @@
                     </div>
                 </div>
 
+            </div>
+
+            <div class="detail-stack">
+                @if($cancellationReason !== '')
+                    <div class="card">
+                        <div class="adjustment-head">
+                            <div>
+                                <div class="k">Cancellation Reason</div>
+                                <div class="v">Cancelled by {{ $cancelledByLabel }}</div>
+                            </div>
+                            <span class="badge bad">Cancelled</span>
+                        </div>
+                        <div class="adjustment-copy">{{ $cancellationReason }}</div>
+                    </div>
+                @endif
+
+                @if($adjustment)
+                    <div class="card">
+                        <div class="adjustment-head">
+                            <div>
+                                <div class="k">Adjustment Review</div>
+                                <div class="v">{{ $adjustment->status_label ?: 'Adjustment logged' }}</div>
+                            </div>
+                            <span class="badge {{ ($adjustment->status_key ?? '') === 'adjustment_accepted' ? 'good' : ((($adjustment->status_key ?? '') === 'adjustment_rejected') ? 'bad' : 'warn') }}">
+                                {{ strtoupper(str_replace('_', ' ', $adjustment->status_key ?: 'pending')) }}
+                            </span>
+                        </div>
+
+                        <div class="compare-grid">
+                            <div class="compare-box">
+                                <div class="k">Original Booking</div>
+                                <div class="v">{{ $optionName ?: $serviceName }}</div>
+                                <div class="adjustment-copy">Original total: PHP {{ $adjustment->original_price_display }}</div>
+                            </div>
+
+                            <div class="compare-box">
+                                <div class="k">Requested Update</div>
+                                <div class="v">{{ $adjustment->proposed_scope_summary ?: 'No scope summary provided.' }}</div>
+                                <div class="adjustment-copy">
+                                    Additional fee: PHP {{ $adjustment->additional_fee_display }}<br>
+                                    Proposed total: PHP {{ $adjustment->proposed_total_display }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="meta-pills">
+                            <span class="meta-pill">Increase {{ $adjustment->price_increase_percent_display }}%</span>
+                            @if(!empty($adjustment->resolved_at_label))
+                                <span class="meta-pill">Resolved {{ $adjustment->resolved_at_label }}</span>
+                            @endif
+                            @if(!empty($adjustment->evidence_url))
+                                <a class="meta-pill" href="{{ $adjustment->evidence_url }}" target="_blank" rel="noopener">View evidence</a>
+                            @endif
+                        </div>
+
+                        @if(!empty($adjustment->reason_labels))
+                            <div class="reason-list">
+                                @foreach($adjustment->reason_labels as $label)
+                                    <span class="reason-chip">{{ $label }}</span>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @if(!empty($adjustment->provider_note))
+                            <div class="adjustment-copy"><strong>Provider note:</strong> {{ $adjustment->provider_note }}</div>
+                        @endif
+
+                        @if(!empty($adjustment->customer_response_note))
+                            <div class="adjustment-copy"><strong>Customer response:</strong> {{ $adjustment->customer_response_note }}</div>
+                        @endif
+                    </div>
+                @endif
+
+                @if($canReportMismatch)
+                    <div class="card">
+                        <div class="adjustment-head">
+                            <div>
+                                <div class="k">Report Mismatch</div>
+                                <div class="v">Compare the original booking with the actual work onsite.</div>
+                            </div>
+                            <span class="badge warn">In Progress</span>
+                        </div>
+
+                        <div class="compare-grid">
+                            <div class="compare-box">
+                                <div class="k">Original Details</div>
+                                <div class="v">{{ $serviceName }}</div>
+                                <div class="adjustment-copy">{{ $optionName ?: 'Selected option not available.' }}</div>
+                                <div class="adjustment-copy">Original total: PHP {{ number_format($amount, 2) }}</div>
+                            </div>
+                            <div class="compare-box">
+                                <div class="k">Mismatch Flow</div>
+                                <div class="adjustment-copy">Explain the mismatch, upload evidence, and submit an updated total for the customer to review.</div>
+                            </div>
+                        </div>
+
+                        <form method="POST" action="{{ route('provider.bookings.adjustment.submit', $booking->reference_code) }}" enctype="multipart/form-data" class="adjustment-form">
+                            @csrf
+
+                            <div class="field-block">
+                                <div class="field-label">Mismatch Reasons</div>
+                                <div class="choice-grid">
+                                    @foreach([
+                                        'larger_area' => 'Larger area than declared',
+                                        'additional_rooms' => 'Additional rooms or sections',
+                                        'heavy_soiling' => 'Heavily soiled or deep cleaning needed',
+                                        'other' => 'Other reason',
+                                    ] as $code => $label)
+                                        <label class="choice-card">
+                                            <input type="checkbox" name="reason_codes[]" value="{{ $code }}" @checked(in_array($code, $selectedReasonCodes, true))>
+                                            <span>{{ $label }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                @error('reason_codes')
+                                    <div class="field-error">{{ $message }}</div>
+                                @enderror
+                                @error('reason_codes.*')
+                                    <div class="field-error">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="field-grid">
+                                <div class="field-block full">
+                                    <label class="field-label" for="proposed_scope_summary">Updated Scope Summary</label>
+                                    <textarea class="field-textarea" id="proposed_scope_summary" name="proposed_scope_summary" placeholder="Example: Two extra rooms were added and kitchen grease requires deeper work.">{{ $scopeSummaryValue }}</textarea>
+                                    @error('proposed_scope_summary')
+                                        <div class="field-error">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div class="field-block">
+                                    <label class="field-label" for="additional_fee">Additional Fee</label>
+                                    <input class="field-input" id="additional_fee" name="additional_fee" type="number" min="0" step="0.01" value="{{ $additionalFeeValue }}" placeholder="0.00">
+                                    @error('additional_fee')
+                                        <div class="field-error">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div class="field-block">
+                                    <label class="field-label" for="proposed_total">Proposed Total</label>
+                                    <input class="field-input" id="proposed_total" name="proposed_total" type="number" min="0" step="0.01" value="{{ $proposedTotalValue }}" placeholder="{{ number_format($amount, 2, '.', '') }}">
+                                    <div class="field-help">The system limits how much the total can increase.</div>
+                                    @error('proposed_total')
+                                        <div class="field-error">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div class="field-block full">
+                                    <label class="field-label" for="other_reason">Other Reason</label>
+                                    <textarea class="field-textarea" id="other_reason" name="other_reason" placeholder="Add a short reason if needed.">{{ $otherReasonValue }}</textarea>
+                                    @error('other_reason')
+                                        <div class="field-error">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div class="field-block full">
+                                    <label class="field-label" for="provider_note">Provider Note</label>
+                                    <textarea class="field-textarea" id="provider_note" name="provider_note" placeholder="Tell the customer what changed onsite.">{{ $providerNoteValue }}</textarea>
+                                    @error('provider_note')
+                                        <div class="field-error">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div class="field-block full">
+                                    <label class="field-label" for="evidence">Photo or File Evidence</label>
+                                    <input class="field-file" id="evidence" name="evidence" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf">
+                                    <div class="field-help">Required for every mismatch request.</div>
+                                    @error('evidence')
+                                        <div class="field-error">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="actions">
+                                <button type="submit" class="btnx primary">Send Adjustment Request</button>
+                            </div>
+                        </form>
+                    </div>
+                @endif
             </div>
 
             @if($booking->tracking_enabled)

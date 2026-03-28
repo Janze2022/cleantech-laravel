@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class CustomerBookingController extends Controller
 {
@@ -609,6 +610,7 @@ class CustomerBookingController extends Controller
             ->where('b.customer_id', $customerId)
             ->where('b.reference_code', $reference)
             ->select(
+                'b.id',
                 'b.reference_code',
                 'b.provider_id',
                 'b.booking_date',
@@ -617,6 +619,15 @@ class CustomerBookingController extends Controller
                 'b.time_end',
                 'b.price',
                 'b.status',
+                Schema::hasColumn('bookings', 'cancellation_reason')
+                    ? 'b.cancellation_reason'
+                    : DB::raw('NULL as cancellation_reason'),
+                Schema::hasColumn('bookings', 'cancelled_by_role')
+                    ? 'b.cancelled_by_role'
+                    : DB::raw('NULL as cancelled_by_role'),
+                Schema::hasColumn('bookings', 'adjustment_status')
+                    ? 'b.adjustment_status'
+                    : DB::raw('NULL as adjustment_status'),
                 'b.address',
                 'b.contact_phone',
                 'b.created_at',
@@ -634,7 +645,11 @@ class CustomerBookingController extends Controller
 
         abort_if(!$booking, 404);
 
-        return view('customer.bookings.show', compact('booking'));
+        $adjustment = $this->formatBookingAdjustment(
+            $this->bookingAdjustmentByBookingId((int) $booking->id)
+        );
+
+        return view('customer.bookings.show', compact('booking', 'adjustment'));
     }
 
     public function tracking(string $reference, GeoapifyService $geoapify): JsonResponse
@@ -730,6 +745,10 @@ class CustomerBookingController extends Controller
                 ->withErrors(['general' => 'Session expired. Please login again.']);
         }
 
+        $data = $request->validate([
+            'cancellation_reason' => ['required', 'string', 'max:600'],
+        ]);
+
         try {
             DB::beginTransaction();
 
@@ -745,6 +764,9 @@ class CustomerBookingController extends Controller
                     'time_start',
                     'time_end',
                     'status',
+                    Schema::hasColumn('bookings', 'adjustment_status')
+                        ? 'adjustment_status'
+                        : DB::raw('NULL as adjustment_status'),
                 ]);
 
             if (!$booking) {
@@ -762,13 +784,48 @@ class CustomerBookingController extends Controller
                 ]);
             }
 
+            $reason = trim((string) $data['cancellation_reason']);
+
+            $adjustment = $this->bookingAdjustmentByBookingId((int) $booking->id);
+
             DB::table('bookings')
                 ->where('id', $booking->id)
                 ->update([
                     'status' => 'cancelled',
+                    'cancellation_reason' => $reason,
+                    'cancelled_by_role' => 'customer',
+                    'adjustment_status' => $adjustment && $adjustment->status === 'pending_adjustment_approval'
+                        ? 'adjustment_rejected'
+                        : ($booking->adjustment_status ?? null),
                     'updated_at' => now(),
                 ]);
 
+            if ($adjustment && $adjustment->status === 'pending_adjustment_approval') {
+                DB::table('booking_adjustments')
+                    ->where('id', $adjustment->id)
+                    ->update([
+                        'status' => 'adjustment_rejected',
+                        'customer_response_note' => 'Customer cancelled the booking.',
+                        'resolved_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                $this->logBookingAdjustmentActivity(
+                    (int) $adjustment->id,
+                    (int) $booking->id,
+                    'customer',
+                    $customerId,
+                    'cancelled_booking',
+                    'Customer cancelled the booking after an adjustment request.',
+                    [
+                        'reference_code' => $booking->reference_code,
+                        'cancellation_reason' => $reason,
+                    ]
+                );
+            }
+
+            $booking->cancellation_reason = $reason;
+            $booking->cancelled_by_role = 'customer';
             $this->restoreAvailabilitySlot($booking);
             $this->notifyProviderAboutCancellation($booking);
 
@@ -785,6 +842,166 @@ class CustomerBookingController extends Controller
 
             return back()->withErrors([
                 'general' => 'Unable to cancel this booking right now. Please try again.',
+            ]);
+        }
+    }
+
+    public function respondToAdjustment(Request $request, string $reference)
+    {
+        $customerId = (int) session('user_id');
+
+        if (!$customerId) {
+            return redirect()
+                ->route('customer.login')
+                ->withErrors(['general' => 'Session expired. Please login again.']);
+        }
+
+        $data = $request->validate([
+            'response' => ['required', 'string', 'in:accept,reject'],
+            'customer_response_note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if (!$this->bookingAdjustmentTableAvailable()) {
+            return back()->withErrors([
+                'general' => 'Booking adjustments are not available right now.',
+            ]);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $booking = DB::table('bookings')
+                ->where('customer_id', $customerId)
+                ->where('reference_code', $reference)
+                ->lockForUpdate()
+                ->first([
+                    'id',
+                    'reference_code',
+                    'provider_id',
+                    'price',
+                    'status',
+                    Schema::hasColumn('bookings', 'adjustment_status')
+                        ? 'adjustment_status'
+                        : DB::raw('NULL as adjustment_status'),
+                ]);
+
+            if (!$booking) {
+                DB::rollBack();
+                abort(404);
+            }
+
+            $adjustment = DB::table('booking_adjustments')
+                ->where('booking_id', $booking->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$adjustment || ($adjustment->status ?? '') !== 'pending_adjustment_approval') {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    'general' => 'There is no pending adjustment to respond to.',
+                ]);
+            }
+
+            $note = trim((string) ($data['customer_response_note'] ?? ''));
+            $note = $note !== '' ? $note : null;
+
+            if ($data['response'] === 'accept') {
+                DB::table('bookings')
+                    ->where('id', $booking->id)
+                    ->update([
+                        'price' => $adjustment->proposed_total,
+                        'adjustment_status' => 'adjustment_accepted',
+                        'updated_at' => now(),
+                    ]);
+
+                DB::table('booking_adjustments')
+                    ->where('id', $adjustment->id)
+                    ->update([
+                        'status' => 'adjustment_accepted',
+                        'customer_response_note' => $note,
+                        'resolved_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                $this->logBookingAdjustmentActivity(
+                    (int) $adjustment->id,
+                    (int) $booking->id,
+                    'customer',
+                    $customerId,
+                    'accepted',
+                    $note,
+                    [
+                        'reference_code' => $booking->reference_code,
+                        'old_price' => (float) ($booking->price ?? 0),
+                        'new_price' => (float) ($adjustment->proposed_total ?? 0),
+                    ]
+                );
+
+                $this->notifyProviderAboutAdjustmentDecision(
+                    $booking,
+                    'accepted',
+                    $note,
+                    (float) ($adjustment->proposed_total ?? 0)
+                );
+
+                DB::commit();
+
+                return redirect()
+                    ->route('customer.bookings.show', $booking->reference_code)
+                    ->with('success', 'Adjustment accepted. The booking total was updated.');
+            }
+
+            DB::table('bookings')
+                ->where('id', $booking->id)
+                ->update([
+                    'adjustment_status' => 'adjustment_rejected',
+                    'updated_at' => now(),
+                ]);
+
+            DB::table('booking_adjustments')
+                ->where('id', $adjustment->id)
+                ->update([
+                    'status' => 'adjustment_rejected',
+                    'customer_response_note' => $note,
+                    'resolved_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            $this->logBookingAdjustmentActivity(
+                (int) $adjustment->id,
+                (int) $booking->id,
+                'customer',
+                $customerId,
+                'rejected',
+                $note,
+                [
+                    'reference_code' => $booking->reference_code,
+                    'kept_price' => (float) ($booking->price ?? 0),
+                    'rejected_total' => (float) ($adjustment->proposed_total ?? 0),
+                ]
+            );
+
+            $this->notifyProviderAboutAdjustmentDecision(
+                $booking,
+                'rejected',
+                $note,
+                (float) ($adjustment->proposed_total ?? 0)
+            );
+
+            DB::commit();
+
+            return redirect()
+                ->route('customer.bookings.show', $booking->reference_code)
+                ->with('success', 'Adjustment rejected. The booking keeps the original scope and price.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            DB::rollBack();
+            report($exception);
+
+            return back()->withErrors([
+                'general' => 'Unable to save your adjustment response right now. Please try again.',
             ]);
         }
     }
@@ -872,6 +1089,100 @@ class CustomerBookingController extends Controller
                 'formatted_address',
                 'is_tracking',
             ]);
+    }
+
+    private function bookingAdjustmentTableAvailable(): bool
+    {
+        return Schema::hasTable('booking_adjustments')
+            && Schema::hasColumns('booking_adjustments', [
+                'id',
+                'booking_id',
+                'provider_id',
+                'customer_id',
+                'original_service_name',
+                'original_option_summary',
+                'original_price',
+                'proposed_service_name',
+                'proposed_scope_summary',
+                'additional_fee',
+                'proposed_total',
+                'price_increase_percent',
+                'reason_payload',
+                'other_reason',
+                'provider_note',
+                'customer_response_note',
+                'evidence_path',
+                'evidence_name',
+                'evidence_mime',
+                'status',
+            ]);
+    }
+
+    private function bookingAdjustmentLogTableAvailable(): bool
+    {
+        return Schema::hasTable('booking_adjustment_logs')
+            && Schema::hasColumns('booking_adjustment_logs', [
+                'booking_adjustment_id',
+                'booking_id',
+                'actor_role',
+                'actor_id',
+                'action',
+                'payload',
+            ]);
+    }
+
+    private function bookingAdjustmentByBookingId(int $bookingId): ?object
+    {
+        if (!$this->bookingAdjustmentTableAvailable()) {
+            return null;
+        }
+
+        return DB::table('booking_adjustments')
+            ->where('booking_id', $bookingId)
+            ->first();
+    }
+
+    private function formatBookingAdjustment(?object $adjustment): ?object
+    {
+        if (!$adjustment) {
+            return null;
+        }
+
+        $adjustment->reason_codes = collect(json_decode((string) ($adjustment->reason_payload ?? '[]'), true))
+            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
+            ->values()
+            ->all();
+
+        $adjustment->reason_labels = collect($adjustment->reason_codes)
+            ->map(fn ($code) => $this->adjustmentReasonLabel($code))
+            ->values()
+            ->all();
+
+        $adjustment->status_key = trim((string) ($adjustment->status ?? ''));
+        $adjustment->status_label = ucwords(str_replace('_', ' ', $adjustment->status_key));
+        $adjustment->original_price_display = number_format((float) ($adjustment->original_price ?? 0), 2);
+        $adjustment->additional_fee_display = number_format((float) ($adjustment->additional_fee ?? 0), 2);
+        $adjustment->proposed_total_display = number_format((float) ($adjustment->proposed_total ?? 0), 2);
+        $adjustment->price_increase_percent_display = number_format((float) ($adjustment->price_increase_percent ?? 0), 1);
+        $adjustment->evidence_url = !empty($adjustment->evidence_path)
+            ? route('booking.adjustments.attachment', ['filename' => basename((string) $adjustment->evidence_path)])
+            : null;
+        $adjustment->resolved_at_label = !empty($adjustment->resolved_at)
+            ? Carbon::parse($adjustment->resolved_at)->format('M d, Y h:i A')
+            : null;
+
+        return $adjustment;
+    }
+
+    private function adjustmentReasonLabel(string $code): string
+    {
+        return match (Str::lower(trim($code))) {
+            'larger_area' => 'Larger area than declared',
+            'additional_rooms' => 'Additional rooms or sections',
+            'heavy_soiling' => 'Heavily soiled or deep cleaning required',
+            'other' => 'Other onsite issue',
+            default => ucwords(str_replace('_', ' ', $code)),
+        };
     }
 
     private function normalizeStatus(string $status): string
@@ -972,9 +1283,16 @@ class CustomerBookingController extends Controller
             return;
         }
 
+        $reason = trim((string) ($booking->cancellation_reason ?? ''));
+        $message = 'A booking was cancelled by the customer. Ref: ' . $booking->reference_code;
+
+        if ($reason !== '') {
+            $message .= ' Reason: ' . $reason;
+        }
+
         $notification = [
             'provider_id' => $providerId,
-            'message' => 'A booking was cancelled by the customer. Ref: ' . $booking->reference_code,
+            'message' => $message,
             'is_read' => 0,
         ];
 
@@ -995,5 +1313,86 @@ class CustomerBookingController extends Controller
         }
 
         DB::table('provider_notifications')->insert($notification);
+    }
+
+    private function notifyProviderAboutAdjustmentDecision(
+        object $booking,
+        string $decision,
+        ?string $note = null,
+        ?float $proposedTotal = null
+    ): void {
+        if (
+            !Schema::hasTable('provider_notifications') ||
+            !Schema::hasColumns('provider_notifications', ['provider_id', 'message', 'is_read'])
+        ) {
+            return;
+        }
+
+        $providerId = (int) ($booking->provider_id ?? 0);
+        if (!$providerId) {
+            return;
+        }
+
+        $message = $decision === 'accepted'
+            ? 'The customer accepted the booking adjustment for ref ' . $booking->reference_code . '.'
+            : 'The customer rejected the booking adjustment for ref ' . $booking->reference_code . '.';
+
+        if ($decision === 'accepted' && $proposedTotal !== null) {
+            $message .= ' New total: PHP ' . number_format($proposedTotal, 2) . '.';
+        }
+
+        if ($note) {
+            $message .= ' Note: ' . $note;
+        }
+
+        $notification = [
+            'provider_id' => $providerId,
+            'message' => $message,
+            'is_read' => 0,
+        ];
+
+        if (Schema::hasColumn('provider_notifications', 'type')) {
+            $notification['type'] = 'booking_adjustment';
+        }
+
+        if (Schema::hasColumn('provider_notifications', 'reference_code')) {
+            $notification['reference_code'] = $booking->reference_code;
+        }
+
+        if (Schema::hasColumn('provider_notifications', 'created_at')) {
+            $notification['created_at'] = now();
+        }
+
+        if (Schema::hasColumn('provider_notifications', 'updated_at')) {
+            $notification['updated_at'] = now();
+        }
+
+        DB::table('provider_notifications')->insert($notification);
+    }
+
+    private function logBookingAdjustmentActivity(
+        int $adjustmentId,
+        int $bookingId,
+        string $actorRole,
+        int $actorId,
+        string $action,
+        ?string $note = null,
+        array $payload = []
+    ): void {
+        if (!$this->bookingAdjustmentLogTableAvailable()) {
+            return;
+        }
+
+        DB::table('booking_adjustment_logs')->insert([
+            'booking_adjustment_id' => $adjustmentId,
+            'booking_id' => $bookingId,
+            'actor_role' => $actorRole,
+            'actor_id' => $actorId,
+            'action' => $action,
+            'note' => $note,
+            'payload' => json_encode($payload),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }

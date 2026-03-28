@@ -199,6 +199,29 @@
     padding:.65rem .75rem;
 }
 
+.reason-input{
+    width:100%;
+    min-height:76px;
+    resize:vertical;
+    background:#020617;
+    color:#fff;
+    border:1px solid var(--border-soft);
+    border-radius:12px;
+    padding:.75rem .85rem;
+    line-height:1.45;
+}
+
+.reason-input::placeholder{
+    color:rgba(255,255,255,.38);
+}
+
+.field-error{
+    color:#fca5a5;
+    font-size:.8rem;
+    font-weight:800;
+    line-height:1.4;
+}
+
 .btn-update{
     border:none;
     border-radius:10px;
@@ -370,6 +393,10 @@
                                                         <option value="{{ $value }}">{{ $label }}</option>
                                                     @endforeach
                                                 </select>
+                                                <textarea name="cancellation_reason" class="reason-input" rows="3" placeholder="Reason if cancelling">{{ old('cancellation_reason') }}</textarea>
+                                                @if($errors->has('cancellation_reason'))
+                                                    <div class="field-error">{{ $errors->first('cancellation_reason') }}</div>
+                                                @endif
                                                 <button class="btn-update" type="submit">Update</button>
                                             </form>
                                         @endif
@@ -447,6 +474,10 @@
                                                 <option value="{{ $value }}">{{ $label }}</option>
                                             @endforeach
                                         </select>
+                                        <textarea name="cancellation_reason" class="reason-input" rows="3" placeholder="Reason if cancelling">{{ old('cancellation_reason') }}</textarea>
+                                        @if($errors->has('cancellation_reason'))
+                                            <div class="field-error">{{ $errors->first('cancellation_reason') }}</div>
+                                        @endif
                                         <button class="btn-update" type="submit">Update</button>
                                     </form>
                                 @endif

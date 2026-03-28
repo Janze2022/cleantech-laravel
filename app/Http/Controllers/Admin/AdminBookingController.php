@@ -338,6 +338,7 @@ class AdminBookingController extends Controller
     {
         $request->validate([
             'status' => ['required', Rule::in(['confirmed', 'in_progress', 'paid', 'completed', 'cancelled'])],
+            'cancellation_reason' => ['nullable', 'string', 'max:600'],
         ]);
 
         $exists = DB::table('bookings')->where('id', $id)->exists();
@@ -346,14 +347,36 @@ class AdminBookingController extends Controller
             return redirect()->route('admin.bookings')->withErrors(['Booking not found.']);
         }
 
+        $reason = trim((string) $request->input('cancellation_reason', ''));
+
+        if ($request->status === 'cancelled' && $reason === '') {
+            return back()->withErrors([
+                'cancellation_reason' => 'Please provide a reason before cancelling the booking.',
+            ]);
+        }
+
+        $update = [
+            'status' => $request->status,
+            'updated_at' => now(),
+        ];
+
+        if (Schema::hasColumn('bookings', 'cancellation_reason')) {
+            $update['cancellation_reason'] = $request->status === 'cancelled' ? $reason : null;
+        }
+
+        if (Schema::hasColumn('bookings', 'cancelled_by_role')) {
+            $update['cancelled_by_role'] = $request->status === 'cancelled' ? 'admin' : null;
+        }
+
         DB::table('bookings')
             ->where('id', $id)
-            ->update([
-                'status' => $request->status,
-                'updated_at' => now(),
-            ]);
+            ->update($update);
 
-        $this->logAdminAction("Updated booking #{$id} status to {$request->status}");
+        $this->logAdminAction(
+            $request->status === 'cancelled' && $reason !== ''
+                ? "Updated booking #{$id} status to {$request->status} ({$reason})"
+                : "Updated booking #{$id} status to {$request->status}"
+        );
 
         return back()->with('success', 'Booking status updated.');
     }
