@@ -211,10 +211,11 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 
 .stack{
     display:grid;
-    grid-template-rows:auto minmax(0, 1fr);
+    grid-template-rows:auto auto;
     gap:.75rem;
     min-width:0;
     align-content:start;
+    align-self:start;
 }
 
 .panel-title{
@@ -363,18 +364,19 @@ canvas{
 .status-summary-grid{
     display:grid;
     grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:.65rem;
-    grid-auto-rows:minmax(76px, auto);
+    gap:.55rem;
+    grid-auto-rows:minmax(64px, auto);
 }
 
 .status-summary-grid .legend-item{
     margin-top:0 !important;
-    min-height:76px;
+    min-height:64px;
     height:auto;
-    padding:.8rem .95rem;
+    padding:.7rem .8rem;
     flex-direction:row;
     align-items:center;
     justify-content:space-between;
+    border-radius:14px;
 }
 
 .status-summary-grid .legend-item.full{
@@ -383,16 +385,21 @@ canvas{
 
 .status-summary-grid .legend-left{
     align-items:center;
+    gap:.55rem;
 }
 
 .status-summary-grid .legend-val{
     align-self:auto;
-    min-width:48px;
+    min-width:36px;
     text-align:right;
+    font-size:.98rem;
+    font-weight:900;
+    color:#fff;
 }
 
 .status-summary-card{
     display:block;
+    padding:.75rem;
 }
 
 .legend-item{
@@ -426,9 +433,7 @@ canvas{
 .legend-name{
     font-size:.82rem;
     color:rgba(255,255,255,.80);
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
+    line-height:1.25;
 }
 
 .legend-val{
