@@ -450,6 +450,43 @@
     color:var(--pp-muted);
 }
 
+.review-attachment{
+    display:grid;
+    gap:.65rem;
+    margin-top:.85rem;
+}
+
+.review-attachment-image{
+    width:100%;
+    max-width:240px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    object-fit:cover;
+}
+
+.review-attachment-link{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    width:max-content;
+    max-width:100%;
+    padding:.62rem .85rem;
+    border-radius:12px;
+    border:1px solid rgba(56,189,248,.18);
+    background:rgba(56,189,248,.08);
+    color:#dff7ff;
+    font-size:.82rem;
+    font-weight:800;
+    text-decoration:none;
+}
+
+.review-attachment-link span{
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
 .empty-card{
     padding:1.35rem;
     text-align:center;
@@ -751,6 +788,24 @@
                             <div class="review-comment {{ $comment === '' ? 'empty' : '' }}">
                                 {{ $comment !== '' ? $comment : 'No written comment was left for this review.' }}
                             </div>
+
+                            @if(!empty($review->attachment_path))
+                                @php
+                                    $providerReviewAttachmentUrl = route('reviews.attachment', ['filename' => basename($review->attachment_path)]) . '?v=' . time();
+                                    $providerReviewHasImage = \Illuminate\Support\Str::startsWith((string) ($review->attachment_mime ?? ''), 'image/');
+                                @endphp
+
+                                <div class="review-attachment">
+                                    @if($providerReviewHasImage)
+                                        <img src="{{ $providerReviewAttachmentUrl }}" alt="Review attachment" class="review-attachment-image">
+                                    @endif
+
+                                    <a href="{{ $providerReviewAttachmentUrl }}" target="_blank" class="review-attachment-link">
+                                        <i class="bi bi-paperclip"></i>
+                                        <span>{{ $review->attachment_name ?: 'View attachment' }}</span>
+                                    </a>
+                                </div>
+                            @endif
                         </article>
                     @endforeach
                 </div>

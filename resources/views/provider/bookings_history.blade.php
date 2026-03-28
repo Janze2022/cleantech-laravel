@@ -247,6 +247,37 @@
     margin-top:1rem;
     display:flex;
     justify-content:flex-end;
+    gap:.65rem;
+    flex-wrap:wrap;
+}
+
+.action-stack{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:.65rem;
+    flex-wrap:wrap;
+}
+
+.btn-rate{
+    border:1px solid rgba(34,197,94,.24);
+    background:rgba(34,197,94,.10);
+    color:#dcfce7;
+    padding:.55rem .85rem;
+    white-space:nowrap;
+    min-width:132px;
+}
+
+.btn-rate.edit{
+    border-color:rgba(251,191,36,.24);
+    background:rgba(251,191,36,.10);
+    color:#fde68a;
+}
+
+.btn-rate.view{
+    border-color:rgba(168,85,247,.24);
+    background:rgba(168,85,247,.10);
+    color:#e9d5ff;
 }
 
 @media (max-width: 1100px){
@@ -328,7 +359,7 @@
                             <th>Time</th>
                             <th>Price</th>
                             <th>Status</th>
-                            <th>Details</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -351,11 +382,26 @@
                                     <span class="status-badge {{ $statusKey }}">{{ strtoupper(str_replace('_', ' ', $statusKey)) }}</span>
                                 </td>
                                 <td>
-                                    @if(\Illuminate\Support\Facades\Route::has('provider.bookings.show'))
-                                        <a class="btn-view" href="{{ route('provider.bookings.show', $b->reference_code) }}">View Details</a>
-                                    @else
-                                        <span class="subtext">No details route.</span>
-                                    @endif
+                                    <div class="action-stack">
+                                        @if(\Illuminate\Support\Facades\Route::has('provider.bookings.show'))
+                                            <a class="btn-view" href="{{ route('provider.bookings.show', $b->reference_code) }}">View Details</a>
+                                        @endif
+
+                                        @if(in_array($statusKey, ['completed', 'paid'], true))
+                                            @php
+                                                $rateLabel = !$b->has_customer_rating
+                                                    ? 'Rate Customer'
+                                                    : ($b->can_edit_customer_rating ? 'Edit Rating' : 'View Rating');
+                                                $rateClass = !$b->has_customer_rating
+                                                    ? 'btn-rate'
+                                                    : ($b->can_edit_customer_rating ? 'btn-rate edit' : 'btn-rate view');
+                                            @endphp
+
+                                            <a class="{{ $rateClass }}" href="{{ route('provider.customer-ratings', ['booking' => $b->id]) }}">
+                                                {{ $rateLabel }}
+                                            </a>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -402,8 +448,21 @@
                         <div class="history-actions">
                             @if(\Illuminate\Support\Facades\Route::has('provider.bookings.show'))
                                 <a class="btn-view" href="{{ route('provider.bookings.show', $b->reference_code) }}">View Details</a>
-                            @else
-                                <span class="subtext">No details route.</span>
+                            @endif
+
+                            @if(in_array($statusKey, ['completed', 'paid'], true))
+                                @php
+                                    $rateLabel = !$b->has_customer_rating
+                                        ? 'Rate Customer'
+                                        : ($b->can_edit_customer_rating ? 'Edit Rating' : 'View Rating');
+                                    $rateClass = !$b->has_customer_rating
+                                        ? 'btn-rate'
+                                        : ($b->can_edit_customer_rating ? 'btn-rate edit' : 'btn-rate view');
+                                @endphp
+
+                                <a class="{{ $rateClass }}" href="{{ route('provider.customer-ratings', ['booking' => $b->id]) }}">
+                                    {{ $rateLabel }}
+                                </a>
                             @endif
                         </div>
                     </div>

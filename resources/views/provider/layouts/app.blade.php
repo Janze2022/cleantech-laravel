@@ -636,6 +636,13 @@
             </span>
         </a>
 
+        <a href="{{ route('provider.customer-ratings') }}" class="panel-link {{ request()->routeIs('provider.customer-ratings*') ? 'active' : '' }}">
+            <span class="panel-link-icon"><i class="bi bi-clipboard-check"></i></span>
+            <span class="panel-link-text">
+                <strong>Customer Ratings</strong>
+            </span>
+        </a>
+
         <a href="{{ route('provider.analytics') }}" class="panel-link {{ request()->routeIs('provider.analytics') ? 'active' : '' }}">
             <span class="panel-link-icon"><i class="bi bi-graph-up"></i></span>
             <span class="panel-link-text">

@@ -107,6 +107,15 @@ class ProviderRatingsController extends Controller
                 'r.rating',
                 'r.comment',
                 'r.created_at',
+                Schema::hasColumn('reviews', 'attachment_path')
+                    ? 'r.attachment_path'
+                    : DB::raw('NULL as attachment_path'),
+                Schema::hasColumn('reviews', 'attachment_name')
+                    ? 'r.attachment_name'
+                    : DB::raw('NULL as attachment_name'),
+                Schema::hasColumn('reviews', 'attachment_mime')
+                    ? 'r.attachment_mime'
+                    : DB::raw('NULL as attachment_mime'),
                 DB::raw($customerNameSql . ' as customer_name'),
                 'c.email as customer_email',
             ]);

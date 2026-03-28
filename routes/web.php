@@ -37,6 +37,7 @@ use App\Http\Controllers\ProviderProfileController;
 use App\Http\Controllers\ProviderForgotPasswordController;
 use App\Http\Controllers\ProviderAvailabilityController;
 use App\Http\Controllers\ProviderBookingController;
+use App\Http\Controllers\ProviderCustomerRatingController;
 use App\Http\Controllers\ProviderEarningsController;
 use App\Http\Controllers\ProviderRatingsController;
 use App\Http\Controllers\ProviderNotificationController;
@@ -51,6 +52,7 @@ use App\Http\Controllers\Admin\AdminCustomerController;
 use App\Http\Controllers\Admin\AdminBookingController;
 use App\Http\Controllers\Admin\AdminReportController;
 use App\Http\Controllers\Admin\AdminEarningsController;
+use App\Http\Controllers\Admin\AdminCustomerReputationController;
 use App\Http\Controllers\Admin\ProfileController;
 
 /*
@@ -92,6 +94,14 @@ Route::get('/customer-image/{filename}', [CustomerProfileController::class, 'pub
     ->where('filename', '.*')
     ->name('customer.image.public');
 
+Route::get('/review-attachment/{filename}', [CustomerReviewController::class, 'attachment'])
+    ->where('filename', '.*')
+    ->name('reviews.attachment');
+
+Route::get('/customer-rating-attachment/{filename}', [ProviderCustomerRatingController::class, 'attachment'])
+    ->where('filename', '.*')
+    ->name('customer.ratings.attachment');
+
 /*
 |--------------------------------------------------------------------------
 | ADMIN — GUEST
@@ -131,6 +141,9 @@ Route::prefix('admin')
         // =====================
         Route::get('/customers', [AdminCustomerController::class, 'index'])
             ->name('customers');
+
+        Route::get('/customer-reputation', [AdminCustomerReputationController::class, 'index'])
+            ->name('customer-reputation');
 
         Route::get('/customers/{id}', [AdminCustomerController::class, 'show'])
             ->name('customers.show');
@@ -506,6 +519,15 @@ Route::prefix('provider')
 
         Route::get('/ratings', [ProviderRatingsController::class, 'index'])
             ->name('ratings');
+
+        Route::get('/customer-ratings', [ProviderCustomerRatingController::class, 'index'])
+            ->name('customer-ratings');
+
+        Route::post('/customer-ratings', [ProviderCustomerRatingController::class, 'store'])
+            ->name('customer-ratings.store');
+
+        Route::put('/customer-ratings/{id}', [ProviderCustomerRatingController::class, 'update'])
+            ->name('customer-ratings.update');
 
         // PROFILE
         Route::get('/profile', [ProviderProfileController::class, 'show'])

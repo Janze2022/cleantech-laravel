@@ -19,6 +19,8 @@
                 'city' => $provider->city,
                 'province' => $provider->province,
                 'profile_image' => $provider->profile_image,
+                'avg_rating' => (float) ($provider->avg_rating ?? 0),
+                'review_count' => (int) ($provider->review_count ?? 0),
             ];
         })->values()
         : collect([]);
@@ -35,6 +37,8 @@
                     'city' => $provider->city,
                     'province' => $provider->province,
                     'profile_image' => $provider->profile_image,
+                    'avg_rating' => (float) ($provider->avg_rating ?? 0),
+                    'review_count' => (int) ($provider->review_count ?? 0),
                 ];
             })->values();
         }
@@ -464,6 +468,30 @@
     margin-top: .18rem;
 }
 
+.provider-rating{
+    display:flex;
+    align-items:center;
+    gap:.38rem;
+    margin-top:.34rem;
+    color:rgba(255,255,255,.88);
+    font-size:.82rem;
+    font-weight:800;
+}
+
+.provider-rating-star{
+    color:#fbbf24;
+    line-height:1;
+}
+
+.provider-rating-count{
+    color:var(--services-muted);
+    font-weight:700;
+}
+
+.provider-rating.new{
+    color:var(--services-muted);
+}
+
 .provider-actions{
     display: flex;
     gap: .65rem;
@@ -790,6 +818,15 @@
         const bookUrl = `{{ url('/customer/book') }}/${provider.id}?date={{ $selectedDateString }}`;
         const imageUrl = avatarUrl(provider);
         const fallback = fallbackAvatar();
+        const avgRating = Number(provider.avg_rating || 0);
+        const reviewCount = Number(provider.review_count || 0);
+        const ratingMarkup = reviewCount > 0
+            ? `<div class="provider-rating">
+                    <span class="provider-rating-star"><i class="bi bi-star-fill"></i></span>
+                    <span>${avgRating.toFixed(1)}</span>
+                    <span class="provider-rating-count">(${reviewCount})</span>
+               </div>`
+            : `<div class="provider-rating new">New provider</div>`;
 
         return `
             <div class="provider-card">
@@ -803,6 +840,7 @@
                     <div>
                         <div class="provider-name">${escapeHtml(name)}</div>
                         <div class="provider-location">${escapeHtml(location)}</div>
+                        ${ratingMarkup}
                     </div>
                 </div>
                 <div class="provider-actions">

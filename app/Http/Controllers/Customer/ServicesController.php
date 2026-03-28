@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ServicesController extends Controller
 {
@@ -35,8 +36,17 @@ class ServicesController extends Controller
             ->where('is_active', 1)
             ->get();
 
+        $providerRatings = DB::table('reviews')
+            ->whereNotNull('rating')
+            ->where('rating', '>', 0)
+            ->selectRaw('provider_id, ROUND(AVG(rating), 1) as avg_rating, COUNT(*) as review_count')
+            ->groupBy('provider_id');
+
         $providers = DB::table('service_providers')
             ->join('provider_availability', 'service_providers.id', '=', 'provider_availability.provider_id')
+            ->leftJoinSub($providerRatings, 'provider_ratings', function ($join) {
+                $join->on('provider_ratings.provider_id', '=', 'service_providers.id');
+            })
             ->where('service_providers.status', 'Approved')
             ->where('service_providers.is_verified', 1)
             ->where('provider_availability.status', 'active')
@@ -48,7 +58,9 @@ class ServicesController extends Controller
                 'service_providers.city',
                 'service_providers.province',
                 'service_providers.profile_image',
-                'provider_availability.date as availability_date'
+                'provider_availability.date as availability_date',
+                DB::raw('COALESCE(provider_ratings.avg_rating, 0) as avg_rating'),
+                DB::raw('COALESCE(provider_ratings.review_count, 0) as review_count')
             )
             ->distinct()
             ->get();
@@ -96,6 +108,15 @@ class ServicesController extends Controller
                 'r.rating',
                 'r.comment',
                 'r.created_at',
+                Schema::hasColumn('reviews', 'attachment_path')
+                    ? 'r.attachment_path'
+                    : DB::raw('NULL as attachment_path'),
+                Schema::hasColumn('reviews', 'attachment_name')
+                    ? 'r.attachment_name'
+                    : DB::raw('NULL as attachment_name'),
+                Schema::hasColumn('reviews', 'attachment_mime')
+                    ? 'r.attachment_mime'
+                    : DB::raw('NULL as attachment_mime'),
                 'c.profile_image as customer_profile_image',
                 DB::raw("COALESCE(NULLIF(TRIM(c.name),''), NULLIF(TRIM(c.email),''), 'Customer') as customer_name")
             )

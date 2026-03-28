@@ -444,11 +444,40 @@ class ProviderBookingController extends Controller
         }
 
         $areasMap = $this->bookingAreasMap($bookings->pluck('id'));
+        $customerRatings = collect();
 
-        return $bookings->map(function ($booking) use ($customers, $services, $options, $areasMap) {
+        if (
+            Schema::hasTable('customer_ratings') &&
+            Schema::hasColumns('customer_ratings', ['booking_id', 'id'])
+        ) {
+            $bookingIds = $bookings->pluck('id')
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->unique()
+                ->values();
+
+            if ($bookingIds->isNotEmpty()) {
+                $ratingColumns = ['id', 'booking_id'];
+
+                if (Schema::hasColumn('customer_ratings', 'editable_until')) {
+                    $ratingColumns[] = 'editable_until';
+                }
+
+                if (Schema::hasColumn('customer_ratings', 'edit_count')) {
+                    $ratingColumns[] = 'edit_count';
+                }
+
+                $customerRatings = DB::table('customer_ratings')
+                    ->whereIn('booking_id', $bookingIds)
+                    ->get($ratingColumns)
+                    ->keyBy('booking_id');
+            }
+        }
+
+        return $bookings->map(function ($booking) use ($customers, $services, $options, $areasMap, $customerRatings) {
             $customer = $customers->get($booking->customer_id);
             $service = $services->get($booking->service_id);
             $option = $options->get($booking->service_option_id);
+            $customerRating = $customerRatings->get($booking->id);
             $statusKey = $this->normalizeStatusKey($booking->status);
 
             $booking->raw_status = $booking->status;
@@ -470,6 +499,13 @@ class ProviderBookingController extends Controller
             $booking->display_email = $this->displayText($booking->email);
             $booking->display_phone = $this->displayText($booking->phone ?? $booking->contact_phone);
             $booking->display_price = number_format((float) ($booking->price ?? 0), 2);
+            $booking->customer_rating_id = $customerRating->id ?? null;
+            $booking->has_customer_rating = $customerRating !== null;
+            $booking->customer_rating_edit_count = (int) ($customerRating->edit_count ?? 0);
+            $booking->customer_rating_editable_until = $customerRating->editable_until ?? null;
+            $booking->can_edit_customer_rating = $customerRating
+                && !empty($customerRating->editable_until)
+                && now()->lt(Carbon::parse($customerRating->editable_until));
 
             return $booking;
         })->values();

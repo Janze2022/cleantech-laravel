@@ -310,6 +310,44 @@
     margin-top:.8rem;
 }
 
+.review-fields{
+    display:grid;
+    gap:.8rem;
+    margin-top:.9rem;
+}
+
+.attachment-shell{
+    padding:.85rem .95rem;
+    border-radius:16px;
+    border:1px dashed rgba(255,255,255,.1);
+    background:rgba(255,255,255,.02);
+}
+
+.attachment-shell label{
+    display:block;
+    margin-bottom:.45rem;
+    color:rgba(255,255,255,.9);
+    font-size:.82rem;
+    font-weight:800;
+}
+
+.attachment-input{
+    width:100%;
+    min-height:46px;
+    padding:.75rem .85rem;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(2,6,23,.55);
+    color:rgba(255,255,255,.92);
+}
+
+.attachment-note{
+    margin-top:.45rem;
+    color:var(--rv-muted);
+    font-size:.78rem;
+    line-height:1.5;
+}
+
 .btn-review{
     display:inline-flex;
     align-items:center;
@@ -331,6 +369,29 @@
 .review-result{
     display:grid;
     gap:.8rem;
+}
+
+.attachment-preview{
+    display:grid;
+    gap:.65rem;
+}
+
+.attachment-image{
+    max-width:220px;
+    width:100%;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+}
+
+.attachment-link{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    color:var(--rv-accent);
+    font-size:.84rem;
+    font-weight:800;
+    text-decoration:none;
 }
 
 .review-score{
@@ -388,6 +449,26 @@
     line-height:1.6;
 }
 
+.feedback-alert{
+    border-radius:18px;
+    padding:.95rem 1rem;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    font-weight:800;
+}
+
+.feedback-alert.success{
+    border-color:rgba(34,197,94,.2);
+    background:rgba(34,197,94,.1);
+    color:#bbf7d0;
+}
+
+.feedback-alert.error{
+    border-color:rgba(239,68,68,.2);
+    background:rgba(239,68,68,.1);
+    color:#fecaca;
+}
+
 @media (max-width: 767.98px){
     .reviews-summary{
         grid-template-columns: 1fr;
@@ -405,6 +486,14 @@
 
 <div class="reviews-page">
     <div class="reviews-stack">
+
+        @if(session('success'))
+            <div class="feedback-alert success">{{ session('success') }}</div>
+        @endif
+
+        @if($errors->any())
+            <div class="feedback-alert error">{{ $errors->first() }}</div>
+        @endif
 
         <section class="reviews-hero">
             <div class="reviews-head">
@@ -501,7 +590,7 @@
 
                         <div class="review-panel">
                             @if($currentRating === 0)
-                                <form method="POST" action="{{ route('customer.reviews.store') }}" class="review-form">
+                                <form method="POST" action="{{ route('customer.reviews.store') }}" class="review-form" enctype="multipart/form-data">
                                     @csrf
                                     <input type="hidden" name="booking_id" value="{{ $r->booking_id }}">
                                     <input type="hidden" name="rating" value="" class="rating-input" required>
@@ -529,11 +618,25 @@
                                         </div>
                                     </div>
 
-                                    <textarea
-                                        name="comment"
-                                        class="review-textarea"
-                                        placeholder="Share a short comment if you want to."
-                                    ></textarea>
+                                    <div class="review-fields">
+                                        <textarea
+                                            name="comment"
+                                            class="review-textarea"
+                                            placeholder="Share a short comment if you want to."
+                                        ></textarea>
+
+                                        <div class="attachment-shell">
+                                            <label for="attachment-{{ $r->booking_id }}">Photo or file (optional)</label>
+                                            <input
+                                                id="attachment-{{ $r->booking_id }}"
+                                                name="attachment"
+                                                type="file"
+                                                class="attachment-input"
+                                                accept=".jpg,.jpeg,.png,.webp,.pdf"
+                                            >
+                                            <div class="attachment-note">Add a photo or file to support your review.</div>
+                                        </div>
+                                    </div>
 
                                     <div class="review-actions">
                                         <button class="btn-review" type="submit">
@@ -565,6 +668,24 @@
                                     <div class="comment-box {{ trim((string) ($r->comment ?? '')) === '' ? 'empty' : '' }}">
                                         {{ trim((string) ($r->comment ?? '')) !== '' ? $r->comment : 'No written comment was added for this review.' }}
                                     </div>
+
+                                    @if(!empty($r->attachment_path))
+                                        @php
+                                            $attachmentUrl = route('reviews.attachment', ['filename' => basename($r->attachment_path)]) . '?v=' . time();
+                                            $isImage = \Illuminate\Support\Str::startsWith((string) ($r->attachment_mime ?? ''), 'image/');
+                                        @endphp
+
+                                        <div class="attachment-preview">
+                                            @if($isImage)
+                                                <img src="{{ $attachmentUrl }}" alt="Review attachment" class="attachment-image">
+                                            @endif
+
+                                            <a href="{{ $attachmentUrl }}" target="_blank" class="attachment-link">
+                                                <i class="bi bi-paperclip"></i>
+                                                <span>{{ $r->attachment_name ?: 'View attachment' }}</span>
+                                            </a>
+                                        </div>
+                                    @endif
                                 </div>
                             @endif
                         </div>

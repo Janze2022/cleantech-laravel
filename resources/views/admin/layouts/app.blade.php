@@ -407,6 +407,9 @@
     <a href="{{ route('admin.customers') }}" class="{{ request()->routeIs('admin.customers') ? 'active' : '' }}">
         <i class="fa fa-users me-2"></i> User Accounts
     </a>
+    <a href="{{ route('admin.customer-reputation') }}" class="{{ request()->routeIs('admin.customer-reputation*') ? 'active' : '' }}">
+        <i class="fa fa-star-half-stroke me-2"></i> Customer Reputation
+    </a>
     <a href="{{ route('admin.providers') }}" class="{{ request()->routeIs('admin.providers') ? 'active' : '' }}">
         <i class="fa fa-user-tie me-2"></i> Providers
     </a>
