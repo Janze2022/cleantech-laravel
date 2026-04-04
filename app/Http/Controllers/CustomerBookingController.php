@@ -645,11 +645,13 @@ class CustomerBookingController extends Controller
 
         abort_if(!$booking, 404);
 
-        $adjustment = $this->formatBookingAdjustment(
-            $this->bookingAdjustmentByBookingId((int) $booking->id)
-        );
+        $adjustmentRecord = $this->bookingAdjustmentByBookingId((int) $booking->id);
+        $adjustment = $this->formatBookingAdjustment($adjustmentRecord);
+        $adjustmentLogs = $adjustmentRecord
+            ? $this->formattedAdjustmentLogs((int) $adjustmentRecord->id)
+            : collect();
 
-        return view('customer.bookings.show', compact('booking', 'adjustment'));
+        return view('customer.bookings.show', compact('booking', 'adjustment', 'adjustmentLogs'));
     }
 
     public function tracking(string $reference, GeoapifyService $geoapify): JsonResponse
@@ -1207,6 +1209,10 @@ class CustomerBookingController extends Controller
         $adjustment->original_price_display = number_format((float) ($adjustment->original_price ?? 0), 2);
         $adjustment->additional_fee_display = number_format((float) ($adjustment->additional_fee ?? 0), 2);
         $adjustment->proposed_total_display = number_format((float) ($adjustment->proposed_total ?? 0), 2);
+        $adjustment->difference_display = number_format(
+            (float) (($adjustment->proposed_total ?? 0) - ($adjustment->original_price ?? 0)),
+            2
+        );
         $adjustment->price_increase_percent_display = number_format((float) ($adjustment->price_increase_percent ?? 0), 1);
         $adjustment->evidence_url = !empty($adjustment->evidence_path)
             ? route('booking.adjustments.attachment', ['filename' => basename((string) $adjustment->evidence_path)])
@@ -1216,6 +1222,108 @@ class CustomerBookingController extends Controller
             : null;
 
         return $adjustment;
+    }
+
+    private function formattedAdjustmentLogs(int $adjustmentId)
+    {
+        if (!$this->bookingAdjustmentLogTableAvailable()) {
+            return collect();
+        }
+
+        return DB::table('booking_adjustment_logs')
+            ->where('booking_adjustment_id', $adjustmentId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($log) {
+                $payload = json_decode((string) ($log->payload ?? '[]'), true);
+                $payload = is_array($payload) ? $payload : [];
+
+                $log->actor_label = match (Str::lower(trim((string) ($log->actor_role ?? '')))) {
+                    'provider' => 'Provider',
+                    'customer' => 'Customer',
+                    'admin' => 'Admin',
+                    default => 'System',
+                };
+                $log->action_label = $this->adjustmentActionLabel((string) ($log->action ?? ''));
+                $log->detail = $this->adjustmentLogDetail((string) ($log->action ?? ''), $payload);
+                $log->created_at_label = !empty($log->created_at)
+                    ? Carbon::parse($log->created_at)->format('M d, Y h:i A')
+                    : null;
+
+                return $log;
+            })
+            ->values();
+    }
+
+    private function adjustmentActionLabel(string $action): string
+    {
+        return match (Str::lower(trim($action))) {
+            'created' => 'Adjustment sent',
+            'updated' => 'Adjustment updated',
+            'accepted' => 'Adjustment accepted',
+            'rejected' => 'Adjustment rejected',
+            'cancelled_booking' => 'Booking cancelled',
+            default => ucwords(str_replace('_', ' ', trim($action))),
+        };
+    }
+
+    private function adjustmentLogDetail(string $action, array $payload): ?string
+    {
+        $normalizedAction = Str::lower(trim($action));
+
+        return match ($normalizedAction) {
+            'created', 'updated' => $this->firstFilled([
+                $this->priceChangeSummary($payload, 'original_price', 'proposed_total'),
+                !empty($payload['reference_code']) ? 'Ref: ' . $payload['reference_code'] : null,
+            ]),
+            'accepted' => $this->firstFilled([
+                isset($payload['new_price'])
+                    ? 'Customer agreed to the updated total of PHP ' . number_format((float) $payload['new_price'], 2) . '.'
+                    : null,
+                $this->priceChangeSummary($payload, 'old_price', 'new_price'),
+            ]),
+            'rejected' => $this->firstFilled([
+                isset($payload['kept_price']) && isset($payload['rejected_total'])
+                    ? 'Customer kept PHP ' . number_format((float) $payload['kept_price'], 2)
+                        . ' and rejected PHP ' . number_format((float) $payload['rejected_total'], 2) . '.'
+                    : null,
+                isset($payload['kept_price'])
+                    ? 'Customer kept the original total of PHP ' . number_format((float) $payload['kept_price'], 2) . '.'
+                    : null,
+            ]),
+            'cancelled_booking' => !empty($payload['cancellation_reason'])
+                ? 'Reason: ' . trim((string) $payload['cancellation_reason'])
+                : 'The booking was cancelled while the adjustment was still pending.',
+            default => null,
+        };
+    }
+
+    private function priceChangeSummary(array $payload, string $fromKey, string $toKey): ?string
+    {
+        if (!isset($payload[$fromKey], $payload[$toKey])) {
+            return null;
+        }
+
+        return 'PHP '
+            . number_format((float) $payload[$fromKey], 2)
+            . ' -> PHP '
+            . number_format((float) $payload[$toKey], 2);
+    }
+
+    private function firstFilled(array $values): ?string
+    {
+        foreach ($values as $value) {
+            if ($value === null) {
+                continue;
+            }
+
+            $stringValue = trim((string) $value);
+            if ($stringValue !== '') {
+                return $stringValue;
+            }
+        }
+
+        return null;
     }
 
     private function adjustmentReasonLabel(string $code): string
@@ -1383,6 +1491,8 @@ class CustomerBookingController extends Controller
 
         if ($decision === 'accepted' && $proposedTotal !== null) {
             $message .= ' New total: PHP ' . number_format($proposedTotal, 2) . '.';
+        } elseif ($decision === 'rejected') {
+            $message .= ' The booking stays on the original total of PHP ' . number_format((float) ($booking->price ?? 0), 2) . '.';
         }
 
         if ($note) {

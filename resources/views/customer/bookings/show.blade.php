@@ -360,6 +360,53 @@
     font-weight:800;
 }
 
+.timeline-list{
+    display:grid;
+    gap:.75rem;
+    margin-top:1rem;
+}
+
+.timeline-item{
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(2,6,23,.32);
+    border-radius:14px;
+    padding:.85rem .95rem;
+}
+
+.timeline-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.75rem;
+    flex-wrap:wrap;
+}
+
+.timeline-title{
+    color:#fff;
+    font-weight:900;
+}
+
+.timeline-meta{
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+    flex-wrap:wrap;
+    margin-top:.45rem;
+    color:var(--text-muted);
+    font-size:.82rem;
+}
+
+.timeline-actor{
+    display:inline-flex;
+    align-items:center;
+    padding:.28rem .62rem;
+    border-radius:999px;
+    border:1px solid rgba(56,189,248,.18);
+    background:rgba(56,189,248,.10);
+    color:#bae6fd;
+    font-weight:800;
+}
+
 .response-form{
     display:grid;
     gap:.85rem;
@@ -666,6 +713,7 @@
                         <div class="label">Requested Update</div>
                         <div class="value">{{ $adjustment->proposed_scope_summary ?: 'No scope summary provided.' }}</div>
                         <div class="sub">
+                            Change: PHP {{ $adjustment->difference_display }}<br>
                             Additional fee: PHP {{ $adjustment->additional_fee_display }}<br>
                             Proposed total: PHP {{ $adjustment->proposed_total_display }}
                         </div>
@@ -708,6 +756,30 @@
                     </form>
                 @elseif(!empty($adjustment->customer_response_note))
                     <div class="adjustment-copy"><strong>Your response:</strong> {{ $adjustment->customer_response_note }}</div>
+                @endif
+
+                @if(!empty($adjustmentLogs) && $adjustmentLogs->isNotEmpty())
+                    <div class="timeline-list">
+                        @foreach($adjustmentLogs as $log)
+                            <div class="timeline-item">
+                                <div class="timeline-top">
+                                    <div class="timeline-title">{{ $log->action_label }}</div>
+                                    @if(!empty($log->created_at_label))
+                                        <div class="adjustment-copy" style="margin-top:0;">{{ $log->created_at_label }}</div>
+                                    @endif
+                                </div>
+                                <div class="timeline-meta">
+                                    <span class="timeline-actor">{{ $log->actor_label }}</span>
+                                    @if(!empty($log->detail))
+                                        <span>{{ $log->detail }}</span>
+                                    @endif
+                                </div>
+                                @if(!empty($log->note))
+                                    <div class="adjustment-copy"><strong>Note:</strong> {{ $log->note }}</div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
                 @endif
             </div>
         @endif
@@ -911,6 +983,30 @@
 <div id="printArea" aria-hidden="true">
     <div id="printMount"></div>
 </div>
+
+<script>
+(() => {
+    const responseForms = document.querySelectorAll('.response-form');
+
+    responseForms.forEach((form) => {
+        form.addEventListener('submit', (event) => {
+            const submitter = event.submitter;
+            const action = submitter?.value || '';
+            let message = 'Continue with this adjustment response?';
+
+            if (action === 'accept') {
+                message = 'Accept this updated scope and total? The booking will continue using the provider\'s onsite update.';
+            } else if (action === 'reject') {
+                message = 'Reject this update? The booking will keep the original scope and original price.';
+            }
+
+            if (!window.confirm(message)) {
+                event.preventDefault();
+            }
+        });
+    });
+})();
+</script>
 
 <script>
 function toggleReceiptPreview(){

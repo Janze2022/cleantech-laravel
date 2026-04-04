@@ -510,6 +510,53 @@
     line-height: 1.6;
 }
 
+.timeline-list{
+    display:grid;
+    gap:10px;
+    margin-top:12px;
+}
+
+.timeline-item{
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(2,6,23,.20);
+    border-radius:14px;
+    padding:12px 14px;
+}
+
+.timeline-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.timeline-title{
+    color:#fff;
+    font-weight:900;
+}
+
+.timeline-meta{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:8px;
+    color:rgba(255,255,255,.72);
+    font-size:.84rem;
+}
+
+.timeline-actor{
+    display:inline-flex;
+    align-items:center;
+    padding:.28rem .62rem;
+    border-radius:999px;
+    border:1px solid rgba(56,189,248,.18);
+    background:rgba(56,189,248,.10);
+    color:#bae6fd;
+    font-weight:800;
+}
+
 .adjustment-form{
     margin-top: 12px;
     display:grid;
@@ -886,6 +933,7 @@
                                 <div class="k">Requested Update</div>
                                 <div class="v">{{ $adjustment->proposed_scope_summary ?: 'No scope summary provided.' }}</div>
                                 <div class="adjustment-copy">
+                                    Change: PHP {{ $adjustment->difference_display }}<br>
                                     Additional fee: PHP {{ $adjustment->additional_fee_display }}<br>
                                     Proposed total: PHP {{ $adjustment->proposed_total_display }}
                                 </div>
@@ -917,6 +965,30 @@
                         @if(!empty($adjustment->customer_response_note))
                             <div class="adjustment-copy"><strong>Customer response:</strong> {{ $adjustment->customer_response_note }}</div>
                         @endif
+
+                        @if(!empty($adjustmentLogs) && $adjustmentLogs->isNotEmpty())
+                            <div class="timeline-list">
+                                @foreach($adjustmentLogs as $log)
+                                    <div class="timeline-item">
+                                        <div class="timeline-top">
+                                            <div class="timeline-title">{{ $log->action_label }}</div>
+                                            @if(!empty($log->created_at_label))
+                                                <div class="adjustment-copy" style="margin-top:0;">{{ $log->created_at_label }}</div>
+                                            @endif
+                                        </div>
+                                        <div class="timeline-meta">
+                                            <span class="timeline-actor">{{ $log->actor_label }}</span>
+                                            @if(!empty($log->detail))
+                                                <span>{{ $log->detail }}</span>
+                                            @endif
+                                        </div>
+                                        @if(!empty($log->note))
+                                            <div class="adjustment-copy"><strong>Note:</strong> {{ $log->note }}</div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
                 @endif
 
@@ -938,9 +1010,9 @@
                                 <div class="adjustment-copy">Original total: PHP {{ number_format($originalPrice, 2) }}</div>
                             </div>
                             <div class="compare-box">
-                                <div class="k">Automatic Pricing</div>
-                                <div class="adjustment-copy">Pick the mismatch reason, choose the actual onsite size or sections, and upload evidence.</div>
-                                <div class="adjustment-copy">The system recalculates the added amount automatically and sends the new total to the customer for approval.</div>
+                                <div class="k">Mismatch Flow</div>
+                                <div class="adjustment-copy">Use this only when the onsite size, sections, or cleaning condition does not match what the customer booked.</div>
+                                <div class="adjustment-copy">Only change the size or sections if the actual onsite scope is different. If the scope stayed the same but the condition is heavier, the system adds the automatic condition fee for you.</div>
                             </div>
                         </div>
 
@@ -1012,7 +1084,7 @@
                                             @endforeach
                                         </select>
                                     @endif
-                                    <div class="field-help" data-scope-help>Choose the real onsite size or sections. The new total updates automatically.</div>
+                                    <div class="field-help" data-scope-help>Keep the booked size unless the actual onsite scope is larger or has extra sections.</div>
                                     @error('corrected_option_id')
                                         <div class="field-error">{{ $message }}</div>
                                     @enderror
@@ -1089,7 +1161,7 @@
                                         </div>
                                     </div>
                                     <div class="preview-note" data-preview-note>
-                                        The system will compare the booked scope with the actual onsite scope and calculate the new total automatically.
+                                        The system will keep the original scope unless you mark a larger area or extra sections, then calculate the updated total automatically.
                                     </div>
                                     <div class="field-error" data-adjustment-warning hidden></div>
                                 </div>
@@ -1186,6 +1258,7 @@
 
     const originalPrice = Number(preview.dataset.originalPrice || 0);
     const serviceBasePrice = Number(preview.dataset.serviceBasePrice || 0);
+    const originalOptionTotal = Number(preview.dataset.originalOptionTotal || 0);
     const maxIncreasePercent = Number(preview.dataset.maxIncrease || 35);
     const originalSelection = preview.dataset.originalSelection || 'Original selection';
     const originalOptionIds = JSON.parse(preview.dataset.originalOptionIds || '[]').map((value) => Number(value));
@@ -1196,7 +1269,20 @@
         .filter((checkbox) => checkbox.checked)
         .map((checkbox) => checkbox.dataset.reasonCode || checkbox.value);
 
+    const hasScopeReason = () => {
+        const reasons = selectedReasons();
+        return reasons.includes('larger_area') || reasons.includes('additional_rooms');
+    };
+
     const selectedOptionState = () => {
+        if (!hasScopeReason()) {
+            return {
+                ids: originalOptionIds,
+                total: originalOptionTotal,
+                label: originalSelection,
+            };
+        }
+
         if (optionSelect) {
             const selected = optionSelect.options[optionSelect.selectedIndex];
             const optionId = Number(selected?.dataset.optionId || selected?.value || 0);
@@ -1217,6 +1303,14 @@
         }
 
         const chosen = optionCheckboxes.filter((checkbox) => checkbox.checked);
+
+        if (!chosen.length) {
+            return {
+                ids: [],
+                total: 0,
+                label: 'Choose corrected size or scope',
+            };
+        }
 
         return {
             ids: chosen.map((checkbox) => Number(checkbox.dataset.optionId || checkbox.value || 0)).filter((value) => value > 0),
@@ -1243,6 +1337,18 @@
         });
     };
 
+    const syncScopeInputs = () => {
+        const scopeMismatch = hasScopeReason();
+
+        if (optionSelect) {
+            optionSelect.disabled = !scopeMismatch;
+        }
+
+        optionCheckboxes.forEach((checkbox) => {
+            checkbox.disabled = !scopeMismatch;
+        });
+    };
+
     const syncOtherReason = () => {
         const showOtherReason = selectedReasons().includes('other');
 
@@ -1262,7 +1368,7 @@
     const syncPreview = () => {
         const reasons = selectedReasons();
         const optionState = selectedOptionState();
-        const hasScopeReason = reasons.includes('larger_area') || reasons.includes('additional_rooms');
+        const scopeMismatch = reasons.includes('larger_area') || reasons.includes('additional_rooms');
         const autoConditionFee = reasons.includes('heavy_soiling')
             ? Math.max(300, originalPrice * 0.10)
             : 0;
@@ -1273,29 +1379,29 @@
             : 0;
 
         if (scopeHelp) {
-            scopeHelp.textContent = hasScopeReason
+            scopeHelp.textContent = scopeMismatch
                 ? 'Pick the real onsite size or sections so the system can calculate the correct added amount.'
-                : 'Keep the original size if the scope is the same. The system only adds an automatic fee when needed.';
+                : 'The booked size stays locked unless you mark a larger area or extra sections.';
         }
 
         selectionText.textContent = optionState.label || originalSelection;
         autoFeeText.textContent = formatCurrency(autoConditionFee);
         additionalFeeText.textContent = formatCurrency(additionalFee);
         proposedTotalText.textContent = formatCurrency(proposedTotal);
-        if (hasScopeReason && autoConditionFee > 0) {
+        if (scopeMismatch && autoConditionFee > 0) {
             previewNote.textContent = `The new total includes the corrected size plus the automatic condition fee. Increase: ${increasePercent.toFixed(2)}%.`;
-        } else if (hasScopeReason) {
+        } else if (scopeMismatch) {
             previewNote.textContent = `The new total is based on the corrected onsite size or sections. Increase: ${increasePercent.toFixed(2)}%.`;
         } else if (autoConditionFee > 0) {
             previewNote.textContent = `The original scope stays the same, and the system adds the automatic condition fee. Increase: ${increasePercent.toFixed(2)}%.`;
         } else {
-            previewNote.textContent = `The new total will be checked against the actual onsite scope. Increase: ${increasePercent.toFixed(2)}%.`;
+            previewNote.textContent = 'The original scope stays the same until you report a larger area or extra sections.';
         }
 
         let warning = '';
-        if (!optionState.ids.length) {
+        if (scopeMismatch && !optionState.ids.length) {
             warning = 'Choose the corrected size or sections before sending the mismatch request.';
-        } else if (hasScopeReason && matchesOriginalSelection(optionState.ids)) {
+        } else if (scopeMismatch && matchesOriginalSelection(optionState.ids)) {
             warning = 'Choose a different size or section set when reporting a larger area or additional rooms.';
         } else if (proposedTotal < originalPrice) {
             warning = 'The corrected selection cannot reduce the original booking total.';
@@ -1321,12 +1427,14 @@
 
     reasonCheckboxes.forEach((checkbox) => {
         checkbox.addEventListener('change', () => {
+            syncScopeInputs();
             syncOtherReason();
             syncPreview();
         });
     });
 
     syncChoiceCards();
+    syncScopeInputs();
     syncOtherReason();
     syncPreview();
 
@@ -1343,13 +1451,14 @@
             : 0;
         const proposedTotal = Number((serviceBasePrice + optionState.total + autoConditionFee).toFixed(2));
         const confirmMessage = [
-            'Send this mismatch request to the customer?',
+            'Send this onsite mismatch request to the customer?',
             '',
             `Booked scope: ${originalSelection}`,
             `Actual scope: ${optionState.label || originalSelection}`,
             `New total: ${formatCurrency(proposedTotal)}`,
             '',
-            'The booking price will stay pending until the customer accepts this adjustment.',
+            'You are confirming that the onsite scope above is accurate.',
+            'The booking total will not change until the customer accepts this adjustment.',
         ].join('\n');
 
         if (!window.confirm(confirmMessage)) {

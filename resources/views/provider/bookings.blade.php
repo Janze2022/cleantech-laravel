@@ -240,6 +240,10 @@
     font-weight:900;
 }
 
+.btn-update.is-danger{
+    background:linear-gradient(180deg,#ef4444,#dc2626);
+}
+
 .btn-view{
     display:inline-flex;
     align-items:center;
@@ -533,8 +537,9 @@
         const statusSelect = form.querySelector('.status-select');
         const cancelWrap = form.querySelector('.cancel-reason-wrap');
         const reasonInput = form.querySelector('.reason-input');
+        const updateButton = form.querySelector('.btn-update');
 
-        if (!statusSelect || !cancelWrap || !reasonInput) {
+        if (!statusSelect || !cancelWrap || !reasonInput || !updateButton) {
             return;
         }
 
@@ -543,6 +548,7 @@
             cancelWrap.hidden = !cancelling;
             reasonInput.disabled = !cancelling;
             reasonInput.required = cancelling;
+            updateButton.classList.toggle('is-danger', cancelling);
 
             if (!cancelling) {
                 reasonInput.value = '';
@@ -566,12 +572,18 @@
                 return;
             }
 
-            let message = `Update this booking to ${selectedLabel}? Continue only if you are sure.`;
+            let message = `Do you agree to update this booking to ${selectedLabel}? Make sure the customer-facing status is correct before continuing.`;
 
             if (selectedValue === 'cancelled') {
-                message = 'Cancel this booking? The customer will be notified right away, the cancellation reason will be saved, and you will not be able to undo this change from here.';
+                message = 'Cancel this booking now? The customer will be notified immediately, the cancellation reason will be saved permanently, and you will not be able to change this from this screen.';
             } else if (selectedValue === 'paid') {
-                message = 'Mark this booking as paid? This will update the booking payment record and provider earnings data.';
+                message = 'Mark this booking as paid? Only continue if the customer has fully settled payment. This updates earnings and remittance records right away.';
+            } else if (selectedValue === 'in_progress') {
+                message = 'Start this booking now? The customer will see the job as in progress, and onsite tools like live tracking and mismatch reporting will become active.';
+            } else if (selectedValue === 'confirmed') {
+                message = 'Confirm this booking now? The customer will see the booking as confirmed and ready for the scheduled service.';
+            } else if (selectedValue === 'completed') {
+                message = 'Mark this booking as completed? This closes the service flow and the customer may be able to review the completed job.';
             }
 
             if (!window.confirm(message)) {
