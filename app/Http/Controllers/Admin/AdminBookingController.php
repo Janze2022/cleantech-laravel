@@ -442,10 +442,10 @@ class AdminBookingController extends Controller
         }
 
         $reason = trim((string) ($booking->cancellation_reason ?? ''));
-        $message = 'Your booking was cancelled by admin. Ref: ' . $booking->reference_code;
+        $message = 'Admin cancelled booking ' . $booking->reference_code . '.';
 
         if ($reason !== '') {
-            $message .= ' Reason: ' . $reason;
+            $message .= ' Cancellation reason: ' . $reason;
         }
 
         $payload = [
@@ -485,10 +485,10 @@ class AdminBookingController extends Controller
         }
 
         $reason = trim((string) ($booking->cancellation_reason ?? ''));
-        $message = 'A booking was cancelled by admin. Ref: ' . $booking->reference_code;
+        $message = 'Admin cancelled booking ' . $booking->reference_code . '.';
 
         if ($reason !== '') {
-            $message .= ' Reason: ' . $reason;
+            $message .= ' Cancellation reason: ' . $reason;
         }
 
         $payload = [

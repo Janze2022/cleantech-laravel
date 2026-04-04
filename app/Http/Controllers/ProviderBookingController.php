@@ -1829,7 +1829,7 @@ class ProviderBookingController extends Controller
                 'in_progress' => 'Your booking is now in progress.',
                 'paid'        => 'Your booking has been marked as paid.',
                 'completed'   => 'Your service has been completed. Please leave a review.',
-                'cancelled'   => 'Your booking has been marked as cancelled by the provider.' . ($reason !== '' ? ' Reason: ' . $reason : ''),
+                'cancelled'   => 'Provider cancelled booking ' . $booking->reference_code . '.' . ($reason !== '' ? ' Cancellation reason: ' . $reason : ''),
                 'confirmed'   => 'Your booking has been confirmed.',
                 default       => 'Your booking status has been updated to ' . $statusLabel . '.',
             };

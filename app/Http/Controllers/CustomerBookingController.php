@@ -1436,10 +1436,10 @@ class CustomerBookingController extends Controller
         }
 
         $reason = trim((string) ($booking->cancellation_reason ?? ''));
-        $message = 'A booking was cancelled by the customer. Ref: ' . $booking->reference_code;
+        $message = 'Customer cancelled booking ' . $booking->reference_code . '.';
 
         if ($reason !== '') {
-            $message .= ' Reason: ' . $reason;
+            $message .= ' Cancellation reason: ' . $reason;
         }
 
         $notification = [

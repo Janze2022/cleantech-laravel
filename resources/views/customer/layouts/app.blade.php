@@ -404,6 +404,19 @@
             font-weight:700;
         }
 
+        .notif-reason{
+            margin-top:6px;
+            padding:.42rem .58rem;
+            border-radius:12px;
+            background:rgba(239,68,68,.08);
+            border:1px solid rgba(239,68,68,.16);
+            color:#ffc7c7;
+            font-size:.79rem;
+            font-weight:760;
+            line-height:1.35;
+            word-break:break-word;
+        }
+
         .notif-right{
             width:20px;
             padding-top:8px;
@@ -812,8 +825,14 @@
                             $isUnread = (int)($n->is_read ?? 0) === 0;
                             $msg = (string)($n->message ?? '');
                             $ref = (string)($n->reference_code ?? '');
+                            $type = trim((string)($n->type ?? ''));
                             $dt = isset($n->created_at) ? \Carbon\Carbon::parse($n->created_at) : null;
                             $timeText = $dt ? $dt->diffForHumans() : '';
+                            $reasonText = '';
+                            if ($type === 'booking_cancelled' && preg_match('/^(.*?)(?:\s+)?(?:Cancellation reason|Reason):\s*(.+)$/i', $msg, $matches)) {
+                                $msg = trim((string)($matches[1] ?? ''));
+                                $reasonText = trim((string)($matches[2] ?? ''));
+                            }
                             $initial = strtoupper(substr($msg ?: 'N', 0, 1));
                         @endphp
 
@@ -824,6 +843,9 @@
 
                             <div class="notif-text">
                                 <div class="notif-msg">{{ $msg }}</div>
+                                @if($reasonText !== '')
+                                    <div class="notif-reason">Cancellation reason: {{ $reasonText }}</div>
+                                @endif
                                 @if($timeText !== '')
                                     <div class="notif-time">{{ $timeText }}</div>
                                 @endif
