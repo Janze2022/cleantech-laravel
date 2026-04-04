@@ -242,6 +242,16 @@
     line-height:1.35;
     word-break:break-word;
 }
+.cancel-note{
+    margin-top:.35rem;
+    color:#fca5a5;
+    font-size:.82rem;
+    line-height:1.45;
+    font-weight:700;
+}
+.history-grid .full-span{
+    grid-column:1 / -1;
+}
 
 .history-actions{
     margin-top:1rem;
@@ -365,6 +375,9 @@
                     <tbody>
                         @foreach($bookings as $b)
                             @php($statusKey = data_get($b, 'status_key') ?? strtolower((string) data_get($b, 'status')))
+                            @php($cancelReason = trim((string) data_get($b, 'cancellation_reason')))
+                            @php($cancelledByRole = trim((string) data_get($b, 'cancelled_by_role')))
+                            @php($cancelledByLabel = $cancelledByRole !== '' ? ucfirst(str_replace('_', ' ', $cancelledByRole)) : 'System')
                             <tr>
                                 <td>
                                     <div class="person-name">{{ $b->name }}</div>
@@ -374,6 +387,9 @@
                                 <td>
                                     <div class="service-name">{{ $b->service }}</div>
                                     <div class="subtext">{{ $b->display_option }}</div>
+                                    @if($statusKey === 'cancelled' && $cancelReason !== '')
+                                        <div class="cancel-note">Cancelled by {{ $cancelledByLabel }}: {{ $cancelReason }}</div>
+                                    @endif
                                 </td>
                                 <td>{{ $b->display_booking_date }}</td>
                                 <td>{{ $b->display_time_range }}</td>
@@ -403,6 +419,9 @@
             <div class="mobile-list">
                 @foreach($bookings as $b)
                     @php($statusKey = data_get($b, 'status_key') ?? strtolower((string) data_get($b, 'status')))
+                    @php($cancelReason = trim((string) data_get($b, 'cancellation_reason')))
+                    @php($cancelledByRole = trim((string) data_get($b, 'cancelled_by_role')))
+                    @php($cancelledByLabel = $cancelledByRole !== '' ? ucfirst(str_replace('_', ' ', $cancelledByRole)) : 'System')
                     <div class="history-card">
                         <div class="history-card-head">
                             <div>
@@ -434,6 +453,13 @@
                                 <div class="label">Price</div>
                                 <div class="value">PHP {{ $b->display_price }}</div>
                             </div>
+                            @if($statusKey === 'cancelled' && $cancelReason !== '')
+                                <div class="full-span">
+                                    <div class="label">Cancellation</div>
+                                    <div class="value">{{ $cancelReason }}</div>
+                                    <div class="cancel-note">Cancelled by {{ $cancelledByLabel }}</div>
+                                </div>
+                            @endif
                         </div>
 
                         <div class="history-actions">

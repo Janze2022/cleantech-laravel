@@ -28,6 +28,16 @@
     $bookings = $bookings ?? collect();
     $providerPerformance = $providerPerformance ?? collect();
     $serviceClassification = $serviceClassification ?? collect();
+    $reportTopCustomers = $reportTopCustomers ?? collect();
+    $reportProblematicCustomers = $reportProblematicCustomers ?? collect();
+    $reportCustomerSummary = $reportCustomerSummary ?? (object) [
+        'customers' => 0,
+        'rated_customers' => 0,
+        'avg_rating' => 0,
+        'high_risk' => 0,
+        'mismatches' => 0,
+        'complaints' => 0,
+    ];
     $positives = $positives ?? collect();
     $negatives = $negatives ?? collect();
 
@@ -488,6 +498,121 @@ body{
     line-height:1.45;
 }
 
+.customer-signal-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:12px;
+    margin-top:14px;
+}
+
+.customer-signal-card{
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.03);
+    border-radius:14px;
+    padding:12px;
+    min-width:0;
+}
+
+.customer-signal-title{
+    margin:0 0 10px;
+    color:var(--text);
+    font-size:.9rem;
+    font-weight:900;
+}
+
+.customer-signal-list{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:grid;
+    gap:8px;
+}
+
+.customer-signal-item{
+    border:1px solid rgba(255,255,255,.06);
+    background:rgba(2,6,23,.35);
+    border-radius:12px;
+    padding:10px;
+}
+
+.customer-signal-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:8px;
+}
+
+.customer-signal-name{
+    color:var(--text);
+    font-size:.9rem;
+    font-weight:900;
+    line-height:1.35;
+}
+
+.customer-signal-meta{
+    margin-top:4px;
+    color:var(--muted);
+    font-size:.8rem;
+    line-height:1.45;
+}
+
+.customer-rating-chip,
+.customer-risk-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:.35rem;
+    padding:.28rem .62rem;
+    border-radius:999px;
+    border:1px solid var(--line);
+    font-size:.73rem;
+    font-weight:900;
+    white-space:nowrap;
+}
+
+.customer-rating-chip{
+    border-color:rgba(56,189,248,.25);
+    background:rgba(56,189,248,.1);
+    color:#dff7ff;
+}
+
+.customer-risk-chip.low{
+    border-color:rgba(34,197,94,.22);
+    background:rgba(34,197,94,.1);
+    color:#bbf7d0;
+}
+
+.customer-risk-chip.medium{
+    border-color:rgba(245,158,11,.22);
+    background:rgba(245,158,11,.1);
+    color:#fde68a;
+}
+
+.customer-risk-chip.high{
+    border-color:rgba(239,68,68,.22);
+    background:rgba(239,68,68,.1);
+    color:#fecaca;
+}
+
+.customer-stat-pills{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:8px;
+}
+
+.customer-stat-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:.35rem;
+    padding:.28rem .56rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.07);
+    background:rgba(255,255,255,.03);
+    color:rgba(255,255,255,.82);
+    font-size:.72rem;
+    font-weight:800;
+}
+
 /* TABLE */
 .table-wrap{
     overflow:auto;
@@ -621,6 +746,10 @@ body{
     }
 
     .summary-grid{
+        grid-template-columns:1fr;
+    }
+
+    .customer-signal-grid{
         grid-template-columns:1fr;
     }
 
@@ -891,6 +1020,91 @@ body{
                                 <div class="summary-label">Completed Bookings</div>
                                 <div class="summary-value">{{ number_format($finishedCount) }}</div>
                                 <div class="summary-sub">Closed jobs marked completed</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <h4>Customer Reputation in Range</h4>
+                        <span class="badgex">{{ $reportCustomerSummary->customers }} customers</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <div class="summary-label">Rated Customers</div>
+                                <div class="summary-value">{{ number_format((int) $reportCustomerSummary->rated_customers) }}</div>
+                                <div class="summary-sub">Customers with provider feedback in range</div>
+                            </div>
+
+                            <div class="summary-item">
+                                <div class="summary-label">Average Rating</div>
+                                <div class="summary-value">{{ number_format((float) $reportCustomerSummary->avg_rating, 1) }}</div>
+                                <div class="summary-sub">Provider-to-customer score</div>
+                            </div>
+
+                            <div class="summary-item">
+                                <div class="summary-label">Mismatches</div>
+                                <div class="summary-value">{{ number_format((int) $reportCustomerSummary->mismatches) }}</div>
+                                <div class="summary-sub">Under-declaration or scope issues</div>
+                            </div>
+
+                            <div class="summary-item">
+                                <div class="summary-label">High Risk</div>
+                                <div class="summary-value">{{ number_format((int) $reportCustomerSummary->high_risk) }}</div>
+                                <div class="summary-sub">Customers needing closer review</div>
+                            </div>
+                        </div>
+
+                        <div class="customer-signal-grid">
+                            <div class="customer-signal-card">
+                                <h5 class="customer-signal-title">Top Customers</h5>
+                                <ul class="customer-signal-list">
+                                    @forelse($reportTopCustomers as $customer)
+                                        <li class="customer-signal-item">
+                                            <div class="customer-signal-head">
+                                                <div class="customer-signal-name">{{ $customer->name }}</div>
+                                                <span class="customer-rating-chip">
+                                                    <span class="dot green"></span>
+                                                    {{ number_format((float) $customer->avg_rating, 1) }}
+                                                </span>
+                                            </div>
+                                            <div class="customer-signal-meta">{{ $customer->completed_bookings }} completed / {{ $customer->cancelled_bookings }} cancelled</div>
+                                            <div class="customer-stat-pills">
+                                                <span class="customer-stat-pill">Score {{ $customer->reputation_score }}</span>
+                                                <span class="customer-stat-pill">{{ $customer->rating_count }} ratings</span>
+                                            </div>
+                                        </li>
+                                    @empty
+                                        <li class="customer-signal-item">
+                                            <div class="customer-signal-meta">No customer rating data in this range yet.</div>
+                                        </li>
+                                    @endforelse
+                                </ul>
+                            </div>
+
+                            <div class="customer-signal-card">
+                                <h5 class="customer-signal-title">Risk Watch</h5>
+                                <ul class="customer-signal-list">
+                                    @forelse($reportProblematicCustomers as $customer)
+                                        <li class="customer-signal-item">
+                                            <div class="customer-signal-head">
+                                                <div class="customer-signal-name">{{ $customer->name }}</div>
+                                                <span class="customer-risk-chip {{ strtolower($customer->risk_level) }}">{{ $customer->risk_level }}</span>
+                                            </div>
+                                            <div class="customer-signal-meta">{{ $customer->mismatch_count }} mismatches / {{ $customer->complaint_count }} complaints / {{ $customer->cancelled_bookings }} cancellations</div>
+                                            <div class="customer-stat-pills">
+                                                <span class="customer-stat-pill">Score {{ $customer->reputation_score }}</span>
+                                                <span class="customer-stat-pill">{{ $customer->completed_bookings }} completed</span>
+                                            </div>
+                                        </li>
+                                    @empty
+                                        <li class="customer-signal-item">
+                                            <div class="customer-signal-meta">No risky customer pattern in this range yet.</div>
+                                        </li>
+                                    @endforelse
+                                </ul>
                             </div>
                         </div>
                     </div>

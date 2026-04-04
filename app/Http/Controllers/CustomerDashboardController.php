@@ -120,7 +120,13 @@ class CustomerDashboardController extends Controller
                 'b.price',
                 'b.status',
                 'b.address',
-                'b.contact_phone'
+                'b.contact_phone',
+                Schema::hasColumn('bookings', 'cancellation_reason')
+                    ? 'b.cancellation_reason'
+                    : DB::raw('NULL as cancellation_reason'),
+                Schema::hasColumn('bookings', 'cancelled_by_role')
+                    ? 'b.cancelled_by_role'
+                    : DB::raw('NULL as cancelled_by_role')
             );
 
         if (Schema::hasColumn('bookings', 'created_at')) {

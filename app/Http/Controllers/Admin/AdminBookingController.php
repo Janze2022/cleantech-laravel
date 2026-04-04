@@ -341,9 +341,22 @@ class AdminBookingController extends Controller
             'cancellation_reason' => ['nullable', 'string', 'max:600'],
         ]);
 
-        $exists = DB::table('bookings')->where('id', $id)->exists();
+        $booking = DB::table('bookings')
+            ->where('id', $id)
+            ->first([
+                'id',
+                'reference_code',
+                'customer_id',
+                'provider_id',
+                Schema::hasColumn('bookings', 'cancellation_reason')
+                    ? 'cancellation_reason'
+                    : DB::raw('NULL as cancellation_reason'),
+                Schema::hasColumn('bookings', 'cancelled_by_role')
+                    ? 'cancelled_by_role'
+                    : DB::raw('NULL as cancelled_by_role'),
+            ]);
 
-        if (!$exists) {
+        if (!$booking) {
             return redirect()->route('admin.bookings')->withErrors(['Booking not found.']);
         }
 
@@ -371,6 +384,15 @@ class AdminBookingController extends Controller
         DB::table('bookings')
             ->where('id', $id)
             ->update($update);
+
+        $booking->status = $request->status;
+        $booking->cancellation_reason = $request->status === 'cancelled' ? $reason : null;
+        $booking->cancelled_by_role = $request->status === 'cancelled' ? 'admin' : null;
+
+        if ($request->status === 'cancelled') {
+            $this->notifyCustomerAboutAdminCancellation($booking);
+            $this->notifyProviderAboutAdminCancellation($booking);
+        }
 
         $this->logAdminAction(
             $request->status === 'cancelled' && $reason !== ''
@@ -403,6 +425,95 @@ class AdminBookingController extends Controller
             'price' => ['nullable', 'numeric', 'min:0'],
             'status' => ['required', Rule::in(['confirmed', 'in_progress', 'paid', 'completed', 'cancelled'])],
         ]);
+    }
+
+    protected function notifyCustomerAboutAdminCancellation(object $booking): void
+    {
+        if (
+            !Schema::hasTable('notifications') ||
+            !Schema::hasColumns('notifications', ['user_id', 'reference_code', 'message', 'is_read'])
+        ) {
+            return;
+        }
+
+        $customerId = (int) ($booking->customer_id ?? 0);
+        if (!$customerId) {
+            return;
+        }
+
+        $reason = trim((string) ($booking->cancellation_reason ?? ''));
+        $message = 'Your booking was cancelled by admin. Ref: ' . $booking->reference_code;
+
+        if ($reason !== '') {
+            $message .= ' Reason: ' . $reason;
+        }
+
+        $payload = [
+            'user_id' => $customerId,
+            'reference_code' => (string) ($booking->reference_code ?? ''),
+            'message' => $message,
+            'is_read' => 0,
+        ];
+
+        if (Schema::hasColumn('notifications', 'type')) {
+            $payload['type'] = 'booking_cancelled';
+        }
+
+        if (Schema::hasColumn('notifications', 'created_at')) {
+            $payload['created_at'] = now();
+        }
+
+        if (Schema::hasColumn('notifications', 'updated_at')) {
+            $payload['updated_at'] = now();
+        }
+
+        DB::table('notifications')->insert($payload);
+    }
+
+    protected function notifyProviderAboutAdminCancellation(object $booking): void
+    {
+        if (
+            !Schema::hasTable('provider_notifications') ||
+            !Schema::hasColumns('provider_notifications', ['provider_id', 'message', 'is_read'])
+        ) {
+            return;
+        }
+
+        $providerId = (int) ($booking->provider_id ?? 0);
+        if (!$providerId) {
+            return;
+        }
+
+        $reason = trim((string) ($booking->cancellation_reason ?? ''));
+        $message = 'A booking was cancelled by admin. Ref: ' . $booking->reference_code;
+
+        if ($reason !== '') {
+            $message .= ' Reason: ' . $reason;
+        }
+
+        $payload = [
+            'provider_id' => $providerId,
+            'message' => $message,
+            'is_read' => 0,
+        ];
+
+        if (Schema::hasColumn('provider_notifications', 'type')) {
+            $payload['type'] = 'booking_cancelled';
+        }
+
+        if (Schema::hasColumn('provider_notifications', 'reference_code')) {
+            $payload['reference_code'] = (string) ($booking->reference_code ?? '');
+        }
+
+        if (Schema::hasColumn('provider_notifications', 'created_at')) {
+            $payload['created_at'] = now();
+        }
+
+        if (Schema::hasColumn('provider_notifications', 'updated_at')) {
+            $payload['updated_at'] = now();
+        }
+
+        DB::table('provider_notifications')->insert($payload);
     }
 
     protected function logAdminAction(string $action): void

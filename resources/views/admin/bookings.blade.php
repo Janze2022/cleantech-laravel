@@ -950,7 +950,8 @@ select.status-select option{
                                         <div class="meta-value small">Adjustment: {{ ucwords(str_replace('_', ' ', $b->adjustment_status)) }}</div>
                                     @endif
                                     @if(!empty($b->cancellation_reason))
-                                        <div class="meta-value small">Cancellation reason: {{ $b->cancellation_reason }}</div>
+                                        @php($cancelledByLabel = !empty($b->cancelled_by_role) ? ucwords(str_replace('_', ' ', $b->cancelled_by_role)) : 'System')
+                                        <div class="meta-value small">Cancelled by {{ $cancelledByLabel }}: {{ $b->cancellation_reason }}</div>
                                     @endif
                                 </div>
                             @endif
@@ -1170,7 +1171,8 @@ select.status-select option{
                                         <div class="meta-value small">Adjustment: {{ ucwords(str_replace('_', ' ', $b->adjustment_status)) }}</div>
                                     @endif
                                     @if(!empty($b->cancellation_reason))
-                                        <div class="meta-value small">Cancellation reason: {{ $b->cancellation_reason }}</div>
+                                        @php($cancelledByLabel = !empty($b->cancelled_by_role) ? ucwords(str_replace('_', ' ', $b->cancelled_by_role)) : 'System')
+                                        <div class="meta-value small">Cancelled by {{ $cancelledByLabel }}: {{ $b->cancellation_reason }}</div>
                                     @endif
                                 </div>
                             @endif

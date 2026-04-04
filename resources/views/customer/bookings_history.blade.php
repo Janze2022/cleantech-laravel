@@ -211,6 +211,14 @@
     flex-wrap: wrap;
 }
 .b-actions a{ width: 100%; justify-content:center; }
+.b-item-full{ grid-column: 1 / -1; }
+.cancel-note{
+    margin-top:.35rem;
+    color:#fca5a5;
+    font-size:.83rem;
+    line-height:1.45;
+    font-weight:700;
+}
 
 @media (max-width: 767.98px){
     .desktop-table{ display:none; }
@@ -341,6 +349,9 @@
                     $payBadge = $pay === 'paid' ? 'success' : 'warn';
 
                     $detailsUrl = $hasShowRoute ? route('customer.bookings.show', $refCode) : null;
+                    $cancelReason = trim((string) ($b->cancellation_reason ?? ''));
+                    $cancelledByRole = trim((string) ($b->cancelled_by_role ?? ''));
+                    $cancelledByLabel = $cancelledByRole !== '' ? ucfirst(str_replace('_', ' ', $cancelledByRole)) : 'System';
                 @endphp
 
                 <div class="booking-card">
@@ -373,6 +384,13 @@
                                 <span class="badge-soft {{ $payBadge }}">{{ strtoupper($pay) }}</span>
                             </div>
                         </div>
+                        @if($st === 'cancelled' && $cancelReason !== '')
+                            <div class="b-item b-item-full">
+                                <div class="k">Cancellation</div>
+                                <div class="v">{{ $cancelReason }}</div>
+                                <div class="cancel-note">Cancelled by {{ $cancelledByLabel }}</div>
+                            </div>
+                        @endif
                     </div>
 
                     <div class="b-bottom">
@@ -438,12 +456,18 @@
                             $payBadge = $pay === 'paid' ? 'success' : 'warn';
 
                             $detailsUrl = $hasShowRoute ? route('customer.bookings.show', $refCode) : null;
+                            $cancelReason = trim((string) ($b->cancellation_reason ?? ''));
+                            $cancelledByRole = trim((string) ($b->cancelled_by_role ?? ''));
+                            $cancelledByLabel = $cancelledByRole !== '' ? ucfirst(str_replace('_', ' ', $cancelledByRole)) : 'System';
                         @endphp
 
                         <tr>
                             <td>
                                 <div style="font-weight:900;color:rgba(255,255,255,.92);">{{ $refCode }}</div>
                                 <div class="small-muted">{{ $b->address ?? '' }}</div>
+                                @if($st === 'cancelled' && $cancelReason !== '')
+                                    <div class="cancel-note">Cancelled by {{ $cancelledByLabel }}: {{ $cancelReason }}</div>
+                                @endif
                             </td>
                             <td>{{ $dateLabel }}</td>
                             <td>{{ $timeLabel }}</td>

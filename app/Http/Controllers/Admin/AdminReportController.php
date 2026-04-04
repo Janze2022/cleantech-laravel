@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class AdminReportController extends Controller
@@ -81,6 +82,45 @@ class AdminReportController extends Controller
                 ->selectRaw("MIN({$reportDateSql}) as first_report_date")
                 ->value('first_report_date') ?: $fallbackDate
         );
+    }
+
+    private function customerReputationScore(object $row): int
+    {
+        $score = 100;
+
+        if (($row->rating_count ?? 0) > 0) {
+            $score -= max(0, (5 - (float) $row->avg_rating) * 12);
+        }
+
+        $score -= min(((int) $row->mismatch_count) * 12, 36);
+        $score -= min(((int) $row->complaint_count) * 10, 40);
+        $score -= min(((int) $row->cancelled_bookings) * 4, 24);
+        $score += min(((int) $row->completed_bookings) * 2, 20);
+
+        return (int) max(0, min(100, round($score)));
+    }
+
+    private function customerRiskLevel(object $row): string
+    {
+        if (
+            (int) $row->complaint_count >= 3 ||
+            (int) $row->mismatch_count >= 2 ||
+            (((int) $row->rating_count) > 0 && (float) $row->avg_rating < 3.2) ||
+            (int) $row->cancelled_bookings >= 4
+        ) {
+            return 'High';
+        }
+
+        if (
+            (int) $row->complaint_count >= 1 ||
+            (int) $row->mismatch_count >= 1 ||
+            (((int) $row->rating_count) > 0 && (float) $row->avg_rating < 4.0) ||
+            (int) $row->cancelled_bookings >= 2
+        ) {
+            return 'Medium';
+        }
+
+        return 'Low';
     }
 
     public function index(Request $request)
@@ -301,6 +341,148 @@ class AdminReportController extends Controller
         $serviceLabels = $serviceClassification->pluck('service_name')->values();
         $serviceBookings = $serviceClassification->pluck('total_bookings')->map(fn($v) => (int)$v)->values();
 
+        $reportCustomerSummary = (object) [
+            'customers' => 0,
+            'rated_customers' => 0,
+            'avg_rating' => 0,
+            'high_risk' => 0,
+            'mismatches' => 0,
+            'complaints' => 0,
+        ];
+        $reportTopCustomers = collect();
+        $reportProblematicCustomers = collect();
+
+        if (Schema::hasTable('customers')) {
+            $customerBookingStats = (clone $base)
+                ->selectRaw("
+                    b.customer_id,
+                    COUNT(*) as total_bookings,
+                    SUM(CASE WHEN {$statusSql} IN ('paid', 'completed') THEN 1 ELSE 0 END) as completed_bookings,
+                    SUM(CASE WHEN {$statusSql} = 'cancelled' THEN 1 ELSE 0 END) as cancelled_bookings
+                ")
+                ->whereNotNull('b.customer_id')
+                ->groupBy('b.customer_id');
+
+            $customerRatingStats = null;
+            if (Schema::hasTable('customer_ratings')) {
+                $customerRatingStats = $this->applyReportRange(DB::table('bookings as b'), $start, $end)
+                    ->join('customer_ratings as cr', 'cr.booking_id', '=', 'b.id')
+                    ->selectRaw("
+                        b.customer_id,
+                        AVG(cr.rating) as avg_rating,
+                        COUNT(cr.id) as rating_count,
+                        SUM(CASE WHEN cr.flag_understated_area = 1 OR cr.flag_hidden_sections = 1 OR cr.flag_misleading_request = 1 THEN 1 ELSE 0 END) as rating_mismatch_count,
+                        SUM(CASE WHEN cr.flag_difficult_behavior = 1 OR cr.flag_payment_issue = 1 OR cr.flag_last_minute_changes = 1 OR cr.unexpected_extra_work = 1 THEN 1 ELSE 0 END) as behavior_issue_count,
+                        SUM(CASE WHEN cr.rating <= 2 THEN 1 ELSE 0 END) as low_rating_count
+                    ")
+                    ->whereNotNull('b.customer_id')
+                    ->groupBy('b.customer_id');
+            }
+
+            $customerAdjustmentStats = null;
+            if (Schema::hasTable('booking_adjustments')) {
+                $customerAdjustmentStats = $this->applyReportRange(DB::table('bookings as b'), $start, $end)
+                    ->join('booking_adjustments as ba', 'ba.booking_id', '=', 'b.id')
+                    ->selectRaw('b.customer_id, COUNT(DISTINCT ba.booking_id) as adjustment_mismatch_count')
+                    ->whereNotNull('b.customer_id')
+                    ->groupBy('b.customer_id');
+            }
+
+            $customerQuery = DB::table('customers as c')
+                ->joinSub($customerBookingStats, 'bs', function ($join) {
+                    $join->on('bs.customer_id', '=', 'c.id');
+                })
+                ->select(
+                    'c.id',
+                    'c.name',
+                    'c.email',
+                    Schema::hasColumn('customers', 'phone')
+                        ? 'c.phone'
+                        : DB::raw('NULL as phone'),
+                    DB::raw('COALESCE(bs.total_bookings, 0) as total_bookings'),
+                    DB::raw('COALESCE(bs.completed_bookings, 0) as completed_bookings'),
+                    DB::raw('COALESCE(bs.cancelled_bookings, 0) as cancelled_bookings')
+                );
+
+            if ($customerRatingStats) {
+                $customerQuery->leftJoinSub($customerRatingStats, 'rs', function ($join) {
+                    $join->on('rs.customer_id', '=', 'c.id');
+                });
+
+                $customerQuery->addSelect(
+                    DB::raw('COALESCE(rs.avg_rating, 0) as avg_rating'),
+                    DB::raw('COALESCE(rs.rating_count, 0) as rating_count'),
+                    DB::raw('COALESCE(rs.rating_mismatch_count, 0) as rating_mismatch_count'),
+                    DB::raw('COALESCE(rs.behavior_issue_count, 0) as behavior_issue_count'),
+                    DB::raw('COALESCE(rs.low_rating_count, 0) as low_rating_count')
+                );
+            } else {
+                $customerQuery->addSelect(
+                    DB::raw('0 as avg_rating'),
+                    DB::raw('0 as rating_count'),
+                    DB::raw('0 as rating_mismatch_count'),
+                    DB::raw('0 as behavior_issue_count'),
+                    DB::raw('0 as low_rating_count')
+                );
+            }
+
+            if ($customerAdjustmentStats) {
+                $customerQuery->leftJoinSub($customerAdjustmentStats, 'adj', function ($join) {
+                    $join->on('adj.customer_id', '=', 'c.id');
+                });
+
+                $customerQuery->addSelect(DB::raw('COALESCE(adj.adjustment_mismatch_count, 0) as adjustment_mismatch_count'));
+            } else {
+                $customerQuery->addSelect(DB::raw('0 as adjustment_mismatch_count'));
+            }
+
+            $reportCustomers = $customerQuery
+                ->orderBy('c.name')
+                ->get()
+                ->map(function ($row) {
+                    $row->avg_rating = round((float) ($row->avg_rating ?? 0), 1);
+                    $row->total_bookings = (int) ($row->total_bookings ?? 0);
+                    $row->completed_bookings = (int) ($row->completed_bookings ?? 0);
+                    $row->cancelled_bookings = (int) ($row->cancelled_bookings ?? 0);
+                    $row->rating_count = (int) ($row->rating_count ?? 0);
+                    $row->rating_mismatch_count = (int) ($row->rating_mismatch_count ?? 0);
+                    $row->adjustment_mismatch_count = (int) ($row->adjustment_mismatch_count ?? 0);
+                    $row->behavior_issue_count = (int) ($row->behavior_issue_count ?? 0);
+                    $row->low_rating_count = (int) ($row->low_rating_count ?? 0);
+                    $row->mismatch_count = $row->rating_mismatch_count + $row->adjustment_mismatch_count;
+                    $row->complaint_count = $row->behavior_issue_count + $row->low_rating_count;
+                    $row->reputation_score = $this->customerReputationScore($row);
+                    $row->risk_level = $this->customerRiskLevel($row);
+                    $row->problem_index = ($row->mismatch_count * 3) + ($row->complaint_count * 4) + $row->cancelled_bookings;
+
+                    return $row;
+                })
+                ->values();
+
+            $reportCustomerSummary = (object) [
+                'customers' => $reportCustomers->count(),
+                'rated_customers' => $reportCustomers->where('rating_count', '>', 0)->count(),
+                'avg_rating' => $reportCustomers->where('rating_count', '>', 0)->avg('avg_rating') ?? 0,
+                'high_risk' => $reportCustomers->where('risk_level', 'High')->count(),
+                'mismatches' => $reportCustomers->sum('mismatch_count'),
+                'complaints' => $reportCustomers->sum('complaint_count'),
+            ];
+
+            $reportTopCustomers = $reportCustomers
+                ->sortByDesc(function ($row) {
+                    return ($row->reputation_score * 1000) + ($row->completed_bookings * 10) + $row->rating_count;
+                })
+                ->take(5)
+                ->values();
+
+            $reportProblematicCustomers = $reportCustomers
+                ->sortByDesc(function ($row) {
+                    return ($row->problem_index * 1000) + max(0, 100 - $row->reputation_score);
+                })
+                ->take(5)
+                ->values();
+        }
+
         // Positives and negatives
         $positives = collect();
         $negatives = collect();
@@ -356,6 +538,9 @@ class AdminReportController extends Controller
             'serviceClassification',
             'serviceLabels',
             'serviceBookings',
+            'reportCustomerSummary',
+            'reportTopCustomers',
+            'reportProblematicCustomers',
             'positives',
             'negatives'
         ));
