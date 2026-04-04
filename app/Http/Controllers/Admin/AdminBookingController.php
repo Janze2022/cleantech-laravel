@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -123,6 +124,8 @@ class AdminBookingController extends Controller
         $bookingHistory = (clone $baseQuery)
             ->whereIn('bookings.status', $historyStatuses)
             ->get();
+
+        $adjustmentSummary = $this->attachAdjustmentData($currentBookings, $bookingHistory);
 
         /*
         |--------------------------------------------------------------------------
@@ -255,7 +258,297 @@ class AdminBookingController extends Controller
             'providers'       => $providers,
             'services'        => $services,
             'serviceOptions'  => $serviceOptions,
+            'adjustmentSummary' => $adjustmentSummary,
         ]);
+    }
+
+    protected function attachAdjustmentData($currentBookings, $bookingHistory): array
+    {
+        $summary = [
+            'pending' => 0,
+            'accepted' => 0,
+            'rejected' => 0,
+        ];
+
+        if (
+            !Schema::hasTable('booking_adjustments') ||
+            !$currentBookings instanceof \Illuminate\Support\Collection ||
+            !$bookingHistory instanceof \Illuminate\Support\Collection
+        ) {
+            return $summary;
+        }
+
+        $bookingIds = $currentBookings
+            ->concat($bookingHistory)
+            ->pluck('id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($bookingIds->isEmpty()) {
+            return $summary;
+        }
+
+        $adjustments = DB::table('booking_adjustments')
+            ->whereIn('booking_id', $bookingIds->all())
+            ->orderByDesc('updated_at')
+            ->get()
+            ->keyBy('booking_id');
+
+        if ($adjustments->isEmpty()) {
+            return $summary;
+        }
+
+        $logsByAdjustment = collect();
+
+        if (Schema::hasTable('booking_adjustment_logs')) {
+            $adjustmentIds = $adjustments->pluck('id')
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->values();
+
+            if ($adjustmentIds->isNotEmpty()) {
+                $logsByAdjustment = DB::table('booking_adjustment_logs')
+                    ->whereIn('booking_adjustment_id', $adjustmentIds->all())
+                    ->orderByDesc('created_at')
+                    ->get()
+                    ->groupBy('booking_adjustment_id')
+                    ->map(function ($logs) {
+                        return $logs->take(6)->map(function ($log) {
+                            $payload = json_decode((string) ($log->payload ?? '[]'), true);
+                            $payload = is_array($payload) ? $payload : [];
+
+                            return [
+                                'actor' => $this->adjustmentActorLabel((string) ($log->actor_role ?? '')),
+                                'action' => $this->adjustmentActionLabel((string) ($log->action ?? '')),
+                                'detail' => $this->adjustmentLogDetail((string) ($log->action ?? ''), $payload, (string) ($log->note ?? '')),
+                                'created_at' => !empty($log->created_at)
+                                    ? Carbon::parse($log->created_at)->format('M d, Y h:i A')
+                                    : null,
+                            ];
+                        })->values()->all();
+                    });
+            }
+        }
+
+        foreach ([$currentBookings, $bookingHistory] as $collection) {
+            $collection->transform(function ($booking) use ($adjustments, $logsByAdjustment, &$summary) {
+                $adjustment = $adjustments->get((int) ($booking->id ?? 0));
+
+                if (!$adjustment) {
+                    $booking->adjustment_details = null;
+                    $booking->adjustment_status_label = null;
+                    $booking->adjustment_reason_text = null;
+
+                    return $booking;
+                }
+
+                $formatted = $this->formatAdjustmentForAdmin(
+                    $adjustment,
+                    $logsByAdjustment->get((int) $adjustment->id, [])
+                );
+
+                $booking->adjustment_status = $formatted['status_key'];
+                $booking->adjustment_status_label = $formatted['status_label'];
+                $booking->adjustment_reason_text = implode(', ', $formatted['reason_labels']);
+                $booking->adjustment_details = (object) $formatted;
+
+                switch ($formatted['status_bucket']) {
+                    case 'pending':
+                        $summary['pending']++;
+                        break;
+                    case 'accepted':
+                        $summary['accepted']++;
+                        break;
+                    case 'rejected':
+                        $summary['rejected']++;
+                        break;
+                }
+
+                return $booking;
+            });
+        }
+
+        return $summary;
+    }
+
+    protected function formatAdjustmentForAdmin(object $adjustment, array $logs = []): array
+    {
+        $reasonCodes = collect(json_decode((string) ($adjustment->reason_payload ?? '[]'), true))
+            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
+            ->values()
+            ->all();
+
+        $reasonLabels = collect($reasonCodes)
+            ->map(fn ($code) => $this->adjustmentReasonLabel((string) $code))
+            ->values()
+            ->all();
+
+        $statusKey = $this->normalizeAdjustmentStatusKey(
+            (string) ($adjustment->status ?? $adjustment->adjustment_status ?? '')
+        );
+
+        return [
+            'status_key' => $statusKey,
+            'status_label' => $this->adjustmentStatusLabel($statusKey),
+            'status_bucket' => $this->adjustmentStatusBucket($statusKey),
+            'original_service_name' => trim((string) ($adjustment->original_service_name ?? '')) ?: 'Original booking',
+            'original_option_summary' => trim((string) ($adjustment->original_option_summary ?? '')) ?: 'Original scope',
+            'original_price' => (float) ($adjustment->original_price ?? 0),
+            'original_price_display' => number_format((float) ($adjustment->original_price ?? 0), 2),
+            'proposed_service_name' => trim((string) ($adjustment->proposed_service_name ?? '')) ?: 'Updated booking',
+            'proposed_scope_summary' => trim((string) ($adjustment->proposed_scope_summary ?? '')) ?: 'Updated scope',
+            'additional_fee' => (float) ($adjustment->additional_fee ?? 0),
+            'additional_fee_display' => number_format((float) ($adjustment->additional_fee ?? 0), 2),
+            'proposed_total' => (float) ($adjustment->proposed_total ?? 0),
+            'proposed_total_display' => number_format((float) ($adjustment->proposed_total ?? 0), 2),
+            'difference_display' => number_format(
+                (float) (($adjustment->proposed_total ?? 0) - ($adjustment->original_price ?? 0)),
+                2
+            ),
+            'price_increase_percent_display' => number_format((float) ($adjustment->price_increase_percent ?? 0), 1),
+            'reason_labels' => $reasonLabels,
+            'other_reason' => trim((string) ($adjustment->other_reason ?? '')) ?: null,
+            'provider_note' => trim((string) ($adjustment->provider_note ?? '')) ?: null,
+            'customer_response_note' => trim((string) ($adjustment->customer_response_note ?? '')) ?: null,
+            'evidence_url' => !empty($adjustment->evidence_path)
+                ? route('booking.adjustments.attachment', ['filename' => basename((string) $adjustment->evidence_path)])
+                : null,
+            'evidence_name' => trim((string) ($adjustment->evidence_name ?? '')) ?: null,
+            'resolved_at_label' => !empty($adjustment->resolved_at)
+                ? Carbon::parse($adjustment->resolved_at)->format('M d, Y h:i A')
+                : null,
+            'submitted_at_label' => !empty($adjustment->created_at)
+                ? Carbon::parse($adjustment->created_at)->format('M d, Y h:i A')
+                : null,
+            'logs' => $logs,
+        ];
+    }
+
+    protected function normalizeAdjustmentStatusKey(string $status): string
+    {
+        $status = strtolower(trim($status));
+        $status = str_replace(['-', ' '], '_', $status);
+
+        return match ($status) {
+            'accepted', 'adjustment_accepted' => 'adjustment_accepted',
+            'rejected', 'adjustment_rejected' => 'adjustment_rejected',
+            'pending_adjustment_approval' => 'pending_adjustment_approval',
+            default => $status,
+        };
+    }
+
+    protected function adjustmentStatusBucket(string $status): ?string
+    {
+        return match ($status) {
+            'pending_adjustment_approval' => 'pending',
+            'adjustment_accepted' => 'accepted',
+            'adjustment_rejected' => 'rejected',
+            default => null,
+        };
+    }
+
+    protected function adjustmentStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'pending_adjustment_approval' => 'Pending Adjustment Approval',
+            'adjustment_accepted' => 'Adjustment Accepted',
+            'adjustment_rejected' => 'Adjustment Rejected',
+            default => ucwords(str_replace('_', ' ', $status ?: 'Adjustment')),
+        };
+    }
+
+    protected function adjustmentReasonLabel(string $code): string
+    {
+        return match (strtolower(trim($code))) {
+            'larger_area' => 'Larger area than declared',
+            'additional_rooms' => 'Additional rooms or sections',
+            'heavy_soiling' => 'Heavily soiled or deep cleaning required',
+            'other' => 'Other onsite issue',
+            default => ucwords(str_replace('_', ' ', $code)),
+        };
+    }
+
+    protected function adjustmentActorLabel(string $actorRole): string
+    {
+        return match (strtolower(trim($actorRole))) {
+            'provider' => 'Provider',
+            'customer' => 'Customer',
+            'admin' => 'Admin',
+            default => 'System',
+        };
+    }
+
+    protected function adjustmentActionLabel(string $action): string
+    {
+        return match (strtolower(trim($action))) {
+            'created' => 'Adjustment sent',
+            'updated' => 'Adjustment updated',
+            'accepted' => 'Adjustment accepted',
+            'rejected' => 'Adjustment rejected',
+            'cancelled_booking' => 'Booking cancelled',
+            default => ucwords(str_replace('_', ' ', trim($action))),
+        };
+    }
+
+    protected function adjustmentLogDetail(string $action, array $payload, string $note = ''): ?string
+    {
+        $action = strtolower(trim($action));
+        $note = trim($note);
+
+        return match ($action) {
+            'created', 'updated' => $this->firstFilledText([
+                $this->priceChangeSummary($payload, 'original_price', 'proposed_total'),
+                $note,
+            ]),
+            'accepted' => $this->firstFilledText([
+                isset($payload['new_price'])
+                    ? 'Customer approved PHP ' . number_format((float) $payload['new_price'], 2) . '.'
+                    : null,
+                $this->priceChangeSummary($payload, 'old_price', 'new_price'),
+                $note,
+            ]),
+            'rejected' => $this->firstFilledText([
+                isset($payload['kept_price']) && isset($payload['rejected_total'])
+                    ? 'Customer kept PHP ' . number_format((float) $payload['kept_price'], 2)
+                        . ' and rejected PHP ' . number_format((float) $payload['rejected_total'], 2) . '.'
+                    : null,
+                $note,
+            ]),
+            'cancelled_booking' => $this->firstFilledText([
+                !empty($payload['cancellation_reason'])
+                    ? 'Reason: ' . trim((string) $payload['cancellation_reason'])
+                    : null,
+                $note,
+            ]),
+            default => $note !== '' ? $note : null,
+        };
+    }
+
+    protected function priceChangeSummary(array $payload, string $fromKey, string $toKey): ?string
+    {
+        if (!isset($payload[$fromKey], $payload[$toKey])) {
+            return null;
+        }
+
+        return 'PHP '
+            . number_format((float) $payload[$fromKey], 2)
+            . ' -> PHP '
+            . number_format((float) $payload[$toKey], 2);
+    }
+
+    protected function firstFilledText(array $values): ?string
+    {
+        foreach ($values as $value) {
+            $value = trim((string) ($value ?? ''));
+
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     public function store(Request $request)

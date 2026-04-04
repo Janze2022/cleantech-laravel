@@ -15,6 +15,11 @@
     $providers       = $providers ?? collect();
     $services        = $services ?? collect();
     $serviceOptions  = $serviceOptions ?? collect();
+    $adjustmentSummary = $adjustmentSummary ?? [
+        'pending' => 0,
+        'accepted' => 0,
+        'rejected' => 0,
+    ];
 
     if (!function_exists('booking_time_12h')) {
         function booking_time_12h($time) {
@@ -152,6 +157,12 @@
     gap:12px;
     margin-bottom:14px;
 }
+.adjustment-kpis{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:12px;
+    margin-bottom:14px;
+}
 .kpi{
     background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
     border:1px solid var(--line);
@@ -169,6 +180,18 @@
     font-size:1.45rem;
     font-weight:900;
     line-height:1;
+}
+.kpi.adjustment .value{
+    font-size:1.15rem;
+}
+.kpi.adjustment.pending{
+    border-color:rgba(59,130,246,.2);
+}
+.kpi.adjustment.accepted{
+    border-color:rgba(34,197,94,.2);
+}
+.kpi.adjustment.rejected{
+    border-color:rgba(239,68,68,.2);
 }
 
 .notice{
@@ -609,6 +632,124 @@ select.status-select option{
     word-break:break-word;
     font-size:.92rem;
 }
+.adjustment-detail{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+.adjustment-banner{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+.adjustment-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:7px 11px;
+    border-radius:999px;
+    border:1px solid rgba(59,130,246,.24);
+    background:rgba(59,130,246,.08);
+    font-size:.78rem;
+    font-weight:900;
+}
+.adjustment-pill.muted{
+    border-color:rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    color:var(--muted);
+}
+.adjustment-compare{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:10px;
+}
+.adjustment-panel{
+    padding:11px 12px;
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:14px;
+    background:rgba(255,255,255,.022);
+}
+.adjustment-panel-label{
+    color:var(--muted);
+    font-size:.72rem;
+    font-weight:900;
+    margin-bottom:6px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+}
+.adjustment-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:10px;
+}
+.adjustment-summary-box{
+    padding:10px 11px;
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:12px;
+    background:rgba(255,255,255,.02);
+}
+.adjustment-chip-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+}
+.adjustment-chip{
+    display:inline-flex;
+    align-items:center;
+    padding:6px 10px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    font-size:.76rem;
+    font-weight:800;
+}
+.adjustment-note-block{
+    padding:10px 11px;
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:12px;
+    background:rgba(255,255,255,.02);
+}
+.adjustment-note-title{
+    color:var(--muted);
+    font-size:.72rem;
+    font-weight:900;
+    margin-bottom:4px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+}
+.adjustment-log-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+.adjustment-log-item{
+    padding:11px 12px;
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:14px;
+    background:rgba(255,255,255,.022);
+}
+.adjustment-log-head{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:4px;
+}
+.adjustment-log-meta{
+    color:var(--muted);
+    font-size:.76rem;
+    font-weight:700;
+}
+.adjustment-link{
+    color:#7dd3fc;
+    text-decoration:none;
+    font-weight:800;
+}
+.adjustment-link:hover{
+    text-decoration:underline;
+}
 
 .form-group{
     display:flex;
@@ -634,6 +775,7 @@ select.status-select option{
 
 @media (max-width: 1180px){
     .kpis{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .adjustment-kpis{ grid-template-columns:repeat(3, minmax(0,1fr)); }
     .grid-2{ grid-template-columns:1fr; }
     .panel{
         height:auto;
@@ -668,6 +810,10 @@ select.status-select option{
         grid-template-columns:1fr 1fr;
         gap:10px;
     }
+    .adjustment-kpis{
+        grid-template-columns:1fr;
+        gap:10px;
+    }
     .kpi{
         padding:12px;
     }
@@ -691,7 +837,9 @@ select.status-select option{
     .booking-meta,
     .compact-meta,
     .detail-grid,
-    .form-grid{
+    .form-grid,
+    .adjustment-compare,
+    .adjustment-summary-grid{
         grid-template-columns:1fr;
     }
 
@@ -811,6 +959,21 @@ select.status-select option{
         </div>
     </div>
 
+    <div class="adjustment-kpis">
+        <div class="kpi adjustment pending">
+            <div class="label">Pending Adjustments</div>
+            <div class="value">{{ number_format($adjustmentSummary['pending'] ?? 0) }}</div>
+        </div>
+        <div class="kpi adjustment accepted">
+            <div class="label">Accepted Adjustments</div>
+            <div class="value">{{ number_format($adjustmentSummary['accepted'] ?? 0) }}</div>
+        </div>
+        <div class="kpi adjustment rejected">
+            <div class="label">Rejected Adjustments</div>
+            <div class="value">{{ number_format($adjustmentSummary['rejected'] ?? 0) }}</div>
+        </div>
+    </div>
+
     @if(session('success'))
         <div class="notice success">{{ session('success') }}</div>
     @endif
@@ -864,6 +1027,8 @@ select.status-select option{
                             $houseLabel = $b->house_type ? ucwords(str_replace('_', ' ', $b->house_type)) : '';
                             $serviceSummary = $serviceOptionLabel . ($houseLabel ? ' â€¢ ' . $houseLabel : '');
 
+                            $adjustment = $b->adjustment_details ?? null;
+
                             $details = [
                                 'id' => $b->id,
                                 'reference_code' => $b->reference_code,
@@ -888,13 +1053,37 @@ select.status-select option{
                                 'cancellation_reason' => $b->cancellation_reason,
                                 'cancelled_by_role' => $b->cancelled_by_role,
                                 'adjustment_status' => $b->adjustment_status,
+                                'adjustment_status_label' => $b->adjustment_status_label,
+                                'adjustment_reason_text' => $b->adjustment_reason_text,
+                                'adjustment' => $adjustment ? [
+                                    'status_key' => $adjustment->status_key ?? null,
+                                    'status_label' => $adjustment->status_label ?? null,
+                                    'submitted_at_label' => $adjustment->submitted_at_label ?? null,
+                                    'resolved_at_label' => $adjustment->resolved_at_label ?? null,
+                                    'original_service_name' => $adjustment->original_service_name ?? null,
+                                    'original_option_summary' => $adjustment->original_option_summary ?? null,
+                                    'original_price_display' => $adjustment->original_price_display ?? null,
+                                    'proposed_service_name' => $adjustment->proposed_service_name ?? null,
+                                    'proposed_scope_summary' => $adjustment->proposed_scope_summary ?? null,
+                                    'additional_fee_display' => $adjustment->additional_fee_display ?? null,
+                                    'proposed_total_display' => $adjustment->proposed_total_display ?? null,
+                                    'difference_display' => $adjustment->difference_display ?? null,
+                                    'price_increase_percent_display' => $adjustment->price_increase_percent_display ?? null,
+                                    'reason_labels' => $adjustment->reason_labels ?? [],
+                                    'other_reason' => $adjustment->other_reason ?? null,
+                                    'provider_note' => $adjustment->provider_note ?? null,
+                                    'customer_response_note' => $adjustment->customer_response_note ?? null,
+                                    'evidence_url' => $adjustment->evidence_url ?? null,
+                                    'evidence_name' => $adjustment->evidence_name ?? null,
+                                    'logs' => $adjustment->logs ?? [],
+                                ] : null,
                                 'created_at' => $b->created_at,
                                 'updated_at' => $b->updated_at,
                             ];
                         @endphp
 
                         <div class="booking-card booking-item"
-                             data-search="{{ strtolower(trim($ref.' '.$custName.' '.$provName.' '.$status.' '.$b->booking_date.' '.booking_time_12h($b->time_start).' '.booking_time_12h($b->time_end).' '.$b->address.' '.$b->contact_phone.' '.$serviceLabel.' '.$serviceSummary.' '.($b->adjustment_status ?? '').' '.($b->cancellation_reason ?? ''))) }}">
+                             data-search="{{ strtolower(trim($ref.' '.$custName.' '.$provName.' '.$status.' '.$b->booking_date.' '.booking_time_12h($b->time_start).' '.booking_time_12h($b->time_end).' '.$b->address.' '.$b->contact_phone.' '.$serviceLabel.' '.$serviceSummary.' '.($b->adjustment_status_label ?? '').' '.($b->adjustment_reason_text ?? '').' '.($b->cancellation_reason ?? ''))) }}">
 
                             <div class="booking-top">
                                 <div class="booking-ref">
@@ -943,11 +1132,15 @@ select.status-select option{
                                 </div>
                             </div>
 
-                            @if(!empty($b->adjustment_status) || !empty($b->cancellation_reason))
+                            @if($adjustment || !empty($b->cancellation_reason))
                                 <div class="meta-box full-span" style="margin-top:12px;">
                                     <div class="meta-label">Booking Notes</div>
-                                    @if(!empty($b->adjustment_status))
-                                        <div class="meta-value small">Adjustment: {{ ucwords(str_replace('_', ' ', $b->adjustment_status)) }}</div>
+                                    @if($adjustment)
+                                        <div class="meta-value small">Adjustment: {{ $b->adjustment_status_label ?: 'Adjustment' }}</div>
+                                        <div class="meta-value small">Original PHP {{ $adjustment->original_price_display ?? '0.00' }} -> Updated PHP {{ $adjustment->proposed_total_display ?? ($adjustment->original_price_display ?? '0.00') }}</div>
+                                        @if(!empty($adjustment->reason_labels))
+                                            <div class="meta-value small">Reasons: {{ implode(', ', $adjustment->reason_labels) }}</div>
+                                        @endif
                                     @endif
                                     @if(!empty($b->cancellation_reason))
                                         @php($cancelledByLabel = !empty($b->cancelled_by_role) ? ucwords(str_replace('_', ' ', $b->cancelled_by_role)) : 'System')
@@ -1096,13 +1289,37 @@ select.status-select option{
                                 'cancellation_reason' => $b->cancellation_reason,
                                 'cancelled_by_role' => $b->cancelled_by_role,
                                 'adjustment_status' => $b->adjustment_status,
+                                'adjustment_status_label' => $b->adjustment_status_label,
+                                'adjustment_reason_text' => $b->adjustment_reason_text,
+                                'adjustment' => $adjustment ? [
+                                    'status_key' => $adjustment->status_key ?? null,
+                                    'status_label' => $adjustment->status_label ?? null,
+                                    'submitted_at_label' => $adjustment->submitted_at_label ?? null,
+                                    'resolved_at_label' => $adjustment->resolved_at_label ?? null,
+                                    'original_service_name' => $adjustment->original_service_name ?? null,
+                                    'original_option_summary' => $adjustment->original_option_summary ?? null,
+                                    'original_price_display' => $adjustment->original_price_display ?? null,
+                                    'proposed_service_name' => $adjustment->proposed_service_name ?? null,
+                                    'proposed_scope_summary' => $adjustment->proposed_scope_summary ?? null,
+                                    'additional_fee_display' => $adjustment->additional_fee_display ?? null,
+                                    'proposed_total_display' => $adjustment->proposed_total_display ?? null,
+                                    'difference_display' => $adjustment->difference_display ?? null,
+                                    'price_increase_percent_display' => $adjustment->price_increase_percent_display ?? null,
+                                    'reason_labels' => $adjustment->reason_labels ?? [],
+                                    'other_reason' => $adjustment->other_reason ?? null,
+                                    'provider_note' => $adjustment->provider_note ?? null,
+                                    'customer_response_note' => $adjustment->customer_response_note ?? null,
+                                    'evidence_url' => $adjustment->evidence_url ?? null,
+                                    'evidence_name' => $adjustment->evidence_name ?? null,
+                                    'logs' => $adjustment->logs ?? [],
+                                ] : null,
                                 'created_at' => $b->created_at,
                                 'updated_at' => $b->updated_at,
                             ];
                         @endphp
 
                         <div class="booking-card booking-item history-item"
-                             data-search="{{ strtolower(trim($ref.' '.$custName.' '.$provName.' '.$status.' '.$b->booking_date.' '.$historyDate.' '.booking_time_12h($b->time_start).' '.booking_time_12h($b->time_end).' '.$b->address.' '.$b->contact_phone.' '.$b->customer_phone.' '.$b->provider_phone.' '.$serviceLabel.' '.$serviceOptionLabel.' '.$houseLabel.' '.($b->adjustment_status ?? '').' '.($b->cancellation_reason ?? ''))) }}"
+                             data-search="{{ strtolower(trim($ref.' '.$custName.' '.$provName.' '.$status.' '.$b->booking_date.' '.$historyDate.' '.booking_time_12h($b->time_start).' '.booking_time_12h($b->time_end).' '.$b->address.' '.$b->contact_phone.' '.$b->customer_phone.' '.$b->provider_phone.' '.$serviceLabel.' '.$serviceOptionLabel.' '.$houseLabel.' '.($b->adjustment_status_label ?? '').' '.($b->adjustment_reason_text ?? '').' '.($b->cancellation_reason ?? ''))) }}"
                              data-status="{{ strtolower($status) }}"
                              data-history-date="{{ $historyDate }}"
                              data-reference="{{ strtolower($ref) }}"
@@ -1164,11 +1381,15 @@ select.status-select option{
                                 </div>
                             </div>
 
-                            @if(!empty($b->adjustment_status) || !empty($b->cancellation_reason))
+                            @if($adjustment || !empty($b->cancellation_reason))
                                 <div class="meta-box full-span" style="margin-top:12px;">
                                     <div class="meta-label">Booking Notes</div>
-                                    @if(!empty($b->adjustment_status))
-                                        <div class="meta-value small">Adjustment: {{ ucwords(str_replace('_', ' ', $b->adjustment_status)) }}</div>
+                                    @if($adjustment)
+                                        <div class="meta-value small">Adjustment: {{ $b->adjustment_status_label ?: 'Adjustment' }}</div>
+                                        <div class="meta-value small">Original PHP {{ $adjustment->original_price_display ?? '0.00' }} -> Updated PHP {{ $adjustment->proposed_total_display ?? ($adjustment->original_price_display ?? '0.00') }}</div>
+                                        @if(!empty($adjustment->reason_labels))
+                                            <div class="meta-value small">Reasons: {{ implode(', ', $adjustment->reason_labels) }}</div>
+                                        @endif
                                     @endif
                                     @if(!empty($b->cancellation_reason))
                                         @php($cancelledByLabel = !empty($b->cancelled_by_role) ? ucwords(str_replace('_', ' ', $b->cancelled_by_role)) : 'System')
@@ -1286,6 +1507,11 @@ select.status-select option{
             <div class="detail-box full" id="mAdjustmentWrap" style="display:none;">
                 <div class="detail-label">Adjustment Status</div>
                 <div class="detail-value" id="mAdjustment"></div>
+            </div>
+
+            <div class="detail-box full" id="mAdjustmentLogsWrap" style="display:none;">
+                <div class="detail-label">Adjustment Activity</div>
+                <div class="detail-value" id="mAdjustmentLogs"></div>
             </div>
 
             <div class="detail-box full" id="mCancellationWrap" style="display:none;">
@@ -1541,6 +1767,113 @@ function format12Hour(value){
     return hours + ':' + minutes + ' ' + suffix;
 }
 
+function escapeHtml(value){
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function renderAdjustmentMarkup(adjustment){
+    if(!adjustment){
+        return '';
+    }
+
+    const reasonLabels = Array.isArray(adjustment.reason_labels) ? adjustment.reason_labels : [];
+    const chips = reasonLabels.length
+        ? `<div class="adjustment-chip-row">${reasonLabels.map((label) => `<span class="adjustment-chip">${escapeHtml(label)}</span>`).join('')}</div>`
+        : '';
+
+    const providerNote = adjustment.provider_note
+        ? `<div class="adjustment-note-block"><div class="adjustment-note-title">Provider note</div><div>${escapeHtml(adjustment.provider_note)}</div></div>`
+        : '';
+
+    const customerNote = adjustment.customer_response_note
+        ? `<div class="adjustment-note-block"><div class="adjustment-note-title">Customer response</div><div>${escapeHtml(adjustment.customer_response_note)}</div></div>`
+        : '';
+
+    const otherReason = adjustment.other_reason
+        ? `<div class="adjustment-note-block"><div class="adjustment-note-title">Other reason</div><div>${escapeHtml(adjustment.other_reason)}</div></div>`
+        : '';
+
+    const submittedMeta = adjustment.submitted_at_label
+        ? `<span class="adjustment-pill muted">Submitted ${escapeHtml(adjustment.submitted_at_label)}</span>`
+        : '';
+
+    const resolvedMeta = adjustment.resolved_at_label
+        ? `<span class="adjustment-pill muted">Resolved ${escapeHtml(adjustment.resolved_at_label)}</span>`
+        : '';
+
+    const evidenceLink = adjustment.evidence_url
+        ? `<a class="adjustment-link" href="${escapeHtml(adjustment.evidence_url)}" target="_blank" rel="noopener">${escapeHtml(adjustment.evidence_name || 'View evidence')}</a>`
+        : '';
+
+    return `
+        <div class="adjustment-detail">
+            <div class="adjustment-banner">
+                <span class="adjustment-pill">${escapeHtml(adjustment.status_label || 'Adjustment')}</span>
+                <div class="adjustment-chip-row">${submittedMeta}${resolvedMeta}</div>
+            </div>
+            <div class="adjustment-compare">
+                <div class="adjustment-panel">
+                    <div class="adjustment-panel-label">Original booking</div>
+                    <div><strong>${escapeHtml(adjustment.original_service_name || 'Original booking')}</strong></div>
+                    <div>${escapeHtml(adjustment.original_option_summary || 'Original scope')}</div>
+                    <div>PHP ${escapeHtml(adjustment.original_price_display || '0.00')}</div>
+                </div>
+                <div class="adjustment-panel">
+                    <div class="adjustment-panel-label">Updated onsite scope</div>
+                    <div><strong>${escapeHtml(adjustment.proposed_service_name || 'Updated booking')}</strong></div>
+                    <div>${escapeHtml(adjustment.proposed_scope_summary || 'Updated scope')}</div>
+                    <div>PHP ${escapeHtml(adjustment.proposed_total_display || adjustment.original_price_display || '0.00')}</div>
+                </div>
+            </div>
+            <div class="adjustment-summary-grid">
+                <div class="adjustment-summary-box">
+                    <div class="adjustment-panel-label">Added fee</div>
+                    <div>PHP ${escapeHtml(adjustment.additional_fee_display || '0.00')}</div>
+                </div>
+                <div class="adjustment-summary-box">
+                    <div class="adjustment-panel-label">Price difference</div>
+                    <div>PHP ${escapeHtml(adjustment.difference_display || '0.00')}</div>
+                </div>
+                <div class="adjustment-summary-box">
+                    <div class="adjustment-panel-label">Increase</div>
+                    <div>${escapeHtml(adjustment.price_increase_percent_display || '0.0')}%</div>
+                </div>
+            </div>
+            ${chips}
+            ${providerNote}
+            ${customerNote}
+            ${otherReason}
+            ${evidenceLink ? `<div class="adjustment-chip-row">${evidenceLink}</div>` : ''}
+        </div>
+    `;
+}
+
+function renderAdjustmentLogs(logs){
+    if(!Array.isArray(logs) || !logs.length){
+        return '';
+    }
+
+    return `
+        <div class="adjustment-log-list">
+            ${logs.map((log) => `
+                <div class="adjustment-log-item">
+                    <div class="adjustment-log-head">
+                        <strong>${escapeHtml(log.action || 'Update')}</strong>
+                        <span class="adjustment-log-meta">${escapeHtml(log.created_at || '')}</span>
+                    </div>
+                    <div class="adjustment-log-meta">${escapeHtml(log.actor || 'System')}</div>
+                    ${log.detail ? `<div>${escapeHtml(log.detail)}</div>` : ''}
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
 function openBooking(b){
     const ref = b.reference_code ? b.reference_code : ('#' + b.id);
 
@@ -1625,15 +1958,27 @@ function openBookingCard(b){
 
     const adjustmentWrap = document.getElementById('mAdjustmentWrap');
     const adjustmentValue = document.getElementById('mAdjustment');
+    const adjustmentLogsWrap = document.getElementById('mAdjustmentLogsWrap');
+    const adjustmentLogsValue = document.getElementById('mAdjustmentLogs');
     const cancellationWrap = document.getElementById('mCancellationWrap');
     const cancellationValue = document.getElementById('mCancellation');
 
-    if ((b.adjustment_status || '').trim() !== '') {
-        adjustmentValue.textContent = String(b.adjustment_status).replaceAll('_', ' ');
+    if (b.adjustment) {
+        adjustmentValue.innerHTML = renderAdjustmentMarkup(b.adjustment);
         adjustmentWrap.style.display = '';
+
+        if (Array.isArray(b.adjustment.logs) && b.adjustment.logs.length) {
+            adjustmentLogsValue.innerHTML = renderAdjustmentLogs(b.adjustment.logs);
+            adjustmentLogsWrap.style.display = '';
+        } else {
+            adjustmentLogsValue.innerHTML = '';
+            adjustmentLogsWrap.style.display = 'none';
+        }
     } else {
-        adjustmentValue.textContent = '';
+        adjustmentValue.innerHTML = '';
         adjustmentWrap.style.display = 'none';
+        adjustmentLogsValue.innerHTML = '';
+        adjustmentLogsWrap.style.display = 'none';
     }
 
     if ((b.cancellation_reason || '').trim() !== '') {
