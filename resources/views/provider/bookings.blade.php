@@ -215,6 +215,15 @@
     color:rgba(255,255,255,.38);
 }
 
+.cancel-reason-wrap{
+    display:grid;
+    gap:.35rem;
+}
+
+.cancel-reason-wrap[hidden]{
+    display:none !important;
+}
+
 .field-error{
     color:#fca5a5;
     font-size:.8rem;
@@ -345,6 +354,9 @@
                     <tbody>
                         @foreach ($bookings as $b)
                             @php($current = $b->status_key ?? strtolower((string) $b->status))
+                            @php($isOldTarget = old('booking_reference') === $b->reference_code)
+                            @php($selectedStatus = $isOldTarget ? strtolower((string) old('status')) : '')
+                            @php($showCancelReason = $selectedStatus === 'cancelled')
                             <tr>
                                 <td>
                                     <div class="customer-name">{{ $b->name }}</div>
@@ -387,14 +399,20 @@
                                         @else
                                             <form method="POST" action="{{ route('provider.bookings.status', $b->reference_code) }}" class="update-form">
                                                 @csrf
-                                                <select name="status" required>
+                                                <input type="hidden" name="booking_reference" value="{{ $b->reference_code }}">
+                                                <select name="status" class="status-select" required>
                                                     <option value="">Select status</option>
                                                     @foreach($nextOptions[$current] as $value => $label)
-                                                        <option value="{{ $value }}">{{ $label }}</option>
+                                                        <option value="{{ $value }}" @selected($selectedStatus === $value)>{{ $label }}</option>
                                                     @endforeach
                                                 </select>
-                                                <textarea name="cancellation_reason" class="reason-input" rows="3" placeholder="Reason if cancelling">{{ old('cancellation_reason') }}</textarea>
-                                                @if($errors->has('cancellation_reason'))
+                                                @if($isOldTarget && $errors->has('status'))
+                                                    <div class="field-error">{{ $errors->first('status') }}</div>
+                                                @endif
+                                                <div class="cancel-reason-wrap" @if(!$showCancelReason) hidden @endif>
+                                                    <textarea name="cancellation_reason" class="reason-input" rows="3" placeholder="Reason if cancelling" @if(!$showCancelReason) disabled @endif>{{ $isOldTarget ? old('cancellation_reason') : '' }}</textarea>
+                                                </div>
+                                                @if($isOldTarget && $errors->has('cancellation_reason'))
                                                     <div class="field-error">{{ $errors->first('cancellation_reason') }}</div>
                                                 @endif
                                                 <button class="btn-update" type="submit">Update</button>
@@ -415,6 +433,9 @@
             <div class="mobile-list">
                 @foreach ($bookings as $b)
                     @php($current = $b->status_key ?? strtolower((string) $b->status))
+                    @php($isOldTarget = old('booking_reference') === $b->reference_code)
+                    @php($selectedStatus = $isOldTarget ? strtolower((string) old('status')) : '')
+                    @php($showCancelReason = $selectedStatus === 'cancelled')
                     <div class="booking-card">
                         <div class="booking-card-head">
                             <div>
@@ -468,14 +489,20 @@
                                 @else
                                     <form method="POST" action="{{ route('provider.bookings.status', $b->reference_code) }}" class="update-form">
                                         @csrf
-                                        <select name="status" required>
+                                        <input type="hidden" name="booking_reference" value="{{ $b->reference_code }}">
+                                        <select name="status" class="status-select" required>
                                             <option value="">Select status</option>
                                             @foreach($nextOptions[$current] as $value => $label)
-                                                <option value="{{ $value }}">{{ $label }}</option>
+                                                <option value="{{ $value }}" @selected($selectedStatus === $value)>{{ $label }}</option>
                                             @endforeach
                                         </select>
-                                        <textarea name="cancellation_reason" class="reason-input" rows="3" placeholder="Reason if cancelling">{{ old('cancellation_reason') }}</textarea>
-                                        @if($errors->has('cancellation_reason'))
+                                        @if($isOldTarget && $errors->has('status'))
+                                            <div class="field-error">{{ $errors->first('status') }}</div>
+                                        @endif
+                                        <div class="cancel-reason-wrap" @if(!$showCancelReason) hidden @endif>
+                                            <textarea name="cancellation_reason" class="reason-input" rows="3" placeholder="Reason if cancelling" @if(!$showCancelReason) disabled @endif>{{ $isOldTarget ? old('cancellation_reason') : '' }}</textarea>
+                                        </div>
+                                        @if($isOldTarget && $errors->has('cancellation_reason'))
                                             <div class="field-error">{{ $errors->first('cancellation_reason') }}</div>
                                         @endif
                                         <button class="btn-update" type="submit">Update</button>
@@ -493,5 +520,56 @@
         @endif
     </div>
 </div>
+
+<script>
+(() => {
+    const forms = document.querySelectorAll('.update-form');
+
+    if (!forms.length) {
+        return;
+    }
+
+    forms.forEach((form) => {
+        const statusSelect = form.querySelector('.status-select');
+        const cancelWrap = form.querySelector('.cancel-reason-wrap');
+        const reasonInput = form.querySelector('.reason-input');
+
+        if (!statusSelect || !cancelWrap || !reasonInput) {
+            return;
+        }
+
+        const syncCancelReason = () => {
+            const cancelling = statusSelect.value === 'cancelled';
+            cancelWrap.hidden = !cancelling;
+            reasonInput.disabled = !cancelling;
+            reasonInput.required = cancelling;
+
+            if (!cancelling) {
+                reasonInput.value = '';
+            }
+        };
+
+        syncCancelReason();
+        statusSelect.addEventListener('change', syncCancelReason);
+
+        form.addEventListener('submit', (event) => {
+            const selectedValue = statusSelect.value;
+            const selectedLabel = statusSelect.options[statusSelect.selectedIndex]?.text || 'this status';
+
+            if (!selectedValue) {
+                return;
+            }
+
+            const message = selectedValue === 'cancelled'
+                ? 'Cancel this booking? This cannot be undone, and the customer will be notified right away.'
+                : `Update this booking to ${selectedLabel}? Continue only if you are sure.`;
+
+            if (!window.confirm(message)) {
+                event.preventDefault();
+            }
+        });
+    });
+})();
+</script>
 
 @endsection

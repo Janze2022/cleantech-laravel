@@ -907,13 +907,54 @@ class CustomerBookingController extends Controller
             $note = $note !== '' ? $note : null;
 
             if ($data['response'] === 'accept') {
+                $proposedOptionIds = collect(json_decode((string) ($adjustment->proposed_option_ids_payload ?? '[]'), true))
+                    ->map(fn ($value) => (int) $value)
+                    ->filter(fn ($value) => $value > 0)
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                if (empty($proposedOptionIds) && !empty($adjustment->proposed_service_option_id)) {
+                    $proposedOptionIds = [(int) $adjustment->proposed_service_option_id];
+                }
+
+                $bookingUpdate = [
+                    'price' => $adjustment->proposed_total,
+                    'adjustment_status' => 'adjustment_accepted',
+                    'updated_at' => now(),
+                ];
+
+                if (!empty($proposedOptionIds) && Schema::hasColumn('bookings', 'service_option_id')) {
+                    $bookingUpdate['service_option_id'] = (int) $proposedOptionIds[0];
+                }
+
                 DB::table('bookings')
                     ->where('id', $booking->id)
-                    ->update([
-                        'price' => $adjustment->proposed_total,
-                        'adjustment_status' => 'adjustment_accepted',
-                        'updated_at' => now(),
-                    ]);
+                    ->update($bookingUpdate);
+
+                if (
+                    !empty($proposedOptionIds)
+                    && Schema::hasTable('booking_service_options')
+                    && Schema::hasColumns('booking_service_options', ['booking_id', 'service_option_id'])
+                ) {
+                    DB::table('booking_service_options')
+                        ->where('booking_id', $booking->id)
+                        ->delete();
+
+                    $rows = collect($proposedOptionIds)
+                        ->map(fn ($optionId) => [
+                            'booking_id' => $booking->id,
+                            'service_option_id' => (int) $optionId,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ])
+                        ->values()
+                        ->all();
+
+                    if (!empty($rows)) {
+                        DB::table('booking_service_options')->insert($rows);
+                    }
+                }
 
                 DB::table('booking_adjustments')
                     ->where('id', $adjustment->id)
@@ -935,6 +976,7 @@ class CustomerBookingController extends Controller
                         'reference_code' => $booking->reference_code,
                         'old_price' => (float) ($booking->price ?? 0),
                         'new_price' => (float) ($adjustment->proposed_total ?? 0),
+                        'applied_option_ids' => $proposedOptionIds,
                     ]
                 );
 
@@ -1103,6 +1145,8 @@ class CustomerBookingController extends Controller
                 'original_option_summary',
                 'original_price',
                 'proposed_service_name',
+                'proposed_service_option_id',
+                'proposed_option_ids_payload',
                 'proposed_scope_summary',
                 'additional_fee',
                 'proposed_total',

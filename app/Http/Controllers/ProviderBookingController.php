@@ -16,6 +16,8 @@ use Illuminate\Support\Str;
 class ProviderBookingController extends Controller
 {
     private const ADJUSTMENT_MAX_INCREASE_PERCENT = 35.0;
+    private const HEAVY_SOILING_AUTO_PERCENT = 10.0;
+    private const HEAVY_SOILING_MIN_FEE = 300.0;
 
     private function columnOrDefault(string $table, string $column, string $alias, ?string $as = null, string $default = 'NULL')
     {
@@ -69,6 +71,8 @@ class ProviderBookingController extends Controller
             'original_option_summary',
             'original_price',
             'proposed_service_name',
+            'proposed_service_option_id',
+            'proposed_option_ids_payload',
             'proposed_scope_summary',
             'additional_fee',
             'proposed_total',
@@ -413,6 +417,12 @@ class ProviderBookingController extends Controller
             return null;
         }
 
+        $adjustment->proposed_option_ids = collect(json_decode((string) ($adjustment->proposed_option_ids_payload ?? '[]'), true))
+            ->map(fn ($value) => (int) $value)
+            ->filter(fn ($value) => $value > 0)
+            ->values()
+            ->all();
+
         $adjustment->reason_codes = collect(json_decode((string) ($adjustment->reason_payload ?? '[]'), true))
             ->filter(fn ($value) => is_string($value) && trim($value) !== '')
             ->values()
@@ -632,6 +642,90 @@ class ProviderBookingController extends Controller
                     ->unique()
                     ->implode(', ');
             });
+    }
+
+    private function bookingSelectedOptionIds(int $bookingId, $fallbackOptionId = null): array
+    {
+        $ids = collect();
+
+        if ($this->tableHasColumns('booking_service_options', ['booking_id', 'service_option_id'])) {
+            $ids = DB::table('booking_service_options')
+                ->where('booking_id', $bookingId)
+                ->pluck('service_option_id');
+        }
+
+        if ($ids->isEmpty() && $fallbackOptionId) {
+            $ids = collect([(int) $fallbackOptionId]);
+        }
+
+        return $ids
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function serviceOptionsForService(int $serviceId)
+    {
+        if (!$serviceId || !$this->tableHasColumns('service_options', ['id', 'service_id', 'label', 'price_addition'])) {
+            return collect();
+        }
+
+        return DB::table('service_options')
+            ->where('service_id', $serviceId)
+            ->orderBy('label')
+            ->get(['id', 'service_id', 'label', 'price_addition']);
+    }
+
+    private function specificAreaServiceId(): ?int
+    {
+        if (!Schema::hasTable('services') || !Schema::hasColumn('services', 'name')) {
+            return null;
+        }
+
+        $id = DB::table('services')
+            ->whereRaw('LOWER(name) = ?', ['specific area cleaning'])
+            ->value('id');
+
+        return $id ? (int) $id : null;
+    }
+
+    private function optionSummaryFromIds(array $optionIds, $optionsById): ?string
+    {
+        $labels = collect($optionIds)
+            ->map(fn ($id) => $optionsById->get((int) $id)?->label ?? null)
+            ->filter(fn ($label) => is_string($label) && trim($label) !== '')
+            ->unique()
+            ->values();
+
+        return $labels->isNotEmpty() ? $labels->implode(', ') : null;
+    }
+
+    private function optionIdsMatch(array $left, array $right): bool
+    {
+        sort($left);
+        sort($right);
+
+        return array_values($left) === array_values($right);
+    }
+
+    private function automaticReasonFee(array $reasonCodes, float $originalPrice): float
+    {
+        $reasonCodes = collect($reasonCodes)
+            ->map(fn ($code) => $this->normalizeStatusKey((string) $code))
+            ->filter()
+            ->values()
+            ->all();
+
+        if (!in_array('heavy_soiling', $reasonCodes, true)) {
+            return 0.0;
+        }
+
+        return round(max(
+            self::HEAVY_SOILING_MIN_FEE,
+            $originalPrice * (self::HEAVY_SOILING_AUTO_PERCENT / 100)
+        ), 2);
     }
 
     private function enrichBookings($bookings)
@@ -1034,7 +1128,50 @@ class ProviderBookingController extends Controller
             $this->bookingAdjustmentByBookingId((int) $booking->id)
         );
 
-        return view('provider.bookings.show', compact('booking', 'adjustment'));
+        $serviceOptions = $this->serviceOptionsForService((int) ($booking->service_id ?? 0))
+            ->map(function ($option) {
+                return (object) [
+                    'id' => (int) $option->id,
+                    'label' => trim((string) $option->label),
+                    'price_addition' => (float) ($option->price_addition ?? 0),
+                ];
+            })
+            ->values();
+
+        $serviceOptionsById = $serviceOptions->keyBy('id');
+        $currentOptionIds = $this->bookingSelectedOptionIds((int) ($booking->id ?? 0), $booking->service_option_id ?? null);
+        $requestedOptionIds = collect($adjustment->proposed_option_ids ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $serviceOptionsById->has($id))
+            ->values()
+            ->all();
+
+        if (empty($requestedOptionIds) && !empty($adjustment->proposed_service_option_id) && $serviceOptionsById->has((int) $adjustment->proposed_service_option_id)) {
+            $requestedOptionIds = [(int) $adjustment->proposed_service_option_id];
+        }
+
+        if (empty($requestedOptionIds)) {
+            $requestedOptionIds = $currentOptionIds;
+        }
+
+        $isSpecificAreaBooking = (int) ($booking->service_id ?? 0) !== 0
+            && (int) ($booking->service_id ?? 0) === (int) ($this->specificAreaServiceId() ?? 0);
+
+        $originalOptionSummary = $this->optionSummaryFromIds($currentOptionIds, $serviceOptionsById)
+            ?: trim((string) ($booking->option_label ?? ''));
+        $requestedOptionSummary = $this->optionSummaryFromIds($requestedOptionIds, $serviceOptionsById)
+            ?: $originalOptionSummary;
+
+        return view('provider.bookings.show', compact(
+            'booking',
+            'adjustment',
+            'serviceOptions',
+            'currentOptionIds',
+            'requestedOptionIds',
+            'isSpecificAreaBooking',
+            'originalOptionSummary',
+            'requestedOptionSummary'
+        ));
     }
 
     public function adjustmentEvidence(string $filename)
@@ -1062,9 +1199,9 @@ class ProviderBookingController extends Controller
             'reason_codes' => ['required', 'array', 'min:1'],
             'reason_codes.*' => ['required', 'string', 'in:larger_area,additional_rooms,heavy_soiling,other'],
             'other_reason' => ['nullable', 'string', 'max:600'],
-            'proposed_scope_summary' => ['required', 'string', 'max:1200'],
-            'additional_fee' => ['required', 'numeric', 'min:0'],
-            'proposed_total' => ['required', 'numeric', 'min:0'],
+            'corrected_option_id' => ['nullable', 'integer'],
+            'corrected_option_ids' => ['nullable', 'array', 'min:1'],
+            'corrected_option_ids.*' => ['integer', 'distinct'],
             'provider_note' => ['nullable', 'string', 'max:1200'],
             'evidence' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
         ]);
@@ -1088,7 +1225,10 @@ class ProviderBookingController extends Controller
                     'b.reference_code',
                     'b.status',
                     'b.price',
+                    'b.service_id',
+                    'b.service_option_id',
                     's.name as service_name',
+                    's.base_price',
                     DB::raw("COALESCE(areas.areas_label, o.label) as option_name")
                 )
                 ->first();
@@ -1103,7 +1243,7 @@ class ProviderBookingController extends Controller
 
                 return back()->withErrors([
                     'general' => 'Mismatch reporting is only available while the booking is in progress.',
-                ]);
+                ])->withInput();
             }
 
             $reasonCodes = collect($data['reason_codes'] ?? [])
@@ -1118,27 +1258,89 @@ class ProviderBookingController extends Controller
 
                 return back()->withErrors([
                     'other_reason' => 'Please describe the other onsite issue.',
-                ]);
+                ])->withInput();
             }
 
+            $serviceOptions = $this->serviceOptionsForService((int) ($booking->service_id ?? 0))->keyBy('id');
+
+            if ($serviceOptions->isEmpty()) {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    'general' => 'This booking has no adjustable scope options right now.',
+                ])->withInput();
+            }
+
+            $isSpecificAreaBooking = (int) ($booking->service_id ?? 0) !== 0
+                && (int) ($booking->service_id ?? 0) === (int) ($this->specificAreaServiceId() ?? 0);
+
+            $originalOptionIds = collect($this->bookingSelectedOptionIds(
+                (int) $booking->id,
+                $booking->service_option_id ?? null
+            ))
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn ($id) => $serviceOptions->has($id))
+                ->values()
+                ->all();
+
+            $correctedOptionIds = $isSpecificAreaBooking
+                ? collect($data['corrected_option_ids'] ?? [])
+                    ->map(fn ($id) => (int) $id)
+                    ->filter(fn ($id) => $serviceOptions->has($id))
+                    ->unique()
+                    ->values()
+                    ->all()
+                : collect([(int) ($data['corrected_option_id'] ?? 0)])
+                    ->filter(fn ($id) => $serviceOptions->has($id))
+                    ->values()
+                    ->all();
+
+            if (empty($correctedOptionIds)) {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    $isSpecificAreaBooking ? 'corrected_option_ids' : 'corrected_option_id' => $isSpecificAreaBooking
+                        ? 'Please select the corrected sections for this booking.'
+                        : 'Please select the corrected size or option for this booking.',
+                ])->withInput();
+            }
+
+            $scopeChangeRequested = collect($reasonCodes)
+                ->contains(fn ($code) => in_array($this->normalizeStatusKey((string) $code), ['larger_area', 'additional_rooms'], true));
+
+            if ($scopeChangeRequested && $this->optionIdsMatch($correctedOptionIds, $originalOptionIds)) {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    $isSpecificAreaBooking ? 'corrected_option_ids' : 'corrected_option_id' => $isSpecificAreaBooking
+                        ? 'Choose the corrected sections so the booking matches the actual onsite scope.'
+                        : 'Choose the corrected size or option so the booking matches the actual onsite scope.',
+                ])->withInput();
+            }
+
+            $originalOptionTotal = round(collect($originalOptionIds)->sum(function ($id) use ($serviceOptions) {
+                return (float) ($serviceOptions->get((int) $id)->price_addition ?? 0);
+            }), 2);
+            $correctedOptionTotal = round(collect($correctedOptionIds)->sum(function ($id) use ($serviceOptions) {
+                return (float) ($serviceOptions->get((int) $id)->price_addition ?? 0);
+            }), 2);
+
             $originalPrice = round((float) ($booking->price ?? 0), 2);
-            $additionalFee = round((float) $data['additional_fee'], 2);
-            $proposedTotal = round((float) $data['proposed_total'], 2);
+            $basePrice = round((float) ($booking->base_price ?? ($originalPrice - $originalOptionTotal)), 2);
+            if ($basePrice < 0) {
+                $basePrice = 0;
+            }
+
+            $automaticReasonFee = $this->automaticReasonFee($reasonCodes, $originalPrice);
+            $proposedTotal = round($basePrice + $correctedOptionTotal + $automaticReasonFee, 2);
+            $additionalFee = round($proposedTotal - $originalPrice, 2);
 
             if ($proposedTotal < $originalPrice) {
                 DB::rollBack();
 
                 return back()->withErrors([
-                    'proposed_total' => 'The proposed total cannot be lower than the original booking price.',
-                ]);
-            }
-
-            if (abs(($originalPrice + $additionalFee) - $proposedTotal) > 0.01) {
-                DB::rollBack();
-
-                return back()->withErrors([
-                    'proposed_total' => 'The proposed total must match the original price plus the added fee.',
-                ]);
+                    $isSpecificAreaBooking ? 'corrected_option_ids' : 'corrected_option_id' => 'The corrected selection cannot reduce the original booking total.',
+                ])->withInput();
             }
 
             $increasePercent = $originalPrice > 0
@@ -1149,8 +1351,8 @@ class ProviderBookingController extends Controller
                 DB::rollBack();
 
                 return back()->withErrors([
-                    'proposed_total' => 'Price adjustments cannot increase by more than ' . (int) self::ADJUSTMENT_MAX_INCREASE_PERCENT . '%.',
-                ]);
+                    $isSpecificAreaBooking ? 'corrected_option_ids' : 'corrected_option_id' => 'Price adjustments cannot increase by more than ' . (int) self::ADJUSTMENT_MAX_INCREASE_PERCENT . '%.',
+                ])->withInput();
             }
 
             $existingAdjustment = DB::table('booking_adjustments')
@@ -1163,7 +1365,7 @@ class ProviderBookingController extends Controller
 
                 return back()->withErrors([
                     'general' => 'This booking adjustment was already accepted and cannot be changed again.',
-                ]);
+                ])->withInput();
             }
 
             $file = $request->file('evidence');
@@ -1179,15 +1381,48 @@ class ProviderBookingController extends Controller
                 }
             }
 
+            $originalOptionSummary = $this->optionSummaryFromIds($originalOptionIds, $serviceOptions)
+                ?: trim((string) ($booking->option_name ?? ''))
+                ?: null;
+            $correctedOptionSummary = $this->optionSummaryFromIds($correctedOptionIds, $serviceOptions)
+                ?: $originalOptionSummary;
+
+            $scopeParts = [];
+            if ($correctedOptionSummary) {
+                $scopeParts[] = 'Updated selection: ' . $correctedOptionSummary;
+            }
+
+            if ($originalOptionSummary && $correctedOptionSummary && $originalOptionSummary !== $correctedOptionSummary) {
+                $scopeParts[] = 'Originally booked: ' . $originalOptionSummary;
+            }
+
+            if (!empty($reasonCodes)) {
+                $scopeParts[] = 'Reason: ' . collect($reasonCodes)
+                    ->map(fn ($code) => $this->adjustmentReasonLabel((string) $code))
+                    ->implode(', ');
+            }
+
+            if ($automaticReasonFee > 0) {
+                $scopeParts[] = 'Automatic condition fee: PHP ' . number_format($automaticReasonFee, 2);
+            }
+
+            if (!empty($data['other_reason'])) {
+                $scopeParts[] = 'Other note: ' . trim((string) $data['other_reason']);
+            }
+
+            $proposedScopeSummary = implode('. ', array_filter($scopeParts));
+
             $payload = [
                 'booking_id' => $booking->id,
                 'provider_id' => $providerId,
                 'customer_id' => $booking->customer_id,
                 'original_service_name' => $booking->service_name,
-                'original_option_summary' => trim((string) ($booking->option_name ?? '')) ?: null,
+                'original_option_summary' => $originalOptionSummary,
                 'original_price' => $originalPrice,
                 'proposed_service_name' => $booking->service_name,
-                'proposed_scope_summary' => trim((string) $data['proposed_scope_summary']),
+                'proposed_service_option_id' => $correctedOptionIds[0] ?? null,
+                'proposed_option_ids_payload' => json_encode(array_values($correctedOptionIds)),
+                'proposed_scope_summary' => $proposedScopeSummary,
                 'additional_fee' => $additionalFee,
                 'proposed_total' => $proposedTotal,
                 'price_increase_percent' => $increasePercent,
@@ -1256,8 +1491,8 @@ class ProviderBookingController extends Controller
             report($exception);
 
             return back()->withErrors([
-                'general' => 'Unable to submit the mismatch report right now. Please try again.',
-            ]);
+                    'general' => 'Unable to submit the mismatch report right now. Please try again.',
+            ])->withInput();
         }
     }
 
@@ -1388,7 +1623,7 @@ class ProviderBookingController extends Controller
         if (!in_array($next, $allowed[$current] ?? [], true)) {
             return back()->withErrors([
                 'status' => "Invalid status change: {$current} → {$next}",
-            ]);
+            ])->withInput();
         }
 
         $reason = trim((string) ($data['cancellation_reason'] ?? ''));
@@ -1396,7 +1631,7 @@ class ProviderBookingController extends Controller
         if ($next === 'cancelled' && $reason === '') {
             return back()->withErrors([
                 'cancellation_reason' => 'Please provide a reason before cancelling the booking.',
-            ]);
+            ])->withInput();
         }
 
         DB::transaction(function () use ($booking, $next, $providerId, $reason) {

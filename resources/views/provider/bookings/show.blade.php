@@ -144,22 +144,72 @@
     $cancelledByLabel = $cancelledByRole !== '' ? ucfirst(str_replace('_', ' ', $cancelledByRole)) : 'System';
     $bookingAdjustmentStatus = trim((string) ($booking->adjustment_status ?? ''));
     $canReportMismatch = $stLower === 'in_progress' && (($adjustment->status_key ?? '') !== 'adjustment_accepted');
+    $serviceOptionsById = collect($serviceOptions ?? [])
+        ->keyBy(fn ($option) => (int) ($option->id ?? 0));
+    $originalOptionIds = collect($currentOptionIds ?? [])
+        ->map(fn ($value) => (int) $value)
+        ->filter(fn ($value) => $value > 0 && $serviceOptionsById->has($value))
+        ->values()
+        ->all();
+    $defaultCorrectedOptionIds = collect($requestedOptionIds ?? [])
+        ->map(fn ($value) => (int) $value)
+        ->filter(fn ($value) => $value > 0 && $serviceOptionsById->has($value))
+        ->values()
+        ->all();
+
+    if (empty($defaultCorrectedOptionIds)) {
+        $defaultCorrectedOptionIds = $originalOptionIds;
+    }
+
     $selectedReasonCodes = collect(old('reason_codes', $adjustment->reason_codes ?? []))
         ->map(fn ($value) => trim((string) $value))
         ->filter()
         ->values()
         ->all();
-    $scopeSummaryValue = old('proposed_scope_summary', $adjustment->proposed_scope_summary ?? '');
-    $additionalFeeValue = old(
-        'additional_fee',
-        isset($adjustment->additional_fee) ? number_format((float) $adjustment->additional_fee, 2, '.', '') : ''
-    );
-    $proposedTotalValue = old(
-        'proposed_total',
-        isset($adjustment->proposed_total) ? number_format((float) $adjustment->proposed_total, 2, '.', '') : ''
-    );
+    $selectedCorrectedOptionIds = $isSpecificAreaBooking
+        ? collect(old('corrected_option_ids', $defaultCorrectedOptionIds))
+            ->map(fn ($value) => (int) $value)
+            ->filter(fn ($value) => $value > 0 && $serviceOptionsById->has($value))
+            ->unique()
+            ->values()
+            ->all()
+        : collect([(int) old('corrected_option_id', $defaultCorrectedOptionIds[0] ?? 0)])
+            ->filter(fn ($value) => $value > 0 && $serviceOptionsById->has($value))
+            ->values()
+            ->all();
+
+    $sumOptionPrices = function (array $optionIds) use ($serviceOptionsById) {
+        return round(collect($optionIds)->sum(fn ($id) => (float) ($serviceOptionsById->get((int) $id)->price_addition ?? 0)), 2);
+    };
+
+    $formatOptionLabels = function (array $optionIds) use ($serviceOptionsById) {
+        return collect($optionIds)
+            ->map(fn ($id) => trim((string) ($serviceOptionsById->get((int) $id)->label ?? '')))
+            ->filter()
+            ->implode(', ');
+    };
+
+    $originalSelectionLabel = $originalOptionSummary ?: trim((string) ($optionName ?: $serviceName));
+    $selectedCorrectedLabel = $formatOptionLabels($selectedCorrectedOptionIds) ?: $originalSelectionLabel;
+    $originalPrice = round((float) $amount, 2);
+    $originalOptionTotal = $sumOptionPrices($originalOptionIds);
+    $selectedCorrectedOptionTotal = $sumOptionPrices($selectedCorrectedOptionIds);
+    $serviceBasePrice = round($originalPrice - $originalOptionTotal, 2);
+    if ($serviceBasePrice < 0) {
+        $serviceBasePrice = 0.0;
+    }
+    $automaticReasonFee = in_array('heavy_soiling', $selectedReasonCodes, true)
+        ? round(max(300, $originalPrice * 0.10), 2)
+        : 0.0;
+    $previewProposedTotal = round($serviceBasePrice + $selectedCorrectedOptionTotal + $automaticReasonFee, 2);
+    $previewAdditionalFee = round($previewProposedTotal - $originalPrice, 2);
+    $adjustmentMaxIncreasePercent = 35.0;
+    $previewIncreasePercent = $originalPrice > 0
+        ? round((($previewProposedTotal - $originalPrice) / $originalPrice) * 100, 2)
+        : 0.0;
     $otherReasonValue = old('other_reason', $adjustment->other_reason ?? '');
     $providerNoteValue = old('provider_note', $adjustment->provider_note ?? '');
+    $showOtherReason = in_array('other', $selectedReasonCodes, true);
 @endphp
 
 <style>
@@ -537,6 +587,77 @@
     line-height: 1.5;
 }
 
+.option-choice{
+    align-items:flex-start;
+}
+
+.option-choice.is-selected{
+    border-color: rgba(56,189,248,.38);
+    background: rgba(56,189,248,.08);
+}
+
+.option-choice-copy{
+    display:grid;
+    gap: 4px;
+}
+
+.option-choice-title{
+    color: rgba(255,255,255,.94);
+    font-weight: 900;
+}
+
+.option-choice-price{
+    color: var(--muted);
+    font-size: .84rem;
+    font-weight: 800;
+}
+
+.field-block[hidden]{
+    display:none !important;
+}
+
+.adjustment-preview{
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(2,6,23,.26);
+    border-radius: 18px;
+    padding: 14px;
+    display:grid;
+    gap: 12px;
+}
+
+.preview-grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.preview-stat{
+    border: 1px solid rgba(255,255,255,.06);
+    background: rgba(255,255,255,.02);
+    border-radius: 14px;
+    padding: 12px;
+    display:grid;
+    gap: 6px;
+}
+
+.preview-value{
+    color: rgba(255,255,255,.94);
+    font-weight: 900;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.preview-value.accent{
+    color: var(--accent);
+}
+
+.preview-note{
+    color: var(--muted);
+    font-size: .84rem;
+    font-weight: 800;
+    line-height: 1.5;
+}
+
 .tracking-card{
     margin-top: 12px;
 }
@@ -626,7 +747,8 @@
     .kvGrid{ grid-template-columns: 1fr; }
     .compare-grid,
     .choice-grid,
-    .field-grid{ grid-template-columns: 1fr; }
+    .field-grid,
+    .preview-grid{ grid-template-columns: 1fr; }
     .btnx{ width:100%; }
     .tracking-controls{
         width:100%;
@@ -812,16 +934,17 @@
                             <div class="compare-box">
                                 <div class="k">Original Details</div>
                                 <div class="v">{{ $serviceName }}</div>
-                                <div class="adjustment-copy">{{ $optionName ?: 'Selected option not available.' }}</div>
-                                <div class="adjustment-copy">Original total: PHP {{ number_format($amount, 2) }}</div>
+                                <div class="adjustment-copy">{{ $originalSelectionLabel ?: 'Selected option not available.' }}</div>
+                                <div class="adjustment-copy">Original total: PHP {{ number_format($originalPrice, 2) }}</div>
                             </div>
                             <div class="compare-box">
-                                <div class="k">Mismatch Flow</div>
-                                <div class="adjustment-copy">Explain the mismatch, upload evidence, and submit an updated total for the customer to review.</div>
+                                <div class="k">How It Works</div>
+                                <div class="adjustment-copy">Pick the mismatch reason, correct the actual onsite size or sections, and upload evidence.</div>
+                                <div class="adjustment-copy">The system calculates the added fee automatically and sends the updated total to the customer for approval.</div>
                             </div>
                         </div>
 
-                        <form method="POST" action="{{ route('provider.bookings.adjustment.submit', $booking->reference_code) }}" enctype="multipart/form-data" class="adjustment-form">
+                        <form method="POST" action="{{ route('provider.bookings.adjustment.submit', $booking->reference_code) }}" enctype="multipart/form-data" class="adjustment-form" data-adjustment-form>
                             @csrf
 
                             <div class="field-block">
@@ -834,7 +957,7 @@
                                         'other' => 'Other reason',
                                     ] as $code => $label)
                                         <label class="choice-card">
-                                            <input type="checkbox" name="reason_codes[]" value="{{ $code }}" @checked(in_array($code, $selectedReasonCodes, true))>
+                                            <input type="checkbox" name="reason_codes[]" value="{{ $code }}" data-reason-code="{{ $code }}" @checked(in_array($code, $selectedReasonCodes, true))>
                                             <span>{{ $label }}</span>
                                         </label>
                                     @endforeach
@@ -849,31 +972,59 @@
 
                             <div class="field-grid">
                                 <div class="field-block full">
-                                    <label class="field-label" for="proposed_scope_summary">Updated Scope Summary</label>
-                                    <textarea class="field-textarea" id="proposed_scope_summary" name="proposed_scope_summary" placeholder="Example: Two extra rooms were added and kitchen grease requires deeper work.">{{ $scopeSummaryValue }}</textarea>
-                                    @error('proposed_scope_summary')
+                                    <div class="field-label">Corrected Selection</div>
+                                    @if($isSpecificAreaBooking)
+                                        <div class="choice-grid">
+                                            @foreach($serviceOptions as $option)
+                                                @php($optionId = (int) ($option->id ?? 0))
+                                                <label class="choice-card option-choice @if(in_array($optionId, $selectedCorrectedOptionIds, true)) is-selected @endif" data-option-choice>
+                                                    <input
+                                                        type="checkbox"
+                                                        name="corrected_option_ids[]"
+                                                        value="{{ $optionId }}"
+                                                        data-option-checkbox
+                                                        data-option-id="{{ $optionId }}"
+                                                        data-option-label="{{ $option->label }}"
+                                                        data-option-price="{{ number_format((float) ($option->price_addition ?? 0), 2, '.', '') }}"
+                                                        @checked(in_array($optionId, $selectedCorrectedOptionIds, true))
+                                                    >
+                                                    <span class="option-choice-copy">
+                                                        <span class="option-choice-title">{{ $option->label }}</span>
+                                                        <span class="option-choice-price">+ PHP {{ number_format((float) ($option->price_addition ?? 0), 2) }}</span>
+                                                    </span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <select class="field-input" id="corrected_option_id" name="corrected_option_id" data-option-select>
+                                            <option value="">Choose corrected size or scope</option>
+                                            @foreach($serviceOptions as $option)
+                                                @php($optionId = (int) ($option->id ?? 0))
+                                                <option
+                                                    value="{{ $optionId }}"
+                                                    data-option-id="{{ $optionId }}"
+                                                    data-option-label="{{ $option->label }}"
+                                                    data-option-price="{{ number_format((float) ($option->price_addition ?? 0), 2, '.', '') }}"
+                                                    @selected(($selectedCorrectedOptionIds[0] ?? 0) === $optionId)
+                                                >
+                                                    {{ $option->label }} (+ PHP {{ number_format((float) ($option->price_addition ?? 0), 2) }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    @endif
+                                    <div class="field-help">Choose the actual onsite size or section set. The total updates automatically.</div>
+                                    @error('corrected_option_id')
+                                        <div class="field-error">{{ $message }}</div>
+                                    @enderror
+                                    @error('corrected_option_ids')
+                                        <div class="field-error">{{ $message }}</div>
+                                    @enderror
+                                    @error('corrected_option_ids.*')
                                         <div class="field-error">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <div class="field-block">
-                                    <label class="field-label" for="additional_fee">Additional Fee</label>
-                                    <input class="field-input" id="additional_fee" name="additional_fee" type="number" min="0" step="0.01" value="{{ $additionalFeeValue }}" placeholder="0.00">
-                                    @error('additional_fee')
-                                        <div class="field-error">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="field-block">
-                                    <label class="field-label" for="proposed_total">Proposed Total</label>
-                                    <input class="field-input" id="proposed_total" name="proposed_total" type="number" min="0" step="0.01" value="{{ $proposedTotalValue }}" placeholder="{{ number_format($amount, 2, '.', '') }}">
-                                    <div class="field-help">The system limits how much the total can increase.</div>
-                                    @error('proposed_total')
-                                        <div class="field-error">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="field-block full">
+                                <div class="field-block full" data-other-reason-wrap @if(!$showOtherReason) hidden @endif>
                                     <label class="field-label" for="other_reason">Other Reason</label>
                                     <textarea class="field-textarea" id="other_reason" name="other_reason" placeholder="Add a short reason if needed.">{{ $otherReasonValue }}</textarea>
                                     @error('other_reason')
@@ -899,8 +1050,53 @@
                                 </div>
                             </div>
 
+                            <div class="field-block full">
+                                <div class="field-label">Updated Quote Preview</div>
+                                <div
+                                    class="adjustment-preview"
+                                    data-adjustment-preview
+                                    data-original-price="{{ number_format($originalPrice, 2, '.', '') }}"
+                                    data-service-base-price="{{ number_format($serviceBasePrice, 2, '.', '') }}"
+                                    data-original-option-total="{{ number_format($originalOptionTotal, 2, '.', '') }}"
+                                    data-original-selection="{{ $originalSelectionLabel }}"
+                                    data-original-option-ids='@json(array_values($originalOptionIds))'
+                                    data-max-increase="{{ number_format($adjustmentMaxIncreasePercent, 2, '.', '') }}"
+                                >
+                                    <div class="preview-grid">
+                                        <div class="preview-stat">
+                                            <div class="field-label">Original Selection</div>
+                                            <div class="preview-value">{{ $originalSelectionLabel }}</div>
+                                        </div>
+                                        <div class="preview-stat">
+                                            <div class="field-label">Corrected Selection</div>
+                                            <div class="preview-value" data-preview-selection>{{ $selectedCorrectedLabel }}</div>
+                                        </div>
+                                        <div class="preview-stat">
+                                            <div class="field-label">Original Total</div>
+                                            <div class="preview-value">PHP {{ number_format($originalPrice, 2) }}</div>
+                                        </div>
+                                        <div class="preview-stat">
+                                            <div class="field-label">Automatic Condition Fee</div>
+                                            <div class="preview-value" data-preview-auto-fee>PHP {{ number_format($automaticReasonFee, 2) }}</div>
+                                        </div>
+                                        <div class="preview-stat">
+                                            <div class="field-label">Additional Fee</div>
+                                            <div class="preview-value" data-preview-additional-fee>PHP {{ number_format($previewAdditionalFee, 2) }}</div>
+                                        </div>
+                                        <div class="preview-stat">
+                                            <div class="field-label">Proposed Total</div>
+                                            <div class="preview-value accent" data-preview-proposed-total>PHP {{ number_format($previewProposedTotal, 2) }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="preview-note" data-preview-note>
+                                        Increase: {{ number_format($previewIncreasePercent, 2) }}% of the original total.
+                                    </div>
+                                    <div class="field-error" data-adjustment-warning hidden></div>
+                                </div>
+                            </div>
+
                             <div class="actions">
-                                <button type="submit" class="btnx primary">Send Adjustment Request</button>
+                                <button type="submit" class="btnx primary" data-adjustment-submit>Send Adjustment Request</button>
                             </div>
                         </form>
                     </div>
@@ -959,6 +1155,167 @@
 
     </div>
 </div>
+
+<script>
+(() => {
+    const form = document.querySelector('[data-adjustment-form]');
+
+    if (!form) {
+        return;
+    }
+
+    const preview = form.querySelector('[data-adjustment-preview]');
+    const selectionText = form.querySelector('[data-preview-selection]');
+    const autoFeeText = form.querySelector('[data-preview-auto-fee]');
+    const additionalFeeText = form.querySelector('[data-preview-additional-fee]');
+    const proposedTotalText = form.querySelector('[data-preview-proposed-total]');
+    const previewNote = form.querySelector('[data-preview-note]');
+    const warningEl = form.querySelector('[data-adjustment-warning]');
+    const submitBtn = form.querySelector('[data-adjustment-submit]');
+    const otherReasonWrap = form.querySelector('[data-other-reason-wrap]');
+    const otherReasonField = form.querySelector('#other_reason');
+    const optionSelect = form.querySelector('[data-option-select]');
+    const optionCheckboxes = Array.from(form.querySelectorAll('[data-option-checkbox]'));
+    const optionChoiceCards = Array.from(form.querySelectorAll('[data-option-choice]'));
+    const reasonCheckboxes = Array.from(form.querySelectorAll('[data-reason-code]'));
+
+    if (!preview || !selectionText || !autoFeeText || !additionalFeeText || !proposedTotalText || !previewNote || !warningEl || !submitBtn) {
+        return;
+    }
+
+    const originalPrice = Number(preview.dataset.originalPrice || 0);
+    const serviceBasePrice = Number(preview.dataset.serviceBasePrice || 0);
+    const maxIncreasePercent = Number(preview.dataset.maxIncrease || 35);
+    const originalSelection = preview.dataset.originalSelection || 'Original selection';
+    const originalOptionIds = JSON.parse(preview.dataset.originalOptionIds || '[]').map((value) => Number(value));
+
+    const formatCurrency = (value) => `PHP ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    const selectedReasons = () => reasonCheckboxes
+        .filter((checkbox) => checkbox.checked)
+        .map((checkbox) => checkbox.dataset.reasonCode || checkbox.value);
+
+    const selectedOptionState = () => {
+        if (optionSelect) {
+            const selected = optionSelect.options[optionSelect.selectedIndex];
+            const optionId = Number(selected?.dataset.optionId || selected?.value || 0);
+
+            if (!optionId) {
+                return {
+                    ids: [],
+                    total: 0,
+                    label: 'Choose corrected size or scope',
+                };
+            }
+
+            return {
+                ids: [optionId],
+                total: Number(selected?.dataset.optionPrice || 0),
+                label: selected?.dataset.optionLabel || selected?.textContent?.trim() || originalSelection,
+            };
+        }
+
+        const chosen = optionCheckboxes.filter((checkbox) => checkbox.checked);
+
+        return {
+            ids: chosen.map((checkbox) => Number(checkbox.dataset.optionId || checkbox.value || 0)).filter((value) => value > 0),
+            total: chosen.reduce((sum, checkbox) => sum + Number(checkbox.dataset.optionPrice || 0), 0),
+            label: chosen.map((checkbox) => checkbox.dataset.optionLabel || '').filter(Boolean).join(', ') || originalSelection,
+        };
+    };
+
+    const matchesOriginalSelection = (ids) => {
+        const normalizedLeft = [...ids].map(Number).filter((value) => value > 0).sort((a, b) => a - b);
+        const normalizedRight = [...originalOptionIds].map(Number).filter((value) => value > 0).sort((a, b) => a - b);
+
+        if (normalizedLeft.length !== normalizedRight.length) {
+            return false;
+        }
+
+        return normalizedLeft.every((value, index) => value === normalizedRight[index]);
+    };
+
+    const syncChoiceCards = () => {
+        optionChoiceCards.forEach((card) => {
+            const checkbox = card.querySelector('[data-option-checkbox]');
+            card.classList.toggle('is-selected', Boolean(checkbox?.checked));
+        });
+    };
+
+    const syncOtherReason = () => {
+        const showOtherReason = selectedReasons().includes('other');
+
+        if (otherReasonWrap) {
+            otherReasonWrap.hidden = !showOtherReason;
+        }
+
+        if (otherReasonField) {
+            otherReasonField.required = showOtherReason;
+
+            if (!showOtherReason) {
+                otherReasonField.value = '';
+            }
+        }
+    };
+
+    const syncPreview = () => {
+        const reasons = selectedReasons();
+        const optionState = selectedOptionState();
+        const hasScopeReason = reasons.includes('larger_area') || reasons.includes('additional_rooms');
+        const autoConditionFee = reasons.includes('heavy_soiling')
+            ? Math.max(300, originalPrice * 0.10)
+            : 0;
+        const proposedTotal = Number((serviceBasePrice + optionState.total + autoConditionFee).toFixed(2));
+        const additionalFee = Number((proposedTotal - originalPrice).toFixed(2));
+        const increasePercent = originalPrice > 0
+            ? Number((((proposedTotal - originalPrice) / originalPrice) * 100).toFixed(2))
+            : 0;
+
+        selectionText.textContent = optionState.label || originalSelection;
+        autoFeeText.textContent = formatCurrency(autoConditionFee);
+        additionalFeeText.textContent = formatCurrency(additionalFee);
+        proposedTotalText.textContent = formatCurrency(proposedTotal);
+        previewNote.textContent = `Increase: ${increasePercent.toFixed(2)}% of the original total.`;
+
+        let warning = '';
+        if (!optionState.ids.length) {
+            warning = 'Choose the corrected size or sections before sending the mismatch request.';
+        } else if (hasScopeReason && matchesOriginalSelection(optionState.ids)) {
+            warning = 'Choose a different size or section set when reporting a larger area or additional rooms.';
+        } else if (proposedTotal < originalPrice) {
+            warning = 'The corrected selection cannot reduce the original booking total.';
+        } else if (increasePercent > maxIncreasePercent) {
+            warning = `This update exceeds the ${maxIncreasePercent.toFixed(0)}% safety limit.`;
+        }
+
+        warningEl.hidden = warning === '';
+        warningEl.textContent = warning;
+        submitBtn.disabled = warning !== '';
+    };
+
+    if (optionSelect) {
+        optionSelect.addEventListener('change', syncPreview);
+    }
+
+    optionCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', () => {
+            syncChoiceCards();
+            syncPreview();
+        });
+    });
+
+    reasonCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', () => {
+            syncOtherReason();
+            syncPreview();
+        });
+    });
+
+    syncChoiceCards();
+    syncOtherReason();
+    syncPreview();
+})();
+</script>
 
 <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
