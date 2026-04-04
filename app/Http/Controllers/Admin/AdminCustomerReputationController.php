@@ -126,6 +126,7 @@ class AdminCustomerReputationController extends Controller
         $customers = $this->sortCustomers($customers, $sort)->values();
 
         $history = $this->loadRatingHistory($customers->pluck('id')->all());
+        $suspiciousRatings = $this->loadSuspiciousRatings();
         $topCustomers = $customers->sortByDesc(function ($row) {
             return ($row->reputation_score * 1000) + ($row->completed_bookings * 10) + $row->rating_count;
         })->take(5)->values();
@@ -145,6 +146,7 @@ class AdminCustomerReputationController extends Controller
         return view('admin.customer_reputation', compact(
             'customers',
             'history',
+            'suspiciousRatings',
             'summary',
             'topCustomers',
             'problematicCustomers',
@@ -207,6 +209,79 @@ class AdminCustomerReputationController extends Controller
             ->groupBy('customer_id');
 
         return $rows;
+    }
+
+    private function loadSuspiciousRatings()
+    {
+        $areasSub = $this->bookingAreasSubquery();
+
+        return DB::table('customer_ratings as cr')
+            ->join('customers as c', 'c.id', '=', 'cr.customer_id')
+            ->join('service_providers as p', 'p.id', '=', 'cr.provider_id')
+            ->leftJoin('bookings as b', 'b.id', '=', 'cr.booking_id')
+            ->leftJoin('services as s', 's.id', '=', 'b.service_id')
+            ->leftJoin('service_options as o', 'o.id', '=', 'b.service_option_id')
+            ->leftJoinSub($areasSub, 'areas', function ($join) {
+                $join->on('areas.booking_id', '=', 'b.id');
+            })
+            ->orderByDesc('cr.created_at')
+            ->limit(200)
+            ->select(
+                'cr.id',
+                'cr.customer_id',
+                'cr.booking_id',
+                'cr.rating',
+                'cr.unexpected_extra_work',
+                'cr.flag_understated_area',
+                'cr.flag_hidden_sections',
+                'cr.flag_misleading_request',
+                'cr.flag_difficult_behavior',
+                'cr.flag_payment_issue',
+                'cr.flag_last_minute_changes',
+                'cr.comment',
+                'cr.attachment_path',
+                'cr.attachment_name',
+                'cr.attachment_mime',
+                'cr.edit_count',
+                'cr.created_at',
+                'b.reference_code',
+                'b.booking_date',
+                's.name as service_name',
+                DB::raw("COALESCE(areas.areas_label, o.label) as option_name"),
+                'c.name as customer_name',
+                'c.email as customer_email',
+                DB::raw("TRIM(CONCAT(COALESCE(p.first_name,''), ' ', COALESCE(p.last_name,''))) as provider_name")
+            )
+            ->get()
+            ->map(function ($row) {
+                $flags = collect([
+                    !empty($row->flag_understated_area) ? 'Understated area' : null,
+                    !empty($row->flag_hidden_sections) ? 'Hidden sections' : null,
+                    !empty($row->flag_misleading_request) ? 'Misleading request' : null,
+                    !empty($row->flag_difficult_behavior) ? 'Difficult behavior' : null,
+                    !empty($row->flag_payment_issue) ? 'Payment issue' : null,
+                    !empty($row->flag_last_minute_changes) ? 'Last-minute changes' : null,
+                    !empty($row->unexpected_extra_work) ? 'Unexpected extra work' : null,
+                ])->filter()->values()->all();
+
+                $row->suspicion_flags = $flags;
+                $row->negative_flags_count = count($flags);
+                $row->suspicion_score =
+                    ($row->negative_flags_count * 3) +
+                    ((int) $row->rating <= 2 ? 3 : 0) +
+                    (!empty($row->attachment_path) ? 1 : 0) +
+                    ((int) ($row->edit_count ?? 0) > 0 ? 1 : 0);
+
+                return $row;
+            })
+            ->filter(function ($row) {
+                return $row->negative_flags_count > 0 || (int) $row->rating <= 2;
+            })
+            ->sortByDesc(function ($row) {
+                return ($row->suspicion_score * 1000000000) + strtotime((string) $row->created_at);
+            })
+            ->take(8)
+            ->values();
     }
 
     private function reputationScore(object $row): int

@@ -10,6 +10,7 @@
     $topCustomers = collect($topCustomers ?? []);
     $problematicCustomers = collect($problematicCustomers ?? []);
     $history = $history ?? collect();
+    $suspiciousRatings = collect($suspiciousRatings ?? []);
     $summary = $summary ?? (object) [
         'customers' => 0,
         'rated_customers' => 0,
@@ -212,6 +213,71 @@
                 </div>
             @endif
         </div>
+    </div>
+
+    <div class="rep-card panel-card">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Suspicious Ratings Review</h2>
+                <p class="panel-sub">Recent low-score or flagged customer ratings that may need admin review.</p>
+            </div>
+            <div class="rep-chip"><i class="fa-solid fa-flag"></i> {{ $suspiciousRatings->count() }} recent</div>
+        </div>
+
+        @if($suspiciousRatings->isEmpty())
+            <div class="empty-note">No suspicious customer ratings found right now.</div>
+        @else
+            <div class="history-list">
+                @foreach($suspiciousRatings as $item)
+                    @php
+                        $attachment = !empty($item->attachment_path)
+                            ? route('customer.ratings.attachment', ['filename' => basename($item->attachment_path)])
+                            : null;
+                    @endphp
+                    <div class="history-card">
+                        <div class="history-top">
+                            <div>
+                                <div class="history-title">{{ $item->customer_name }} / {{ $item->provider_name ?: 'Provider' }}</div>
+                                <div class="history-meta">
+                                    {{ $item->service_name ?: 'Service' }}
+                                    @if(!empty($item->option_name))
+                                        / {{ $item->option_name }}
+                                    @endif
+                                    @if(!empty($item->reference_code))
+                                        / {{ $item->reference_code }}
+                                    @endif
+                                    @if(!empty($item->booking_date))
+                                        / {{ Carbon::parse($item->booking_date)->format('M d, Y') }}
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="rating-badge"><i class="fa-solid fa-star"></i> {{ (int) $item->rating }}/5</div>
+                        </div>
+
+                        @if(collect($item->suspicion_flags)->isNotEmpty())
+                            <div class="history-flags">
+                                @foreach($item->suspicion_flags as $flag)
+                                    <span class="history-flag issue">{{ $flag }}</span>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @if(!empty($item->comment))
+                            <div class="history-comment">{{ $item->comment }}</div>
+                        @endif
+
+                        @if($attachment)
+                            <div class="history-attachment">
+                                @if(str_starts_with((string) $item->attachment_mime, 'image/'))
+                                    <img src="{{ $attachment }}" alt="Suspicious rating attachment">
+                                @endif
+                                <a href="{{ $attachment }}" target="_blank" rel="noopener">{{ $item->attachment_name ?: 'Open attachment' }}</a>
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        @endif
     </div>
 
     <div class="rep-card table-card">
