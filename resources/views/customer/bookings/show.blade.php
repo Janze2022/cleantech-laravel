@@ -415,7 +415,7 @@
 
 .response-choice-grid{
     display:grid;
-    grid-template-columns:repeat(3, minmax(0, 1fr));
+    grid-template-columns:repeat(2, minmax(0, 1fr));
     gap:.75rem;
 }
 
@@ -771,13 +771,14 @@
                         <div>
                             <label class="label" for="customer_response_note">Reply to Provider</label>
                             <textarea id="customer_response_note" name="customer_response_note" placeholder="Optional note for the provider.">{{ old('customer_response_note', $adjustment->customer_response_note ?? '') }}</textarea>
-                            <div class="form-help">Choose whether to continue with the updated booking, keep the original booking, or cancel it.</div>
+                            <div class="form-help">Choose whether to accept the update, ask the provider to review it again, keep the original booking, or cancel it.</div>
                             @error('customer_response_note')
                                 <div class="field-error">{{ $message }}</div>
                             @enderror
                         </div>
                         <div class="response-choice-grid">
                             <button type="submit" class="btnx primary" name="response" value="accept">Accept Updated Booking</button>
+                            <button type="submit" class="btnx" name="response" value="request_revision">Ask Provider to Review</button>
                             <button type="submit" class="btnx" name="response" value="reject">Reject, Keep Original</button>
                             <button type="button" class="btnx danger response-cancel-toggle">Reject and Cancel</button>
                         </div>
@@ -1031,6 +1032,7 @@
         const cancelPanel = form.querySelector('.cancel-response-panel');
         const cancelToggle = form.querySelector('.response-cancel-toggle');
         const cancelReason = form.querySelector('[name="cancellation_reason"]');
+        const noteField = form.querySelector('[name="customer_response_note"]');
 
         const openCancelPanel = () => {
             if (!cancelPanel) return;
@@ -1063,6 +1065,16 @@
             if (action === 'accept') {
                 closeCancelPanel();
                 message = 'Accept this updated scope and total? The booking will continue using the provider\'s onsite update.';
+            } else if (action === 'request_revision') {
+                closeCancelPanel();
+
+                if (!noteField || noteField.value.trim() === '') {
+                    event.preventDefault();
+                    noteField?.focus();
+                    return;
+                }
+
+                message = 'Ask the provider to review this onsite update again? Your note will be sent and the adjustment will stay pending.';
             } else if (action === 'reject') {
                 closeCancelPanel();
                 message = 'Reject this update and keep the original booking? The booking will stay on the original scope and original price.';

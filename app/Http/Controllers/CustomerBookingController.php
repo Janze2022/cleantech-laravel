@@ -859,7 +859,7 @@ class CustomerBookingController extends Controller
         }
 
         $data = $request->validate([
-            'response' => ['required', 'string', 'in:accept,reject,reject_cancel'],
+            'response' => ['required', 'string', 'in:accept,reject,reject_cancel,request_revision'],
             'customer_response_note' => ['nullable', 'string', 'max:1000'],
             'cancellation_reason' => ['nullable', 'string', 'max:600'],
         ]);
@@ -909,6 +909,59 @@ class CustomerBookingController extends Controller
             $note = trim((string) ($data['customer_response_note'] ?? ''));
             $note = $note !== '' ? $note : null;
             $cancellationReason = trim((string) ($data['cancellation_reason'] ?? ''));
+
+            if ($data['response'] === 'request_revision') {
+                if ($note === null) {
+                    DB::rollBack();
+
+                    return back()->withErrors([
+                        'customer_response_note' => 'Please tell the provider what needs to be reviewed.',
+                    ])->withInput();
+                }
+
+                DB::table('bookings')
+                    ->where('id', $booking->id)
+                    ->update([
+                        'adjustment_status' => 'pending_adjustment_approval',
+                        'updated_at' => now(),
+                    ]);
+
+                DB::table('booking_adjustments')
+                    ->where('id', $adjustment->id)
+                    ->update([
+                        'status' => 'pending_adjustment_approval',
+                        'customer_response_note' => $note,
+                        'resolved_at' => null,
+                        'updated_at' => now(),
+                    ]);
+
+                $this->logBookingAdjustmentActivity(
+                    (int) $adjustment->id,
+                    (int) $booking->id,
+                    'customer',
+                    $customerId,
+                    'revision_requested',
+                    $note,
+                    [
+                        'reference_code' => $booking->reference_code,
+                        'kept_price' => (float) ($booking->price ?? 0),
+                        'requested_total' => (float) ($adjustment->proposed_total ?? 0),
+                    ]
+                );
+
+                $this->notifyProviderAboutAdjustmentDecision(
+                    $booking,
+                    'revision_requested',
+                    $note,
+                    (float) ($adjustment->proposed_total ?? 0)
+                );
+
+                DB::commit();
+
+                return redirect()
+                    ->route('customer.bookings.show', $booking->reference_code)
+                    ->with('success', 'Your note was sent. The provider can review and update the mismatch request.');
+            }
 
             if ($data['response'] === 'accept') {
                 $proposedOptionIds = collect(json_decode((string) ($adjustment->proposed_option_ids_payload ?? '[]'), true))
@@ -1343,6 +1396,7 @@ class CustomerBookingController extends Controller
             'created' => 'Adjustment sent',
             'updated' => 'Adjustment updated',
             'accepted' => 'Adjustment accepted',
+            'revision_requested' => 'Customer asked for a review',
             'rejected' => 'Adjustment rejected',
             'cancelled_booking' => 'Booking cancelled',
             default => ucwords(str_replace('_', ' ', trim($action))),
@@ -1363,6 +1417,14 @@ class CustomerBookingController extends Controller
                     ? 'Customer agreed to the updated total of PHP ' . number_format((float) $payload['new_price'], 2) . '.'
                     : null,
                 $this->priceChangeSummary($payload, 'old_price', 'new_price'),
+            ]),
+            'revision_requested' => $this->firstFilled([
+                isset($payload['requested_total'])
+                    ? 'Customer asked the provider to review the requested total of PHP ' . number_format((float) $payload['requested_total'], 2) . ' before deciding.'
+                    : null,
+                isset($payload['kept_price'])
+                    ? 'Customer wants to review the mismatch and is still holding the original total of PHP ' . number_format((float) $payload['kept_price'], 2) . '.'
+                    : null,
             ]),
             'rejected' => $this->firstFilled([
                 isset($payload['kept_price']) && isset($payload['rejected_total'])
@@ -1569,11 +1631,19 @@ class CustomerBookingController extends Controller
 
         $message = $decision === 'accepted'
             ? 'The customer accepted the booking adjustment for ref ' . $booking->reference_code . '.'
-            : 'The customer rejected the booking adjustment for ref ' . $booking->reference_code . '.';
+            : ($decision === 'revision_requested'
+                ? 'The customer asked you to review the booking adjustment for ref ' . $booking->reference_code . '.'
+                : 'The customer rejected the booking adjustment for ref ' . $booking->reference_code . '.');
 
         if ($decision === 'accepted' && $proposedTotal !== null) {
             $message .= ' Total updated from PHP ' . number_format((float) ($booking->price ?? 0), 2)
                 . ' to PHP ' . number_format($proposedTotal, 2) . '.';
+        } elseif ($decision === 'revision_requested') {
+            if ($proposedTotal !== null) {
+                $message .= ' Current requested total is PHP ' . number_format($proposedTotal, 2) . '.';
+            }
+
+            $message .= ' The booking still stays on the original total of PHP ' . number_format((float) ($booking->price ?? 0), 2) . ' until the customer accepts an update.';
         } elseif ($decision === 'rejected') {
             if ($proposedTotal !== null) {
                 $message .= ' Requested total was PHP ' . number_format($proposedTotal, 2) . '.';

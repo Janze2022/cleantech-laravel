@@ -486,6 +486,7 @@ class AdminBookingController extends Controller
             'created' => 'Adjustment sent',
             'updated' => 'Adjustment updated',
             'accepted' => 'Adjustment accepted',
+            'revision_requested' => 'Customer asked for a review',
             'rejected' => 'Adjustment rejected',
             'cancelled_booking' => 'Booking cancelled',
             default => ucwords(str_replace('_', ' ', trim($action))),
@@ -507,6 +508,15 @@ class AdminBookingController extends Controller
                     ? 'Customer approved PHP ' . number_format((float) $payload['new_price'], 2) . '.'
                     : null,
                 $this->priceChangeSummary($payload, 'old_price', 'new_price'),
+                $note,
+            ]),
+            'revision_requested' => $this->firstFilledText([
+                isset($payload['requested_total'])
+                    ? 'Customer asked the provider to review PHP ' . number_format((float) $payload['requested_total'], 2) . ' again before deciding.'
+                    : null,
+                isset($payload['kept_price'])
+                    ? 'Customer is still holding the original total of PHP ' . number_format((float) $payload['kept_price'], 2) . '.'
+                    : null,
                 $note,
             ]),
             'rejected' => $this->firstFilledText([
