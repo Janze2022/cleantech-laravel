@@ -560,9 +560,19 @@
                 return;
             }
 
-            const message = selectedValue === 'cancelled'
-                ? 'Cancel this booking? This cannot be undone, and the customer will be notified right away.'
-                : `Update this booking to ${selectedLabel}? Continue only if you are sure.`;
+            if (selectedValue === 'cancelled' && !reasonInput.value.trim()) {
+                event.preventDefault();
+                reasonInput.focus();
+                return;
+            }
+
+            let message = `Update this booking to ${selectedLabel}? Continue only if you are sure.`;
+
+            if (selectedValue === 'cancelled') {
+                message = 'Cancel this booking? The customer will be notified right away, the cancellation reason will be saved, and you will not be able to undo this change from here.';
+            } else if (selectedValue === 'paid') {
+                message = 'Mark this booking as paid? This will update the booking payment record and provider earnings data.';
+            }
 
             if (!window.confirm(message)) {
                 event.preventDefault();

@@ -938,9 +938,9 @@
                                 <div class="adjustment-copy">Original total: PHP {{ number_format($originalPrice, 2) }}</div>
                             </div>
                             <div class="compare-box">
-                                <div class="k">How It Works</div>
-                                <div class="adjustment-copy">Pick the mismatch reason, correct the actual onsite size or sections, and upload evidence.</div>
-                                <div class="adjustment-copy">The system calculates the added fee automatically and sends the updated total to the customer for approval.</div>
+                                <div class="k">Automatic Pricing</div>
+                                <div class="adjustment-copy">Pick the mismatch reason, choose the actual onsite size or sections, and upload evidence.</div>
+                                <div class="adjustment-copy">The system recalculates the added amount automatically and sends the new total to the customer for approval.</div>
                             </div>
                         </div>
 
@@ -972,7 +972,7 @@
 
                             <div class="field-grid">
                                 <div class="field-block full">
-                                    <div class="field-label">Corrected Selection</div>
+                                    <div class="field-label">Actual Onsite Size / Scope</div>
                                     @if($isSpecificAreaBooking)
                                         <div class="choice-grid">
                                             @foreach($serviceOptions as $option)
@@ -1012,7 +1012,7 @@
                                             @endforeach
                                         </select>
                                     @endif
-                                    <div class="field-help">Choose the actual onsite size or section set. The total updates automatically.</div>
+                                    <div class="field-help" data-scope-help>Choose the real onsite size or sections. The new total updates automatically.</div>
                                     @error('corrected_option_id')
                                         <div class="field-error">{{ $message }}</div>
                                     @enderror
@@ -1051,7 +1051,7 @@
                             </div>
 
                             <div class="field-block full">
-                                <div class="field-label">Updated Quote Preview</div>
+                                <div class="field-label">Customer Approval Preview</div>
                                 <div
                                     class="adjustment-preview"
                                     data-adjustment-preview
@@ -1064,11 +1064,11 @@
                                 >
                                     <div class="preview-grid">
                                         <div class="preview-stat">
-                                            <div class="field-label">Original Selection</div>
+                                            <div class="field-label">Booked Selection</div>
                                             <div class="preview-value">{{ $originalSelectionLabel }}</div>
                                         </div>
                                         <div class="preview-stat">
-                                            <div class="field-label">Corrected Selection</div>
+                                            <div class="field-label">Actual Onsite Scope</div>
                                             <div class="preview-value" data-preview-selection>{{ $selectedCorrectedLabel }}</div>
                                         </div>
                                         <div class="preview-stat">
@@ -1076,27 +1076,27 @@
                                             <div class="preview-value">PHP {{ number_format($originalPrice, 2) }}</div>
                                         </div>
                                         <div class="preview-stat">
-                                            <div class="field-label">Automatic Condition Fee</div>
+                                            <div class="field-label">Condition Fee</div>
                                             <div class="preview-value" data-preview-auto-fee>PHP {{ number_format($automaticReasonFee, 2) }}</div>
                                         </div>
                                         <div class="preview-stat">
-                                            <div class="field-label">Additional Fee</div>
+                                            <div class="field-label">Added Amount</div>
                                             <div class="preview-value" data-preview-additional-fee>PHP {{ number_format($previewAdditionalFee, 2) }}</div>
                                         </div>
                                         <div class="preview-stat">
-                                            <div class="field-label">Proposed Total</div>
+                                            <div class="field-label">New Total</div>
                                             <div class="preview-value accent" data-preview-proposed-total>PHP {{ number_format($previewProposedTotal, 2) }}</div>
                                         </div>
                                     </div>
                                     <div class="preview-note" data-preview-note>
-                                        Increase: {{ number_format($previewIncreasePercent, 2) }}% of the original total.
+                                        The system will compare the booked scope with the actual onsite scope and calculate the new total automatically.
                                     </div>
                                     <div class="field-error" data-adjustment-warning hidden></div>
                                 </div>
                             </div>
 
                             <div class="actions">
-                                <button type="submit" class="btnx primary" data-adjustment-submit>Send Adjustment Request</button>
+                                <button type="submit" class="btnx primary" data-adjustment-submit>Send for Customer Approval</button>
                             </div>
                         </form>
                     </div>
@@ -1174,6 +1174,7 @@
     const submitBtn = form.querySelector('[data-adjustment-submit]');
     const otherReasonWrap = form.querySelector('[data-other-reason-wrap]');
     const otherReasonField = form.querySelector('#other_reason');
+    const scopeHelp = form.querySelector('[data-scope-help]');
     const optionSelect = form.querySelector('[data-option-select]');
     const optionCheckboxes = Array.from(form.querySelectorAll('[data-option-checkbox]'));
     const optionChoiceCards = Array.from(form.querySelectorAll('[data-option-choice]'));
@@ -1271,11 +1272,25 @@
             ? Number((((proposedTotal - originalPrice) / originalPrice) * 100).toFixed(2))
             : 0;
 
+        if (scopeHelp) {
+            scopeHelp.textContent = hasScopeReason
+                ? 'Pick the real onsite size or sections so the system can calculate the correct added amount.'
+                : 'Keep the original size if the scope is the same. The system only adds an automatic fee when needed.';
+        }
+
         selectionText.textContent = optionState.label || originalSelection;
         autoFeeText.textContent = formatCurrency(autoConditionFee);
         additionalFeeText.textContent = formatCurrency(additionalFee);
         proposedTotalText.textContent = formatCurrency(proposedTotal);
-        previewNote.textContent = `Increase: ${increasePercent.toFixed(2)}% of the original total.`;
+        if (hasScopeReason && autoConditionFee > 0) {
+            previewNote.textContent = `The new total includes the corrected size plus the automatic condition fee. Increase: ${increasePercent.toFixed(2)}%.`;
+        } else if (hasScopeReason) {
+            previewNote.textContent = `The new total is based on the corrected onsite size or sections. Increase: ${increasePercent.toFixed(2)}%.`;
+        } else if (autoConditionFee > 0) {
+            previewNote.textContent = `The original scope stays the same, and the system adds the automatic condition fee. Increase: ${increasePercent.toFixed(2)}%.`;
+        } else {
+            previewNote.textContent = `The new total will be checked against the actual onsite scope. Increase: ${increasePercent.toFixed(2)}%.`;
+        }
 
         let warning = '';
         if (!optionState.ids.length) {
@@ -1314,6 +1329,33 @@
     syncChoiceCards();
     syncOtherReason();
     syncPreview();
+
+    form.addEventListener('submit', (event) => {
+        if (submitBtn.disabled) {
+            event.preventDefault();
+            return;
+        }
+
+        const reasons = selectedReasons();
+        const optionState = selectedOptionState();
+        const autoConditionFee = reasons.includes('heavy_soiling')
+            ? Math.max(300, originalPrice * 0.10)
+            : 0;
+        const proposedTotal = Number((serviceBasePrice + optionState.total + autoConditionFee).toFixed(2));
+        const confirmMessage = [
+            'Send this mismatch request to the customer?',
+            '',
+            `Booked scope: ${originalSelection}`,
+            `Actual scope: ${optionState.label || originalSelection}`,
+            `New total: ${formatCurrency(proposedTotal)}`,
+            '',
+            'The booking price will stay pending until the customer accepts this adjustment.',
+        ].join('\n');
+
+        if (!window.confirm(confirmMessage)) {
+            event.preventDefault();
+        }
+    });
 })();
 </script>
 
