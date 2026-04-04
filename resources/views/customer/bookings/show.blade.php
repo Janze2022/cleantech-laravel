@@ -413,6 +413,29 @@
     margin-top:1rem;
 }
 
+.response-choice-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:.75rem;
+}
+
+.cancel-response-panel{
+    display:none;
+    gap:.75rem;
+    padding:1rem;
+    border-radius:16px;
+    border:1px solid rgba(239,68,68,.22);
+    background:rgba(127,29,29,.10);
+}
+
+.cancel-response-panel.is-open{
+    display:grid;
+}
+
+.cancel-response-panel .form-help{
+    margin-top:-.25rem;
+}
+
 .response-form textarea,
 .cancel-form textarea{
     width:100%;
@@ -553,6 +576,7 @@
     }
 
     .actions{ gap:.6rem; }
+    .response-choice-grid{ grid-template-columns:1fr; }
     .btnx{ width: 100%; text-align:center; }
     .preview-shell{ padding: .85rem; }
     .tracking-map{ height:280px; }
@@ -739,19 +763,34 @@
                 @endif
 
                 @if(($adjustment->status_key ?? '') === 'pending_adjustment_approval')
-                    <form method="POST" action="{{ route('customer.bookings.adjustment.respond', $ref) }}" class="response-form">
+                    @php
+                        $cancelAdjustmentFlowOpen = old('response') === 'reject_cancel' || $errors->has('cancellation_reason');
+                    @endphp
+                    <form method="POST" action="{{ route('customer.bookings.adjustment.respond', $ref) }}" class="response-form" data-open-cancel="{{ $cancelAdjustmentFlowOpen ? '1' : '0' }}">
                         @csrf
                         <div>
                             <label class="label" for="customer_response_note">Reply to Provider</label>
                             <textarea id="customer_response_note" name="customer_response_note" placeholder="Optional note for the provider.">{{ old('customer_response_note', $adjustment->customer_response_note ?? '') }}</textarea>
-                            <div class="form-help">Accept to continue with the updated total, or reject to keep the original booking amount.</div>
+                            <div class="form-help">Choose whether to continue with the updated booking, keep the original booking, or cancel it.</div>
                             @error('customer_response_note')
                                 <div class="field-error">{{ $message }}</div>
                             @enderror
                         </div>
-                        <div class="actions">
-                            <button type="submit" class="btnx primary" name="response" value="accept">Accept Adjustment</button>
-                            <button type="submit" class="btnx danger" name="response" value="reject">Reject Adjustment</button>
+                        <div class="response-choice-grid">
+                            <button type="submit" class="btnx primary" name="response" value="accept">Accept Updated Booking</button>
+                            <button type="submit" class="btnx" name="response" value="reject">Reject, Keep Original</button>
+                            <button type="button" class="btnx danger response-cancel-toggle">Reject and Cancel</button>
+                        </div>
+                        <div class="cancel-response-panel{{ $cancelAdjustmentFlowOpen ? ' is-open' : '' }}" aria-hidden="{{ $cancelAdjustmentFlowOpen ? 'false' : 'true' }}">
+                            <div>
+                                <label class="label" for="adjustment_cancellation_reason">Cancellation Reason</label>
+                                <textarea id="adjustment_cancellation_reason" name="cancellation_reason" placeholder="Tell the provider why you are cancelling this booking.">{{ old('cancellation_reason') }}</textarea>
+                                <div class="form-help">This is required only if you reject the update and cancel the booking.</div>
+                                @error('cancellation_reason')
+                                    <div class="field-error">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <button type="submit" class="btnx danger" name="response" value="reject_cancel">Reject and Cancel Booking</button>
                         </div>
                     </form>
                 @elseif(!empty($adjustment->customer_response_note))
@@ -989,15 +1028,54 @@
     const responseForms = document.querySelectorAll('.response-form');
 
     responseForms.forEach((form) => {
+        const cancelPanel = form.querySelector('.cancel-response-panel');
+        const cancelToggle = form.querySelector('.response-cancel-toggle');
+        const cancelReason = form.querySelector('[name="cancellation_reason"]');
+
+        const openCancelPanel = () => {
+            if (!cancelPanel) return;
+            cancelPanel.classList.add('is-open');
+            cancelPanel.setAttribute('aria-hidden', 'false');
+        };
+
+        const closeCancelPanel = () => {
+            if (!cancelPanel) return;
+            cancelPanel.classList.remove('is-open');
+            cancelPanel.setAttribute('aria-hidden', 'true');
+        };
+
+        if (form.dataset.openCancel === '1') {
+            openCancelPanel();
+        } else {
+            closeCancelPanel();
+        }
+
+        cancelToggle?.addEventListener('click', () => {
+            openCancelPanel();
+            cancelReason?.focus();
+        });
+
         form.addEventListener('submit', (event) => {
             const submitter = event.submitter;
             const action = submitter?.value || '';
             let message = 'Continue with this adjustment response?';
 
             if (action === 'accept') {
+                closeCancelPanel();
                 message = 'Accept this updated scope and total? The booking will continue using the provider\'s onsite update.';
             } else if (action === 'reject') {
-                message = 'Reject this update? The booking will keep the original scope and original price.';
+                closeCancelPanel();
+                message = 'Reject this update and keep the original booking? The booking will stay on the original scope and original price.';
+            } else if (action === 'reject_cancel') {
+                openCancelPanel();
+
+                if (!cancelReason || cancelReason.value.trim() === '') {
+                    event.preventDefault();
+                    cancelReason?.focus();
+                    return;
+                }
+
+                message = 'Reject this adjustment and cancel the booking? This will notify the provider and save your cancellation reason.';
             }
 
             if (!window.confirm(message)) {

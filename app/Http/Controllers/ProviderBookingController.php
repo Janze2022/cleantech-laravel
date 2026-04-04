@@ -1582,11 +1582,17 @@ class ProviderBookingController extends Controller
                 (int) $booking->customer_id,
                 (string) $booking->reference_code,
                 'Adjustment request for ref ' . $booking->reference_code
-                    . '. Booked: ' . ($originalOptionSummary ?: $booking->service_name)
-                    . '. Updated: ' . ($correctedOptionSummary ?: $booking->service_name)
-                    . '. Original PHP ' . number_format($originalPrice, 2)
-                    . ', new total PHP ' . number_format($proposedTotal, 2)
-                    . '. Please review the adjustment.',
+                    . '. Booked scope: ' . ($originalOptionSummary ?: $booking->service_name)
+                    . '. Actual onsite scope: ' . ($correctedOptionSummary ?: $booking->service_name)
+                    . '. Original total: PHP ' . number_format($originalPrice, 2)
+                    . '. Added amount: PHP ' . number_format($additionalFee, 2)
+                    . '. New total: PHP ' . number_format($proposedTotal, 2)
+                    . (!empty($reasonCodes)
+                        ? '. Reason: ' . collect($reasonCodes)
+                            ->map(fn ($code) => $this->adjustmentReasonLabel((string) $code))
+                            ->implode(', ')
+                        : '')
+                    . '. Please review the update and choose whether to accept it, keep the original booking, or cancel it.',
                 'booking_adjustment'
             );
 
