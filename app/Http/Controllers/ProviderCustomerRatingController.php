@@ -25,10 +25,16 @@ class ProviderCustomerRatingController extends Controller
         return $providerId;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $providerId = $this->providerId();
         $areasSub = $this->bookingAreasSubquery();
+        $q = trim((string) $request->query('q', ''));
+        $sort = (string) $request->query('sort', 'customer_asc');
+
+        if (!in_array($sort, ['customer_asc', 'customer_desc', 'rating_high', 'rating_low', 'latest', 'oldest'], true)) {
+            $sort = 'customer_asc';
+        }
 
         $rows = DB::table('bookings as b')
             ->join('customers as c', 'c.id', '=', 'b.customer_id')
@@ -95,21 +101,124 @@ class ProviderCustomerRatingController extends Controller
                 return $row;
             });
 
-        $pendingBookings = $rows->whereNull('rating_id')->values();
-        $submittedRatings = $rows->whereNotNull('rating_id')->values();
+        $filteredRows = $rows
+            ->filter(fn ($row) => $this->matchesRatingSearch($row, $q))
+            ->values();
+
+        $pendingBookings = $this->sortCustomerRatingRows(
+            $filteredRows->whereNull('rating_id')->values(),
+            $sort,
+            true
+        );
+
+        $submittedRatings = $this->sortCustomerRatingRows(
+            $filteredRows->whereNotNull('rating_id')->values(),
+            $sort,
+            false
+        );
 
         $summary = (object) [
             'completed_bookings' => $rows->count(),
+            'pending_ratings' => $rows->whereNull('rating_id')->count(),
+            'submitted_ratings' => $rows->whereNotNull('rating_id')->count(),
+            'editable_ratings' => $rows->whereNotNull('rating_id')->where('can_edit', true)->count(),
+        ];
+
+        $filteredSummary = (object) [
+            'matches' => $filteredRows->count(),
             'pending_ratings' => $pendingBookings->count(),
             'submitted_ratings' => $submittedRatings->count(),
-            'editable_ratings' => $submittedRatings->where('can_edit', true)->count(),
         ];
 
         return view('provider.customer_ratings.index', compact(
             'pendingBookings',
             'submittedRatings',
-            'summary'
+            'summary',
+            'filteredSummary',
+            'q',
+            'sort'
         ));
+    }
+
+    private function matchesRatingSearch(object $row, string $query): bool
+    {
+        if ($query === '') {
+            return true;
+        }
+
+        $needle = Str::lower($query);
+
+        $haystack = collect([
+            $row->customer_name ?? null,
+            $row->customer_email ?? null,
+            $row->customer_phone ?? null,
+            $row->reference_code ?? null,
+            $row->service_name ?? null,
+            $row->option_name ?? null,
+            $row->comment ?? null,
+        ])->filter()->map(fn ($value) => Str::lower(trim((string) $value)))->implode(' ');
+
+        return $haystack !== '' && Str::contains($haystack, $needle);
+    }
+
+    private function sortCustomerRatingRows($rows, string $sort, bool $pending)
+    {
+        return collect($rows)
+            ->sort(fn ($left, $right) => $this->compareCustomerRatingRows($left, $right, $sort, $pending))
+            ->values();
+    }
+
+    private function compareCustomerRatingRows(object $left, object $right, string $sort, bool $pending): int
+    {
+        $customerCompare = strcasecmp(
+            trim((string) ($left->customer_name ?? '')),
+            trim((string) ($right->customer_name ?? ''))
+        );
+
+        return match ($sort) {
+            'customer_desc' => $customerCompare !== 0
+                ? -$customerCompare
+                : $this->compareCustomerRatingTimestamps($left, $right),
+            'rating_high' => $pending
+                ? ($customerCompare !== 0 ? $customerCompare : $this->compareCustomerRatingTimestamps($left, $right))
+                : (
+                    (((int) ($right->rating ?? 0)) <=> ((int) ($left->rating ?? 0)))
+                    ?: $customerCompare
+                    ?: $this->compareCustomerRatingTimestamps($left, $right)
+                ),
+            'rating_low' => $pending
+                ? ($customerCompare !== 0 ? $customerCompare : $this->compareCustomerRatingTimestamps($left, $right))
+                : (
+                    (((int) ($left->rating ?? 0)) <=> ((int) ($right->rating ?? 0)))
+                    ?: $customerCompare
+                    ?: $this->compareCustomerRatingTimestamps($left, $right)
+                ),
+            'oldest' => $this->compareCustomerRatingTimestamps($left, $right, true)
+                ?: $customerCompare,
+            'latest' => $this->compareCustomerRatingTimestamps($left, $right)
+                ?: $customerCompare,
+            default => $customerCompare !== 0
+                ? $customerCompare
+                : $this->compareCustomerRatingTimestamps($left, $right),
+        };
+    }
+
+    private function compareCustomerRatingTimestamps(object $left, object $right, bool $ascending = false): int
+    {
+        $comparison = $this->customerRatingTimestamp($left) <=> $this->customerRatingTimestamp($right);
+
+        return $ascending ? $comparison : -$comparison;
+    }
+
+    private function customerRatingTimestamp(object $row): int
+    {
+        foreach (['rating_updated_at', 'rating_created_at', 'booking_updated_at', 'booking_date'] as $field) {
+            if (!empty($row->{$field})) {
+                return Carbon::parse($row->{$field})->timestamp;
+            }
+        }
+
+        return 0;
     }
 
     public function store(Request $request)

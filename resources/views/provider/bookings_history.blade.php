@@ -162,8 +162,8 @@
 
 .desktop-table th:last-child,
 .desktop-table td:last-child{
-    white-space:nowrap;
-    width:1%;
+    white-space:normal;
+    width:180px;
 }
 
 .desktop-table tbody tr:last-child td{
@@ -212,14 +212,15 @@
     border-radius:16px;
     background:rgba(255,255,255,.02);
     padding:1rem;
+    display:grid;
+    gap:1rem;
 }
 
 .history-card-head{
-    display:flex;
-    justify-content:space-between;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
     gap:.8rem;
     align-items:flex-start;
-    margin-bottom:.8rem;
 }
 
 .history-grid{
@@ -254,19 +255,25 @@
 }
 
 .history-actions{
-    margin-top:1rem;
-    display:flex;
-    justify-content:flex-end;
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
     gap:.65rem;
-    flex-wrap:wrap;
 }
 
 .action-stack{
-    display:flex;
-    align-items:center;
-    justify-content:flex-end;
+    display:grid;
     gap:.65rem;
-    flex-wrap:wrap;
+    min-width:160px;
+}
+
+.action-stack .btn-view,
+.action-stack .btn-rate,
+.history-actions .btn-view,
+.history-actions .btn-rate{
+    width:100%;
+    min-width:0;
+    white-space:normal;
+    text-align:center;
 }
 
 .btn-rate{
@@ -296,12 +303,15 @@
     .filter-grid .apply-field{ grid-column:1 / -1; }
     .desktop-table{ display:none; }
     .mobile-list{ display:grid; }
+    .history-actions{ grid-template-columns:1fr; }
 }
 
 @media (max-width: 640px){
     .history-head h2{ font-size:1.45rem; }
     .filter-grid{ grid-template-columns:1fr; }
     .history-grid{ grid-template-columns:1fr; }
+    .history-card-head{ grid-template-columns:1fr; }
+    .history-card-head .status-badge{ justify-self:flex-start; }
 }
 </style>
 
