@@ -24,6 +24,7 @@
 
     $status = $booking->status ?? '—';
     $stLower = strtolower((string)$status);
+    $viewErrors = isset($errors) ? $errors : new \Illuminate\Support\ViewErrorBag();
 
     $amount = (float)($booking->price ?? 0);
 
@@ -904,8 +905,8 @@
                 <div class="notice success">{{ session('success') }}</div>
             @endif
 
-            @if($errors->has('general'))
-                <div class="notice error">{{ $errors->first('general') }}</div>
+            @if($viewErrors->has('general'))
+                <div class="notice error">{{ $viewErrors->first('general') }}</div>
             @endif
 
             <div class="grid">

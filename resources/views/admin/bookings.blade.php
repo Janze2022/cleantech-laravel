@@ -15,6 +15,7 @@
     $providers       = $providers ?? collect();
     $services        = $services ?? collect();
     $serviceOptions  = $serviceOptions ?? collect();
+    $viewErrors      = isset($errors) ? $errors : new \Illuminate\Support\ViewErrorBag();
     $adjustmentSummary = $adjustmentSummary ?? [
         'pending' => 0,
         'accepted' => 0,
@@ -1015,11 +1016,11 @@ select.status-select option{
         <div class="notice success">{{ session('success') }}</div>
     @endif
 
-    @if($errors->any())
+    @if($viewErrors->any())
         <div class="notice danger">
             Please fix:
             <ul>
-                @foreach($errors->all() as $e)
+                @foreach($viewErrors->all() as $e)
                     <li>{{ $e }}</li>
                 @endforeach
             </ul>
@@ -1174,7 +1175,9 @@ select.status-select option{
                                     <div class="meta-label">Booking Notes</div>
                                     <div class="booking-note-stack">
                                         @if($adjustment)
-                                            @php($latestAdjustmentLog = collect($adjustment->logs ?? [])->first())
+                                            @php
+                                                $latestAdjustmentLog = collect($adjustment->logs ?? [])->first();
+                                            @endphp
                                             <div class="booking-note-row">
                                                 <span class="booking-note-chip">{{ $b->adjustment_status_label ?: 'Adjustment' }}</span>
                                                 @if(!empty($adjustment->submitted_at_label))
@@ -1227,7 +1230,11 @@ select.status-select option{
                                             @endif
                                         @endif
                                         @if(!empty($b->cancellation_reason))
-                                            @php($cancelledByLabel = !empty($b->cancelled_by_role) ? ucwords(str_replace('_', ' ', $b->cancelled_by_role)) : 'System')
+                                            @php
+                                                $cancelledByLabel = !empty($b->cancelled_by_role)
+                                                    ? ucwords(str_replace('_', ' ', $b->cancelled_by_role))
+                                                    : 'System';
+                                            @endphp
                                             <div class="booking-note-line"><strong>Cancelled by {{ $cancelledByLabel }}:</strong> {{ $b->cancellation_reason }}</div>
                                         @endif
                                     </div>
@@ -1323,11 +1330,14 @@ select.status-select option{
                         <button type="button" class="btnx" onclick="clearHistoryFilters()">Clear</button>
                     </div>
                 </div>
-            </div>
+                </div>
 
-            <div class="panel-scroll">
-                <div class="booking-list" id="listHistory">
-                    @forelse($bookingHistory as $b)
+                <div class="panel-scroll">
+                    <div class="booking-list" id="listHistory">
+                    @if($bookingHistory->isEmpty())
+                        <div class="empty">No booking history yet.</div>
+                    @else
+                        @foreach($bookingHistory as $b)
                         @php
                             $status = $b->status ?? 'completed';
                             $isLocked = $status === 'cancelled';
@@ -1471,7 +1481,9 @@ select.status-select option{
                                     <div class="meta-label">Booking Notes</div>
                                     <div class="booking-note-stack">
                                         @if($adjustment)
-                                            @php($latestAdjustmentLog = collect($adjustment->logs ?? [])->first())
+                                            @php
+                                                $latestAdjustmentLog = collect($adjustment->logs ?? [])->first();
+                                            @endphp
                                             <div class="booking-note-row">
                                                 <span class="booking-note-chip">{{ $b->adjustment_status_label ?: 'Adjustment' }}</span>
                                                 @if(!empty($adjustment->submitted_at_label))
@@ -1524,7 +1536,11 @@ select.status-select option{
                                             @endif
                                         @endif
                                         @if(!empty($b->cancellation_reason))
-                                            @php($cancelledByLabel = !empty($b->cancelled_by_role) ? ucwords(str_replace('_', ' ', $b->cancelled_by_role)) : 'System')
+                                            @php
+                                                $cancelledByLabel = !empty($b->cancelled_by_role)
+                                                    ? ucwords(str_replace('_', ' ', $b->cancelled_by_role))
+                                                    : 'System';
+                                            @endphp
                                             <div class="booking-note-line"><strong>Cancelled by {{ $cancelledByLabel }}:</strong> {{ $b->cancellation_reason }}</div>
                                         @endif
                                     </div>
@@ -1564,9 +1580,8 @@ select.status-select option{
                                 @endif
                             </div>
                         </div>
-                    @empty
-                        <div class="empty">No booking history yet.</div>
-                    @endforelse
+                        @endforeach
+                    @endif
                 </div>
             </div>
         </div>

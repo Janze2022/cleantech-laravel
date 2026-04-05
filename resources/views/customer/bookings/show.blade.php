@@ -66,7 +66,30 @@
     $cancellationReason = trim((string) ($booking->cancellation_reason ?? ''));
     $cancelledByRole = trim((string) ($booking->cancelled_by_role ?? ''));
     $cancelledByLabel = $cancelledByRole !== '' ? ucfirst(str_replace('_', ' ', $cancelledByRole)) : 'System';
+    $adjustment = $adjustment ?? null;
+    $viewErrors = isset($errors) ? $errors : new \Illuminate\Support\ViewErrorBag();
     $bookingAdjustmentStatus = trim((string) ($booking->adjustment_status ?? ''));
+    $originalSelectionLabel = trim($serviceName . ($optionName !== 'â€”' ? ' / ' . $optionName : ''));
+    $adjustmentScopeLines = collect(
+        preg_split('/\.\s+/', trim((string) ($adjustment->proposed_scope_summary ?? ''))) ?: []
+    )
+        ->map(fn ($line) => trim((string) $line))
+        ->filter()
+        ->map(fn ($line) => rtrim($line, '.'))
+        ->values()
+        ->all();
+    $originalOptionLabel = trim((string) $optionName);
+    $hasOriginalOption = preg_match('/[A-Za-z0-9]/', $originalOptionLabel) === 1;
+    $originalSelectionLabel = trim($serviceName . ($hasOriginalOption ? ' / ' . $originalOptionLabel : ''));
+    $adjustmentSummaryText = trim((string) ($adjustment->proposed_scope_summary ?? ''));
+    $adjustmentScopeLines = collect(
+        preg_split('/\.\s+/', $adjustmentSummaryText) ?: []
+    )
+        ->map(fn ($line) => trim((string) $line))
+        ->filter()
+        ->map(fn ($line) => rtrim($line, '.'))
+        ->values()
+        ->all();
 @endphp
 
 <style>
@@ -82,13 +105,18 @@
     --bad:#ef4444;
 }
 
-.wrap{ max-width: 980px; margin: 2rem auto; padding: 0 1rem; }
+.wrap{
+    width:min(1220px, 100%);
+    max-width:100%;
+    margin:clamp(1rem, 2.4vw, 2rem) auto;
+    padding:0 clamp(.75rem, 1.4vw, 1.25rem);
+}
 
 .cardx{
     background: linear-gradient(180deg, var(--bg-card), var(--bg-deep));
     border: 1px solid var(--border-soft);
     border-radius: 18px;
-    padding: 2rem;
+    padding: clamp(1.1rem, 2vw, 2rem);
 }
 
 .header{
@@ -135,7 +163,7 @@
 
 .grid{
     display:grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
     margin-top: 1.25rem;
 }
@@ -325,13 +353,15 @@
     margin-top:.35rem;
     color:var(--text-muted);
     line-height:1.5;
+    word-break:break-word;
 }
 
 .adjustment-grid{
     display:grid;
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:minmax(0, .82fr) minmax(0, 1.18fr);
     gap:.85rem;
     margin-top:1rem;
+    align-items:start;
 }
 
 .adjustment-box{
@@ -339,6 +369,31 @@
     background:rgba(2,6,23,.32);
     border-radius:14px;
     padding:.9rem;
+    min-width:0;
+}
+
+.adjustment-box .value{
+    font-size:1.05rem;
+    line-height:1.55;
+    word-break:break-word;
+}
+
+.adjustment-box .sub{
+    margin-top:.65rem;
+    line-height:1.65;
+    word-break:break-word;
+}
+
+.adjustment-list{
+    margin:.7rem 0 0;
+    padding-left:1.15rem;
+    display:grid;
+    gap:.45rem;
+    color:rgba(255,255,255,.88);
+}
+
+.adjustment-list li::marker{
+    color:var(--accent);
 }
 
 .reason-row{
@@ -415,7 +470,7 @@
 
 .response-choice-grid{
     display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
+    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
     gap:.75rem;
 }
 
@@ -466,7 +521,11 @@
 }
 
 .btnx{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
     padding:.75rem 1rem;
+    min-height:48px;
     border-radius:12px;
     font-weight:950;
     text-decoration:none;
@@ -485,6 +544,17 @@
     color:#fecaca;
 }
 .btnx:hover{ filter: brightness(1.05); }
+
+@media (max-width: 992px){
+    .wrap{
+        width:100%;
+    }
+
+    .adjustment-grid,
+    .tracking-grid{
+        grid-template-columns:1fr;
+    }
+}
 
 .preview-wrap{ margin-top: 1rem; display:none; }
 .preview-wrap.show{ display:block; }
@@ -582,6 +652,8 @@
     .tracking-map{ height:280px; }
     .tracking-grid{ grid-template-columns:1fr; }
     .adjustment-grid{ grid-template-columns:1fr; }
+    .adjustment-head{ align-items:stretch; }
+    .adjustment-head .pill{ width:100%; justify-content:center; }
 }
 
 @media print{
@@ -629,8 +701,8 @@
             <div class="notice success">{{ session('success') }}</div>
         @endif
 
-        @if($errors->has('general'))
-            <div class="notice error">{{ $errors->first('general') }}</div>
+        @if($viewErrors->has('general'))
+            <div class="notice error">{{ $viewErrors->first('general') }}</div>
         @endif
 
         <div class="header">
@@ -730,12 +802,22 @@
                 <div class="adjustment-grid">
                     <div class="adjustment-box">
                         <div class="label">Original Booking</div>
-                        <div class="value">{{ $optionName }}</div>
+                        <div class="value">{{ $adjustment->original_service_name ?: $serviceName }}</div>
+                        <div class="sub">{{ $adjustment->original_option_summary ?: $originalSelectionLabel }}</div>
                         <div class="sub">Original total: PHP {{ $adjustment->original_price_display }}</div>
                     </div>
                     <div class="adjustment-box">
                         <div class="label">Requested Update</div>
-                        <div class="value">{{ $adjustment->proposed_scope_summary ?: 'No scope summary provided.' }}</div>
+                        <div class="value">{{ $adjustment->proposed_service_name ?: ($adjustment->original_service_name ?: $serviceName) }}</div>
+                        @if(!empty($adjustmentScopeLines))
+                            <ul class="adjustment-list">
+                                @foreach($adjustmentScopeLines as $line)
+                                    <li>{{ $line }}</li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <div class="sub">{{ $adjustmentSummaryText !== '' ? $adjustmentSummaryText : 'No scope summary provided.' }}</div>
+                        @endif
                         <div class="sub">
                             Change: PHP {{ $adjustment->difference_display }}<br>
                             Additional fee: PHP {{ $adjustment->additional_fee_display }}<br>
@@ -764,7 +846,7 @@
 
                 @if(($adjustment->status_key ?? '') === 'pending_adjustment_approval')
                     @php
-                        $cancelAdjustmentFlowOpen = old('response') === 'reject_cancel' || $errors->has('cancellation_reason');
+                        $cancelAdjustmentFlowOpen = old('response') === 'reject_cancel' || $viewErrors->has('cancellation_reason');
                     @endphp
                     <form method="POST" action="{{ route('customer.bookings.adjustment.respond', $ref) }}" class="response-form" data-open-cancel="{{ $cancelAdjustmentFlowOpen ? '1' : '0' }}">
                         @csrf

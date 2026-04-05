@@ -15,15 +15,19 @@ class AdminBookingController extends Controller
     {
         $currentStatuses = ['confirmed', 'in_progress', 'paid'];
         $historyStatuses = ['completed', 'cancelled'];
+        $hasCustomersTable = Schema::hasTable('customers');
+        $hasProvidersTable = Schema::hasTable('service_providers');
+        $hasServicesTable = Schema::hasTable('services');
+        $hasServiceOptionsTable = Schema::hasTable('service_options');
 
         /*
         |--------------------------------------------------------------------------
         | Detect customer name columns safely
         |--------------------------------------------------------------------------
         */
-        if (Schema::hasColumn('customers', 'name')) {
+        if ($hasCustomersTable && Schema::hasColumn('customers', 'name')) {
             $customerNameSql = "customers.name";
-        } elseif (Schema::hasColumn('customers', 'full_name')) {
+        } elseif ($hasCustomersTable && Schema::hasColumn('customers', 'full_name')) {
             $customerNameSql = "customers.full_name";
         } else {
             $customerNameSql = "CONCAT('Customer ID: ', bookings.customer_id)";
@@ -35,6 +39,7 @@ class AdminBookingController extends Controller
         |--------------------------------------------------------------------------
         */
         if (
+            $hasProvidersTable &&
             Schema::hasColumn('service_providers', 'first_name') &&
             Schema::hasColumn('service_providers', 'last_name')
         ) {
@@ -45,9 +50,9 @@ class AdminBookingController extends Controller
                     COALESCE(service_providers.last_name, '')
                 ))
             ";
-        } elseif (Schema::hasColumn('service_providers', 'name')) {
+        } elseif ($hasProvidersTable && Schema::hasColumn('service_providers', 'name')) {
             $providerNameSql = "service_providers.name";
-        } elseif (Schema::hasColumn('service_providers', 'full_name')) {
+        } elseif ($hasProvidersTable && Schema::hasColumn('service_providers', 'full_name')) {
             $providerNameSql = "service_providers.full_name";
         } else {
             $providerNameSql = "CONCAT('Provider ID: ', bookings.provider_id)";
@@ -58,8 +63,6 @@ class AdminBookingController extends Controller
         | Detect service name column safely
         |--------------------------------------------------------------------------
         */
-        $hasServicesTable = Schema::hasTable('services');
-
         if ($hasServicesTable) {
             if (Schema::hasColumn('services', 'name')) {
                 $serviceNameSql = "services.name";
@@ -79,8 +82,6 @@ class AdminBookingController extends Controller
         | Detect service option name column safely
         |--------------------------------------------------------------------------
         */
-        $hasServiceOptionsTable = Schema::hasTable('service_options');
-
         if ($hasServiceOptionsTable) {
             if (Schema::hasColumn('service_options', 'name')) {
                 $serviceOptionNameSql = "service_options.name";
@@ -97,24 +98,54 @@ class AdminBookingController extends Controller
             $serviceOptionNameSql = "CONCAT('Option #', bookings.service_option_id)";
         }
 
+        $customerPhoneSelect = $hasCustomersTable && Schema::hasColumn('customers', 'phone')
+            ? DB::raw('customers.phone as customer_phone')
+            : DB::raw('NULL as customer_phone');
+
+        $providerPhoneSelect = $hasProvidersTable && Schema::hasColumn('service_providers', 'phone')
+            ? DB::raw('service_providers.phone as provider_phone')
+            : DB::raw('NULL as provider_phone');
+
+        $missingBookingColumnSelects = [];
+
+        foreach ([
+            'house_type',
+            'contact_phone',
+            'address',
+            'adjustment_status',
+            'cancellation_reason',
+            'cancelled_by_role',
+        ] as $column) {
+            if (!Schema::hasColumn('bookings', $column)) {
+                $missingBookingColumnSelects[] = DB::raw("NULL as {$column}");
+            }
+        }
+
         $baseQuery = DB::table('bookings')
-            ->leftJoin('customers', 'bookings.customer_id', '=', 'customers.id')
-            ->leftJoin('service_providers', 'bookings.provider_id', '=', 'service_providers.id')
+            ->when($hasCustomersTable, function ($query) {
+                $query->leftJoin('customers', 'bookings.customer_id', '=', 'customers.id');
+            })
+            ->when($hasProvidersTable, function ($query) {
+                $query->leftJoin('service_providers', 'bookings.provider_id', '=', 'service_providers.id');
+            })
             ->when($hasServicesTable, function ($query) {
                 $query->leftJoin('services', 'bookings.service_id', '=', 'services.id');
             })
             ->when($hasServiceOptionsTable, function ($query) {
                 $query->leftJoin('service_options', 'bookings.service_option_id', '=', 'service_options.id');
             })
-            ->select(
-                'bookings.*',
-                DB::raw("$customerNameSql as customer_name"),
-                DB::raw("customers.phone as customer_phone"),
-                DB::raw("$providerNameSql as provider_name"),
-                DB::raw("service_providers.phone as provider_phone"),
-                DB::raw("$serviceNameSql as service_name"),
-                DB::raw("$serviceOptionNameSql as service_option_name")
-            )
+            ->select(array_merge(
+                ['bookings.*'],
+                $missingBookingColumnSelects,
+                [
+                    DB::raw("$customerNameSql as customer_name"),
+                    $customerPhoneSelect,
+                    DB::raw("$providerNameSql as provider_name"),
+                    $providerPhoneSelect,
+                    DB::raw("$serviceNameSql as service_name"),
+                    DB::raw("$serviceOptionNameSql as service_option_name"),
+                ]
+            ))
             ->orderByDesc('bookings.created_at');
 
         $currentBookings = (clone $baseQuery)
@@ -132,55 +163,71 @@ class AdminBookingController extends Controller
         | Customers dropdown
         |--------------------------------------------------------------------------
         */
-        if (Schema::hasColumn('customers', 'name')) {
-            $customerDisplaySql = "customers.name";
-        } elseif (Schema::hasColumn('customers', 'full_name')) {
-            $customerDisplaySql = "customers.full_name";
-        } else {
-            $customerDisplaySql = "CONCAT('Customer #', customers.id)";
-        }
+        $customers = collect();
 
-        $customers = DB::table('customers')
-            ->select(
-                'customers.id',
-                DB::raw("$customerDisplaySql as display_name"),
-                DB::raw("customers.phone as phone")
-            )
-            ->orderBy('customers.id')
-            ->get();
+        if ($hasCustomersTable) {
+            if (Schema::hasColumn('customers', 'name')) {
+                $customerDisplaySql = "customers.name";
+            } elseif (Schema::hasColumn('customers', 'full_name')) {
+                $customerDisplaySql = "customers.full_name";
+            } else {
+                $customerDisplaySql = "CONCAT('Customer #', customers.id)";
+            }
+
+            $customerPhoneDropdownSelect = Schema::hasColumn('customers', 'phone')
+                ? DB::raw('customers.phone as phone')
+                : DB::raw('NULL as phone');
+
+            $customers = DB::table('customers')
+                ->select(
+                    'customers.id',
+                    DB::raw("$customerDisplaySql as display_name"),
+                    $customerPhoneDropdownSelect
+                )
+                ->orderBy('customers.id')
+                ->get();
+        }
 
         /*
         |--------------------------------------------------------------------------
         | Providers dropdown
         |--------------------------------------------------------------------------
         */
-        if (
-            Schema::hasColumn('service_providers', 'first_name') &&
-            Schema::hasColumn('service_providers', 'last_name')
-        ) {
-            $providerDisplaySql = "
-                TRIM(CONCAT(
-                    COALESCE(service_providers.first_name, ''),
-                    ' ',
-                    COALESCE(service_providers.last_name, '')
-                ))
-            ";
-        } elseif (Schema::hasColumn('service_providers', 'name')) {
-            $providerDisplaySql = "service_providers.name";
-        } elseif (Schema::hasColumn('service_providers', 'full_name')) {
-            $providerDisplaySql = "service_providers.full_name";
-        } else {
-            $providerDisplaySql = "CONCAT('Provider #', service_providers.id)";
-        }
+        $providers = collect();
 
-        $providers = DB::table('service_providers')
-            ->select(
-                'service_providers.id',
-                DB::raw("$providerDisplaySql as display_name"),
-                DB::raw("service_providers.phone as phone")
-            )
-            ->orderBy('service_providers.id')
-            ->get();
+        if ($hasProvidersTable) {
+            if (
+                Schema::hasColumn('service_providers', 'first_name') &&
+                Schema::hasColumn('service_providers', 'last_name')
+            ) {
+                $providerDisplaySql = "
+                    TRIM(CONCAT(
+                        COALESCE(service_providers.first_name, ''),
+                        ' ',
+                        COALESCE(service_providers.last_name, '')
+                    ))
+                ";
+            } elseif (Schema::hasColumn('service_providers', 'name')) {
+                $providerDisplaySql = "service_providers.name";
+            } elseif (Schema::hasColumn('service_providers', 'full_name')) {
+                $providerDisplaySql = "service_providers.full_name";
+            } else {
+                $providerDisplaySql = "CONCAT('Provider #', service_providers.id)";
+            }
+
+            $providerPhoneDropdownSelect = Schema::hasColumn('service_providers', 'phone')
+                ? DB::raw('service_providers.phone as phone')
+                : DB::raw('NULL as phone');
+
+            $providers = DB::table('service_providers')
+                ->select(
+                    'service_providers.id',
+                    DB::raw("$providerDisplaySql as display_name"),
+                    $providerPhoneDropdownSelect
+                )
+                ->orderBy('service_providers.id')
+                ->get();
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -272,6 +319,7 @@ class AdminBookingController extends Controller
 
         if (
             !Schema::hasTable('booking_adjustments') ||
+            !Schema::hasColumn('booking_adjustments', 'booking_id') ||
             !$currentBookings instanceof \Illuminate\Support\Collection ||
             !$bookingHistory instanceof \Illuminate\Support\Collection
         ) {
@@ -290,9 +338,39 @@ class AdminBookingController extends Controller
             return $summary;
         }
 
-        $adjustments = DB::table('booking_adjustments')
+        $adjustmentsQuery = DB::table('booking_adjustments')
             ->whereIn('booking_id', $bookingIds->all())
-            ->orderByDesc('updated_at')
+            ->select([
+                $this->tableColumnOrNull('booking_adjustments', 'id'),
+                $this->tableColumnOrNull('booking_adjustments', 'booking_id'),
+                $this->tableColumnOrNull('booking_adjustments', 'reason_payload'),
+                $this->tableColumnOrNull('booking_adjustments', 'status'),
+                $this->tableColumnOrNull('booking_adjustments', 'adjustment_status'),
+                $this->tableColumnOrNull('booking_adjustments', 'original_service_name'),
+                $this->tableColumnOrNull('booking_adjustments', 'original_option_summary'),
+                $this->tableColumnOrNull('booking_adjustments', 'original_price'),
+                $this->tableColumnOrNull('booking_adjustments', 'proposed_service_name'),
+                $this->tableColumnOrNull('booking_adjustments', 'proposed_scope_summary'),
+                $this->tableColumnOrNull('booking_adjustments', 'additional_fee'),
+                $this->tableColumnOrNull('booking_adjustments', 'proposed_total'),
+                $this->tableColumnOrNull('booking_adjustments', 'price_increase_percent'),
+                $this->tableColumnOrNull('booking_adjustments', 'other_reason'),
+                $this->tableColumnOrNull('booking_adjustments', 'provider_note'),
+                $this->tableColumnOrNull('booking_adjustments', 'customer_response_note'),
+                $this->tableColumnOrNull('booking_adjustments', 'evidence_path'),
+                $this->tableColumnOrNull('booking_adjustments', 'evidence_name'),
+                $this->tableColumnOrNull('booking_adjustments', 'resolved_at'),
+                $this->tableColumnOrNull('booking_adjustments', 'created_at'),
+                $this->tableColumnOrNull('booking_adjustments', 'updated_at'),
+            ]);
+
+        if ($this->tableHasColumn('booking_adjustments', 'updated_at')) {
+            $adjustmentsQuery->orderByDesc('booking_adjustments.updated_at');
+        } elseif ($this->tableHasColumn('booking_adjustments', 'created_at')) {
+            $adjustmentsQuery->orderByDesc('booking_adjustments.created_at');
+        }
+
+        $adjustments = $adjustmentsQuery
             ->get()
             ->keyBy('booking_id');
 
@@ -302,16 +380,32 @@ class AdminBookingController extends Controller
 
         $logsByAdjustment = collect();
 
-        if (Schema::hasTable('booking_adjustment_logs')) {
+        if (
+            Schema::hasTable('booking_adjustment_logs') &&
+            Schema::hasColumn('booking_adjustment_logs', 'booking_adjustment_id')
+        ) {
             $adjustmentIds = $adjustments->pluck('id')
                 ->filter()
                 ->map(fn ($id) => (int) $id)
                 ->values();
 
             if ($adjustmentIds->isNotEmpty()) {
-                $logsByAdjustment = DB::table('booking_adjustment_logs')
+                $logsQuery = DB::table('booking_adjustment_logs')
                     ->whereIn('booking_adjustment_id', $adjustmentIds->all())
-                    ->orderByDesc('created_at')
+                    ->select([
+                        $this->tableColumnOrNull('booking_adjustment_logs', 'booking_adjustment_id'),
+                        $this->tableColumnOrNull('booking_adjustment_logs', 'created_at'),
+                        $this->tableColumnOrNull('booking_adjustment_logs', 'payload'),
+                        $this->tableColumnOrNull('booking_adjustment_logs', 'actor_role'),
+                        $this->tableColumnOrNull('booking_adjustment_logs', 'action'),
+                        $this->tableColumnOrNull('booking_adjustment_logs', 'note'),
+                    ]);
+
+                if ($this->tableHasColumn('booking_adjustment_logs', 'created_at')) {
+                    $logsQuery->orderByDesc('booking_adjustment_logs.created_at');
+                }
+
+                $logsByAdjustment = $logsQuery
                     ->get()
                     ->groupBy('booking_adjustment_id')
                     ->map(function ($logs) {
@@ -371,6 +465,22 @@ class AdminBookingController extends Controller
         }
 
         return $summary;
+    }
+
+    protected function tableHasColumn(string $table, string $column): bool
+    {
+        return Schema::hasTable($table) && Schema::hasColumn($table, $column);
+    }
+
+    protected function tableColumnOrNull(string $table, string $column, ?string $alias = null)
+    {
+        $alias = $alias ?: $column;
+
+        if ($this->tableHasColumn($table, $column)) {
+            return DB::raw("{$table}.{$column} as {$alias}");
+        }
+
+        return DB::raw("NULL as {$alias}");
     }
 
     protected function formatAdjustmentForAdmin(object $adjustment, array $logs = []): array
