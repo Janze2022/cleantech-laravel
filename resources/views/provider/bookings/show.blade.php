@@ -976,6 +976,27 @@
                             <div class="adjustment-copy"><strong>Customer response:</strong> {{ $adjustment->customer_response_note }}</div>
                         @endif
 
+                        @if(($adjustment->status_key ?? '') === 'pending_adjustment_approval')
+                            <form method="POST" action="{{ route('provider.bookings.adjustment.note', $booking->reference_code) }}" class="adjustment-form">
+                                @csrf
+                                <div class="field-block">
+                                    <div class="field-label">Reply to Customer</div>
+                                    <textarea
+                                        class="field-textarea"
+                                        name="provider_adjustment_note"
+                                        placeholder="Add a note to explain the onsite issue or answer the customer."
+                                    >{{ old('provider_adjustment_note') }}</textarea>
+                                    <div class="field-help">Use this when you need to clarify the mismatch before the customer accepts or rejects it.</div>
+                                    @error('provider_adjustment_note')
+                                        <div class="field-error">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div>
+                                    <button type="submit" class="btnx ghost">Send Note to Customer</button>
+                                </div>
+                            </form>
+                        @endif
+
                         @if(!empty($adjustmentLogs) && $adjustmentLogs->isNotEmpty())
                             <div class="timeline-list">
                                 @foreach($adjustmentLogs as $log)

@@ -771,7 +771,7 @@
                         <div>
                             <label class="label" for="customer_response_note">Reply to Provider</label>
                             <textarea id="customer_response_note" name="customer_response_note" placeholder="Optional note for the provider.">{{ old('customer_response_note', $adjustment->customer_response_note ?? '') }}</textarea>
-                            <div class="form-help">Choose whether to accept the update, ask the provider to review it again, keep the original booking, or cancel it.</div>
+                            <div class="form-help">Choose whether to accept the update, ask the provider to review it again, send a note, keep the original booking, or cancel it.</div>
                             @error('customer_response_note')
                                 <div class="field-error">{{ $message }}</div>
                             @enderror
@@ -779,6 +779,7 @@
                         <div class="response-choice-grid">
                             <button type="submit" class="btnx primary" name="response" value="accept">Accept Updated Booking</button>
                             <button type="submit" class="btnx" name="response" value="request_revision">Ask Provider to Review</button>
+                            <button type="submit" class="btnx" name="response" value="send_note">Send Note Only</button>
                             <button type="submit" class="btnx" name="response" value="reject">Reject, Keep Original</button>
                             <button type="button" class="btnx danger response-cancel-toggle">Reject and Cancel</button>
                         </div>

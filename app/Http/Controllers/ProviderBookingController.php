@@ -537,6 +537,8 @@ class ProviderBookingController extends Controller
         return match (Str::lower(trim($action))) {
             'created' => 'Adjustment sent',
             'updated' => 'Adjustment updated',
+            'provider_note' => 'Provider note',
+            'customer_note' => 'Customer note',
             'accepted' => 'Adjustment accepted',
             'revision_requested' => 'Customer asked for a review',
             'rejected' => 'Adjustment rejected',
@@ -552,6 +554,18 @@ class ProviderBookingController extends Controller
         return match ($normalizedAction) {
             'created', 'updated' => $this->firstFilled([
                 $this->priceChangeSummary($payload, 'original_price', 'proposed_total'),
+                !empty($payload['reference_code']) ? 'Ref: ' . $payload['reference_code'] : null,
+            ]),
+            'provider_note' => $this->firstFilled([
+                isset($payload['requested_total'])
+                    ? 'Provider sent a note while the requested total is PHP ' . number_format((float) $payload['requested_total'], 2) . '.'
+                    : null,
+                !empty($payload['reference_code']) ? 'Ref: ' . $payload['reference_code'] : null,
+            ]),
+            'customer_note' => $this->firstFilled([
+                isset($payload['requested_total'])
+                    ? 'Customer sent a note about the requested total of PHP ' . number_format((float) $payload['requested_total'], 2) . '.'
+                    : null,
                 !empty($payload['reference_code']) ? 'Ref: ' . $payload['reference_code'] : null,
             ]),
             'accepted' => $this->firstFilled([
@@ -1343,6 +1357,111 @@ class ProviderBookingController extends Controller
         }
 
         return Storage::disk('public')->response($path);
+    }
+
+    public function sendAdjustmentNote(Request $request, string $reference)
+    {
+        $providerId = $this->providerId();
+
+        if (!$this->bookingAdjustmentTableAvailable()) {
+            return back()->withErrors([
+                'general' => 'Booking adjustments are not available right now.',
+            ]);
+        }
+
+        $data = $request->validate([
+            'provider_adjustment_note' => ['required', 'string', 'max:1200'],
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $booking = DB::table('bookings')
+                ->where('provider_id', $providerId)
+                ->where('reference_code', $reference)
+                ->lockForUpdate()
+                ->first([
+                    'id',
+                    'customer_id',
+                    'reference_code',
+                    'price',
+                    'status',
+                    Schema::hasColumn('bookings', 'adjustment_status')
+                        ? 'adjustment_status'
+                        : DB::raw('NULL as adjustment_status'),
+                ]);
+
+            if (!$booking) {
+                DB::rollBack();
+                abort(404);
+            }
+
+            $adjustment = DB::table('booking_adjustments')
+                ->where('booking_id', $booking->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$adjustment || ($adjustment->status ?? '') !== 'pending_adjustment_approval') {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    'provider_adjustment_note' => 'There is no pending adjustment to reply to right now.',
+                ])->withInput();
+            }
+
+            $note = trim((string) ($data['provider_adjustment_note'] ?? ''));
+
+            DB::table('booking_adjustments')
+                ->where('id', $adjustment->id)
+                ->update([
+                    'provider_note' => $note,
+                    'updated_at' => now(),
+                ]);
+
+            DB::table('bookings')
+                ->where('id', $booking->id)
+                ->update([
+                    'adjustment_status' => 'pending_adjustment_approval',
+                    'updated_at' => now(),
+                ]);
+
+            $this->logBookingAdjustmentActivity(
+                (int) $adjustment->id,
+                (int) $booking->id,
+                'provider',
+                $providerId,
+                'provider_note',
+                $note,
+                [
+                    'reference_code' => $booking->reference_code,
+                    'requested_total' => (float) ($adjustment->proposed_total ?? 0),
+                ]
+            );
+
+            $this->insertCustomerNotification(
+                (int) $booking->customer_id,
+                (string) $booking->reference_code,
+                'The provider sent a note about the booking adjustment for ref ' . $booking->reference_code
+                    . '. Current requested total is PHP ' . number_format((float) ($adjustment->proposed_total ?? 0), 2)
+                    . '. Note: ' . $note,
+                'booking_adjustment'
+            );
+
+            DB::commit();
+
+            return redirect()
+                ->route('provider.bookings.show', $booking->reference_code)
+                ->with('success', 'Your note was sent to the customer.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            DB::rollBack();
+            report($exception);
+
+            return back()->withErrors([
+                'provider_adjustment_note' => 'Unable to send your note right now. Please try again.',
+            ])->withInput();
+        }
     }
 
     public function submitAdjustment(Request $request, string $reference)

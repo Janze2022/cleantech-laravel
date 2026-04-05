@@ -502,6 +502,9 @@ Route::prefix('provider')
         Route::post('/bookings/{reference}/adjustment', [ProviderBookingController::class, 'submitAdjustment'])
             ->name('bookings.adjustment.submit');
 
+        Route::post('/bookings/{reference}/adjustment/note', [ProviderBookingController::class, 'sendAdjustmentNote'])
+            ->name('bookings.adjustment.note');
+
         Route::post('/bookings/{reference}/location', [ProviderBookingController::class, 'updateLocation'])
             ->name('bookings.location.update');
 

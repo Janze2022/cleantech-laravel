@@ -859,7 +859,7 @@ class CustomerBookingController extends Controller
         }
 
         $data = $request->validate([
-            'response' => ['required', 'string', 'in:accept,reject,reject_cancel,request_revision'],
+            'response' => ['required', 'string', 'in:accept,reject,reject_cancel,request_revision,send_note'],
             'customer_response_note' => ['nullable', 'string', 'max:1000'],
             'cancellation_reason' => ['nullable', 'string', 'max:600'],
         ]);
@@ -909,6 +909,55 @@ class CustomerBookingController extends Controller
             $note = trim((string) ($data['customer_response_note'] ?? ''));
             $note = $note !== '' ? $note : null;
             $cancellationReason = trim((string) ($data['cancellation_reason'] ?? ''));
+
+            if ($data['response'] === 'send_note') {
+                if ($note === null) {
+                    DB::rollBack();
+
+                    return back()->withErrors([
+                        'customer_response_note' => 'Please write a note before sending it to the provider.',
+                    ])->withInput();
+                }
+
+                DB::table('booking_adjustments')
+                    ->where('id', $adjustment->id)
+                    ->update([
+                        'customer_response_note' => $note,
+                        'updated_at' => now(),
+                    ]);
+
+                DB::table('bookings')
+                    ->where('id', $booking->id)
+                    ->update([
+                        'adjustment_status' => 'pending_adjustment_approval',
+                        'updated_at' => now(),
+                    ]);
+
+                $this->logBookingAdjustmentActivity(
+                    (int) $adjustment->id,
+                    (int) $booking->id,
+                    'customer',
+                    $customerId,
+                    'customer_note',
+                    $note,
+                    [
+                        'reference_code' => $booking->reference_code,
+                        'requested_total' => (float) ($adjustment->proposed_total ?? 0),
+                    ]
+                );
+
+                $this->notifyProviderAboutAdjustmentNote(
+                    $booking,
+                    $note,
+                    (float) ($adjustment->proposed_total ?? 0)
+                );
+
+                DB::commit();
+
+                return redirect()
+                    ->route('customer.bookings.show', $booking->reference_code)
+                    ->with('success', 'Your note was sent to the provider.');
+            }
 
             if ($data['response'] === 'request_revision') {
                 if ($note === null) {
@@ -1395,6 +1444,8 @@ class CustomerBookingController extends Controller
         return match (Str::lower(trim($action))) {
             'created' => 'Adjustment sent',
             'updated' => 'Adjustment updated',
+            'provider_note' => 'Provider note',
+            'customer_note' => 'Customer note',
             'accepted' => 'Adjustment accepted',
             'revision_requested' => 'Customer asked for a review',
             'rejected' => 'Adjustment rejected',
@@ -1410,6 +1461,18 @@ class CustomerBookingController extends Controller
         return match ($normalizedAction) {
             'created', 'updated' => $this->firstFilled([
                 $this->priceChangeSummary($payload, 'original_price', 'proposed_total'),
+                !empty($payload['reference_code']) ? 'Ref: ' . $payload['reference_code'] : null,
+            ]),
+            'provider_note' => $this->firstFilled([
+                isset($payload['requested_total'])
+                    ? 'Provider sent a note about the requested total of PHP ' . number_format((float) $payload['requested_total'], 2) . '.'
+                    : null,
+                !empty($payload['reference_code']) ? 'Ref: ' . $payload['reference_code'] : null,
+            ]),
+            'customer_note' => $this->firstFilled([
+                isset($payload['requested_total'])
+                    ? 'Customer sent a note while the requested total is PHP ' . number_format((float) $payload['requested_total'], 2) . '.'
+                    : null,
                 !empty($payload['reference_code']) ? 'Ref: ' . $payload['reference_code'] : null,
             ]),
             'accepted' => $this->firstFilled([
@@ -1655,6 +1718,56 @@ class CustomerBookingController extends Controller
         if ($note) {
             $message .= ' Note: ' . $note;
         }
+
+        $notification = [
+            'provider_id' => $providerId,
+            'message' => $message,
+            'is_read' => 0,
+        ];
+
+        if (Schema::hasColumn('provider_notifications', 'type')) {
+            $notification['type'] = 'booking_adjustment';
+        }
+
+        if (Schema::hasColumn('provider_notifications', 'reference_code')) {
+            $notification['reference_code'] = $booking->reference_code;
+        }
+
+        if (Schema::hasColumn('provider_notifications', 'created_at')) {
+            $notification['created_at'] = now();
+        }
+
+        if (Schema::hasColumn('provider_notifications', 'updated_at')) {
+            $notification['updated_at'] = now();
+        }
+
+        DB::table('provider_notifications')->insert($notification);
+    }
+
+    private function notifyProviderAboutAdjustmentNote(
+        object $booking,
+        string $note,
+        ?float $proposedTotal = null
+    ): void {
+        if (
+            !Schema::hasTable('provider_notifications') ||
+            !Schema::hasColumns('provider_notifications', ['provider_id', 'message', 'is_read'])
+        ) {
+            return;
+        }
+
+        $providerId = (int) ($booking->provider_id ?? 0);
+        if (!$providerId) {
+            return;
+        }
+
+        $message = 'The customer sent a note about the booking adjustment for ref ' . $booking->reference_code . '.';
+
+        if ($proposedTotal !== null) {
+            $message .= ' Current requested total is PHP ' . number_format($proposedTotal, 2) . '.';
+        }
+
+        $message .= ' Note: ' . $note;
 
         $notification = [
             'provider_id' => $providerId,
