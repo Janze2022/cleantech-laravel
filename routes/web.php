@@ -150,6 +150,9 @@ Route::prefix('admin')
         Route::get('/customer-reputation', [AdminCustomerReputationController::class, 'index'])
             ->name('customer-reputation');
 
+        Route::post('/customer-reputation/ratings/{id}/review', [AdminCustomerReputationController::class, 'reviewRating'])
+            ->name('customer-reputation.review-rating');
+
         Route::get('/customers/{id}', [AdminCustomerController::class, 'show'])
             ->name('customers.show');
 

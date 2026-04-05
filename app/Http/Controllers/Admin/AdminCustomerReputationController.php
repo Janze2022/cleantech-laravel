@@ -141,6 +141,8 @@ class AdminCustomerReputationController extends Controller
             'high_risk' => $customers->where('risk_level', 'High')->count(),
             'mismatches' => $customers->sum('mismatch_count'),
             'complaints' => $customers->sum('complaint_count'),
+            'suspicious_pending' => $suspiciousRatings->whereNull('admin_reviewed_at')->count(),
+            'suspicious_reviewed' => $suspiciousRatings->whereNotNull('admin_reviewed_at')->count(),
         ];
 
         return view('admin.customer_reputation', compact(
@@ -154,6 +156,83 @@ class AdminCustomerReputationController extends Controller
             'risk',
             'sort'
         ));
+    }
+
+    public function reviewRating(Request $request, int $id)
+    {
+        if (!$this->supportsAdminReview()) {
+            return back()->withErrors([
+                'customer_reputation' => 'Customer rating review fields are not available yet.',
+            ]);
+        }
+
+        $request->validate([
+            'action' => 'required|in:review,reopen',
+            'admin_review_note' => 'nullable|string|max:1200',
+        ]);
+
+        $rating = DB::table('customer_ratings')
+            ->where('id', $id)
+            ->first();
+
+        if (!$rating) {
+            return back()->withErrors([
+                'customer_reputation' => 'Customer rating record not found.',
+            ]);
+        }
+
+        $action = (string) $request->input('action');
+        $note = trim((string) $request->input('admin_review_note', '')) ?: null;
+        $timestamp = now();
+
+        if ($action === 'review') {
+            DB::table('customer_ratings')
+                ->where('id', $id)
+                ->update([
+                    'admin_reviewed_at' => $timestamp,
+                    'admin_reviewed_by' => session('admin_id'),
+                    'admin_review_note' => $note,
+                    'updated_at' => $timestamp,
+                ]);
+
+            $this->logRatingActivity(
+                $id,
+                (int) $rating->booking_id,
+                (int) $rating->customer_id,
+                (int) $rating->provider_id,
+                'admin_reviewed',
+                [
+                    'admin_review_note' => $note,
+                    'admin_reviewed_at' => $timestamp->toDateTimeString(),
+                    'admin_reviewed_by' => session('admin_id'),
+                ]
+            );
+
+            return back()->with('success', 'Suspicious customer rating marked as reviewed.');
+        }
+
+        DB::table('customer_ratings')
+            ->where('id', $id)
+            ->update([
+                'admin_reviewed_at' => null,
+                'admin_reviewed_by' => null,
+                'admin_review_note' => null,
+                'updated_at' => $timestamp,
+            ]);
+
+        $this->logRatingActivity(
+            $id,
+            (int) $rating->booking_id,
+            (int) $rating->customer_id,
+            (int) $rating->provider_id,
+            'admin_review_reopened',
+            [
+                'admin_review_note' => $note,
+                'admin_reviewed_by' => session('admin_id'),
+            ]
+        );
+
+        return back()->with('success', 'Suspicious customer rating moved back to pending review.');
     }
 
     private function loadRatingHistory(array $customerIds)
@@ -214,8 +293,8 @@ class AdminCustomerReputationController extends Controller
     private function loadSuspiciousRatings()
     {
         $areasSub = $this->bookingAreasSubquery();
-
-        return DB::table('customer_ratings as cr')
+        $supportsAdminReview = $this->supportsAdminReview();
+        $query = DB::table('customer_ratings as cr')
             ->join('customers as c', 'c.id', '=', 'cr.customer_id')
             ->join('service_providers as p', 'p.id', '=', 'cr.provider_id')
             ->leftJoin('bookings as b', 'b.id', '=', 'cr.booking_id')
@@ -224,7 +303,6 @@ class AdminCustomerReputationController extends Controller
             ->leftJoinSub($areasSub, 'areas', function ($join) {
                 $join->on('areas.booking_id', '=', 'b.id');
             })
-            ->orderByDesc('cr.created_at')
             ->limit(200)
             ->select(
                 'cr.id',
@@ -251,7 +329,26 @@ class AdminCustomerReputationController extends Controller
                 'c.name as customer_name',
                 'c.email as customer_email',
                 DB::raw("TRIM(CONCAT(COALESCE(p.first_name,''), ' ', COALESCE(p.last_name,''))) as provider_name")
-            )
+            );
+
+        if ($supportsAdminReview && Schema::hasTable('admins')) {
+            $query->leftJoin('admins as reviewed_admin', 'reviewed_admin.id', '=', 'cr.admin_reviewed_by');
+            $query->addSelect(
+                'cr.admin_reviewed_at',
+                'cr.admin_reviewed_by',
+                'cr.admin_review_note',
+                DB::raw("COALESCE(reviewed_admin.name, 'Admin') as admin_reviewed_by_name")
+            );
+        } else {
+            $query->addSelect(
+                DB::raw('NULL as admin_reviewed_at'),
+                DB::raw('NULL as admin_reviewed_by'),
+                DB::raw('NULL as admin_review_note'),
+                DB::raw('NULL as admin_reviewed_by_name')
+            );
+        }
+
+        return $query
             ->get()
             ->map(function ($row) {
                 $flags = collect([
@@ -266,6 +363,7 @@ class AdminCustomerReputationController extends Controller
 
                 $row->suspicion_flags = $flags;
                 $row->negative_flags_count = count($flags);
+                $row->is_reviewed = !empty($row->admin_reviewed_at);
                 $row->suspicion_score =
                     ($row->negative_flags_count * 3) +
                     ((int) $row->rating <= 2 ? 3 : 0) +
@@ -278,7 +376,10 @@ class AdminCustomerReputationController extends Controller
                 return $row->negative_flags_count > 0 || (int) $row->rating <= 2;
             })
             ->sortByDesc(function ($row) {
-                return ($row->suspicion_score * 1000000000) + strtotime((string) $row->created_at);
+                return
+                    (($row->is_reviewed ? 0 : 1) * 1000000000000) +
+                    ($row->suspicion_score * 1000000000) +
+                    strtotime((string) $row->created_at);
             })
             ->take(8)
             ->values();
@@ -355,5 +456,39 @@ class AdminCustomerReputationController extends Controller
             ->join('service_options as so2', 'so2.id', '=', 'bso.service_option_id')
             ->selectRaw("bso.booking_id, GROUP_CONCAT(so2.label ORDER BY so2.label SEPARATOR ', ') as areas_label")
             ->groupBy('bso.booking_id');
+    }
+
+    private function supportsAdminReview(): bool
+    {
+        return Schema::hasTable('customer_ratings')
+            && Schema::hasColumn('customer_ratings', 'admin_reviewed_at')
+            && Schema::hasColumn('customer_ratings', 'admin_reviewed_by')
+            && Schema::hasColumn('customer_ratings', 'admin_review_note');
+    }
+
+    private function logRatingActivity(
+        int $customerRatingId,
+        int $bookingId,
+        int $customerId,
+        int $providerId,
+        string $action,
+        array $payload
+    ): void {
+        if (!Schema::hasTable('customer_rating_logs')) {
+            return;
+        }
+
+        DB::table('customer_rating_logs')->insert([
+            'customer_rating_id' => $customerRatingId,
+            'booking_id' => $bookingId,
+            'customer_id' => $customerId,
+            'provider_id' => $providerId,
+            'actor_role' => 'admin',
+            'actor_id' => session('admin_id'),
+            'action' => $action,
+            'payload' => json_encode($payload),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }

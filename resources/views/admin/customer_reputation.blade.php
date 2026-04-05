@@ -18,6 +18,8 @@
         'high_risk' => 0,
         'mismatches' => 0,
         'complaints' => 0,
+        'suspicious_pending' => 0,
+        'suspicious_reviewed' => 0,
     ];
 
     $ratingWords = function ($value) {
@@ -105,6 +107,19 @@
 .history-comment{margin-top:.85rem;padding:.85rem .95rem;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);color:#e2e8f0;line-height:1.6}
 .history-attachment img{width:90px;height:90px;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.08)}
 .history-attachment a{color:#7dd3fc;font-weight:800;text-decoration:none}
+.review-strip{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin-top:.9rem}
+.review-state{display:inline-flex;align-items:center;gap:.38rem;padding:.36rem .68rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900}
+.review-state.pending{border-color:rgba(245,158,11,.22);background:rgba(245,158,11,.12);color:#fde68a}
+.review-state.reviewed{border-color:rgba(34,197,94,.22);background:rgba(34,197,94,.1);color:#bbf7d0}
+.review-panel{margin-top:.95rem;padding:.9rem;border-radius:16px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03)}
+.review-note{margin-top:.55rem;color:#cbd5e1;font-size:.84rem;line-height:1.55}
+.review-form{display:flex;flex-direction:column;gap:.7rem}
+.review-form textarea{min-height:86px;padding:.8rem .9rem;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(2,6,23,.45);color:#fff;resize:vertical}
+.review-form textarea:focus{outline:none;border-color:rgba(56,189,248,.28);box-shadow:0 0 0 3px rgba(56,189,248,.08)}
+.review-actions{display:flex;flex-wrap:wrap;gap:.65rem}
+.review-btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:.72rem 1rem;border-radius:12px;font-size:.82rem;font-weight:900;text-decoration:none}
+.review-btn.primary{border:1px solid rgba(34,197,94,.18);background:linear-gradient(135deg,#15803d,#22c55e);color:#fff}
+.review-btn.secondary{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#fff}
 .empty-note{padding:1.1rem;border-radius:18px;border:1px dashed rgba(255,255,255,.1);color:var(--rep-muted);text-align:center;font-weight:800}
 @media (max-width:1200px){.summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.toolbar-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:991px){.summary-grid,.insight-grid,.toolbar-grid{grid-template-columns:1fr}}
@@ -221,7 +236,10 @@
                 <h2 class="panel-title">Suspicious Ratings Review</h2>
                 <p class="panel-sub">Recent low-score or flagged customer ratings that may need admin review.</p>
             </div>
-            <div class="rep-chip"><i class="fa-solid fa-flag"></i> {{ $suspiciousRatings->count() }} recent</div>
+            <div class="d-flex gap-2 flex-wrap">
+                <div class="rep-chip"><i class="fa-solid fa-clock"></i> {{ $summary->suspicious_pending }} pending</div>
+                <div class="rep-chip"><i class="fa-solid fa-flag"></i> {{ $suspiciousRatings->count() }} recent</div>
+            </div>
         </div>
 
         @if($suspiciousRatings->isEmpty())
@@ -274,6 +292,43 @@
                                 <a href="{{ $attachment }}" target="_blank" rel="noopener">{{ $item->attachment_name ?: 'Open attachment' }}</a>
                             </div>
                         @endif
+
+                        <div class="review-strip">
+                            @if(!empty($item->admin_reviewed_at))
+                                <span class="review-state reviewed"><i class="fa-solid fa-circle-check"></i> Reviewed</span>
+                                <span class="customer-sub">
+                                    {{ $item->admin_reviewed_by_name ?: 'Admin' }}
+                                    / {{ Carbon::parse($item->admin_reviewed_at)->format('M d, Y h:i A') }}
+                                </span>
+                            @else
+                                <span class="review-state pending"><i class="fa-solid fa-clock"></i> Pending admin review</span>
+                            @endif
+                        </div>
+
+                        <div class="review-panel">
+                            @if(!empty($item->admin_reviewed_at))
+                                @if(!empty($item->admin_review_note))
+                                    <div class="review-note">{{ $item->admin_review_note }}</div>
+                                @endif
+
+                                <form method="POST" action="{{ route('admin.customer-reputation.review-rating', $item->id) }}" class="review-form">
+                                    @csrf
+                                    <input type="hidden" name="action" value="reopen">
+                                    <div class="review-actions">
+                                        <button class="review-btn secondary" type="submit">Move Back to Pending</button>
+                                    </div>
+                                </form>
+                            @else
+                                <form method="POST" action="{{ route('admin.customer-reputation.review-rating', $item->id) }}" class="review-form">
+                                    @csrf
+                                    <input type="hidden" name="action" value="review">
+                                    <textarea name="admin_review_note" placeholder="Add a short admin review note if needed."></textarea>
+                                    <div class="review-actions">
+                                        <button class="review-btn primary" type="submit">Mark Reviewed</button>
+                                    </div>
+                                </form>
+                            @endif
+                        </div>
                     </div>
                 @endforeach
             </div>
