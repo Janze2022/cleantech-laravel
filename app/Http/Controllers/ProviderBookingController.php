@@ -729,6 +729,32 @@ class ProviderBookingController extends Controller
         }
     }
 
+    private function logBookingAdjustmentActivity(
+        int $adjustmentId,
+        int $bookingId,
+        string $actorRole,
+        int $actorId,
+        string $action,
+        ?string $note = null,
+        array $payload = []
+    ): void {
+        if (!$this->bookingAdjustmentLogTableAvailable()) {
+            return;
+        }
+
+        DB::table('booking_adjustment_logs')->insert([
+            'booking_adjustment_id' => $adjustmentId,
+            'booking_id' => $bookingId,
+            'actor_role' => $actorRole,
+            'actor_id' => $actorId,
+            'action' => $action,
+            'note' => $note,
+            'payload' => json_encode($payload),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
     private function bookingCanTrack(?string $status): bool
     {
         return in_array($this->normalizeStatusKey($status), $this->trackingStatusKeys(), true);
@@ -855,6 +881,88 @@ class ProviderBookingController extends Controller
             ->get(['id', 'service_id', 'label', 'price_addition']);
     }
 
+    private function adjustmentServices()
+    {
+        if (!$this->tableHasColumns('services', ['id', 'name', 'base_price'])) {
+            return collect();
+        }
+
+        return DB::table('services')
+            ->orderByRaw("
+                CASE LOWER(name)
+                    WHEN 'general cleaning' THEN 1
+                    WHEN 'deep cleaning' THEN 2
+                    WHEN 'specific area cleaning' THEN 3
+                    ELSE 99
+                END
+            ")
+            ->orderBy('name')
+            ->get(['id', 'name', 'base_price'])
+            ->map(function ($service) {
+                return (object) [
+                    'id' => (int) $service->id,
+                    'name' => trim((string) $service->name),
+                    'base_price' => (float) ($service->base_price ?? 0),
+                ];
+            })
+            ->values();
+    }
+
+    private function serviceOptionsForServices(array $serviceIds)
+    {
+        $serviceIds = collect($serviceIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($serviceIds) || !$this->tableHasColumns('service_options', ['id', 'service_id', 'label', 'price_addition'])) {
+            return collect();
+        }
+
+        return DB::table('service_options')
+            ->whereIn('service_id', $serviceIds)
+            ->orderBy('service_id')
+            ->orderBy('label')
+            ->get(['id', 'service_id', 'label', 'price_addition'])
+            ->groupBy(fn ($option) => (int) $option->service_id)
+            ->map(function ($options) {
+                return collect($options)
+                    ->map(function ($option) {
+                        return (object) [
+                            'id' => (int) $option->id,
+                            'service_id' => (int) $option->service_id,
+                            'label' => trim((string) $option->label),
+                            'price_addition' => (float) ($option->price_addition ?? 0),
+                        ];
+                    })
+                    ->values();
+            });
+    }
+
+    private function firstServiceIdFromOptionIds(array $optionIds, $serviceOptionsByService, ?int $fallback = null): ?int
+    {
+        $optionIds = collect($optionIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->values()
+            ->all();
+
+        if (!empty($optionIds)) {
+            foreach ($serviceOptionsByService as $serviceId => $options) {
+                $matches = collect($options)
+                    ->contains(fn ($option) => in_array((int) ($option->id ?? 0), $optionIds, true));
+
+                if ($matches) {
+                    return (int) $serviceId;
+                }
+            }
+        }
+
+        return $fallback ? (int) $fallback : null;
+    }
+
     private function specificAreaServiceId(): ?int
     {
         if (!Schema::hasTable('services') || !Schema::hasColumn('services', 'name')) {
@@ -877,14 +985,6 @@ class ProviderBookingController extends Controller
             ->values();
 
         return $labels->isNotEmpty() ? $labels->implode(', ') : null;
-    }
-
-    private function optionIdsMatch(array $left, array $right): bool
-    {
-        sort($left);
-        sort($right);
-
-        return array_values($left) === array_values($right);
     }
 
     private function automaticReasonFee(array $reasonCodes, float $originalPrice): float
@@ -1298,38 +1398,52 @@ class ProviderBookingController extends Controller
             $this->bookingAdjustmentByBookingId((int) $booking->id)
         );
 
-        $serviceOptions = $this->serviceOptionsForService((int) ($booking->service_id ?? 0))
-            ->map(function ($option) {
-                return (object) [
-                    'id' => (int) $option->id,
-                    'label' => trim((string) $option->label),
-                    'price_addition' => (float) ($option->price_addition ?? 0),
-                ];
-            })
-            ->values();
-
-        $serviceOptionsById = $serviceOptions->keyBy('id');
+        $adjustmentServices = $this->adjustmentServices();
+        $serviceOptionsByService = $this->serviceOptionsForServices(
+            $adjustmentServices->pluck('id')->all()
+        );
+        $currentServiceId = (int) ($booking->service_id ?? 0);
+        $specificAreaServiceId = (int) ($this->specificAreaServiceId() ?? 0);
+        $currentServiceOptions = collect($serviceOptionsByService->get($currentServiceId, collect()));
+        $currentServiceOptionsById = $currentServiceOptions->keyBy('id');
         $currentOptionIds = $this->bookingSelectedOptionIds((int) ($booking->id ?? 0), $booking->service_option_id ?? null);
         $requestedOptionIds = collect($adjustment->proposed_option_ids ?? [])
             ->map(fn ($id) => (int) $id)
-            ->filter(fn ($id) => $serviceOptionsById->has($id))
+            ->filter(fn ($id) => $id > 0)
             ->values()
             ->all();
 
-        if (empty($requestedOptionIds) && !empty($adjustment->proposed_service_option_id) && $serviceOptionsById->has((int) $adjustment->proposed_service_option_id)) {
+        if (empty($requestedOptionIds) && !empty($adjustment->proposed_service_option_id)) {
             $requestedOptionIds = [(int) $adjustment->proposed_service_option_id];
         }
 
-        if (empty($requestedOptionIds)) {
+        $requestedServiceId = $this->firstServiceIdFromOptionIds(
+            $requestedOptionIds,
+            $serviceOptionsByService,
+            null
+        );
+
+        if (
+            !$requestedServiceId
+            && !empty($adjustment->proposed_service_name)
+        ) {
+            $requestedServiceId = $adjustmentServices
+                ->first(fn ($service) => Str::lower(trim((string) ($service->name ?? ''))) === Str::lower(trim((string) $adjustment->proposed_service_name)))
+                ?->id;
+        }
+
+        $requestedServiceId = (int) ($requestedServiceId ?: $currentServiceId);
+
+        if (empty($requestedOptionIds) && $requestedServiceId === $currentServiceId) {
             $requestedOptionIds = $currentOptionIds;
         }
 
-        $isSpecificAreaBooking = (int) ($booking->service_id ?? 0) !== 0
-            && (int) ($booking->service_id ?? 0) === (int) ($this->specificAreaServiceId() ?? 0);
+        $requestedServiceOptions = collect($serviceOptionsByService->get($requestedServiceId, collect()));
+        $requestedServiceOptionsById = $requestedServiceOptions->keyBy('id');
 
-        $originalOptionSummary = $this->optionSummaryFromIds($currentOptionIds, $serviceOptionsById)
+        $originalOptionSummary = $this->optionSummaryFromIds($currentOptionIds, $currentServiceOptionsById)
             ?: trim((string) ($booking->option_label ?? ''));
-        $requestedOptionSummary = $this->optionSummaryFromIds($requestedOptionIds, $serviceOptionsById)
+        $requestedOptionSummary = $this->optionSummaryFromIds($requestedOptionIds, $requestedServiceOptionsById)
             ?: $originalOptionSummary;
         $adjustmentLogs = $adjustment
             ? $this->formattedAdjustmentLogs((int) ($adjustment->id ?? 0))
@@ -1339,10 +1453,13 @@ class ProviderBookingController extends Controller
             'booking',
             'adjustment',
             'adjustmentLogs',
-            'serviceOptions',
+            'adjustmentServices',
+            'serviceOptionsByService',
             'currentOptionIds',
             'requestedOptionIds',
-            'isSpecificAreaBooking',
+            'currentServiceId',
+            'requestedServiceId',
+            'specificAreaServiceId',
             'originalOptionSummary',
             'requestedOptionSummary'
         ));
@@ -1477,6 +1594,7 @@ class ProviderBookingController extends Controller
         $data = $request->validate([
             'reason_codes' => ['required', 'array', 'min:1'],
             'reason_codes.*' => ['required', 'string', 'in:larger_area,additional_rooms,heavy_soiling,other'],
+            'corrected_service_id' => ['required', 'integer'],
             'other_reason' => ['nullable', 'string', 'max:600'],
             'corrected_option_id' => ['nullable', 'integer'],
             'corrected_option_ids' => ['nullable', 'array', 'min:1'],
@@ -1540,89 +1658,95 @@ class ProviderBookingController extends Controller
                 ])->withInput();
             }
 
-            $serviceOptions = $this->serviceOptionsForService((int) ($booking->service_id ?? 0))->keyBy('id');
+            $adjustmentServices = $this->adjustmentServices();
+            $servicesById = $adjustmentServices->keyBy('id');
+            $serviceOptionsByService = $this->serviceOptionsForServices(
+                $adjustmentServices->pluck('id')->all()
+            );
 
-            if ($serviceOptions->isEmpty()) {
+            $currentServiceId = (int) ($booking->service_id ?? 0);
+            $correctedServiceId = (int) ($data['corrected_service_id'] ?? 0);
+
+            if (!$servicesById->has($correctedServiceId)) {
                 DB::rollBack();
 
                 return back()->withErrors([
-                    'general' => 'This booking has no adjustable scope options right now.',
+                    'corrected_service_id' => 'Choose the actual onsite service before sending the update.',
                 ])->withInput();
             }
 
-            $isSpecificAreaBooking = (int) ($booking->service_id ?? 0) !== 0
-                && (int) ($booking->service_id ?? 0) === (int) ($this->specificAreaServiceId() ?? 0);
+            $correctedService = $servicesById->get($correctedServiceId);
+            $specificAreaServiceId = (int) ($this->specificAreaServiceId() ?? 0);
+            $currentServiceOptions = collect($serviceOptionsByService->get($currentServiceId, collect()))->keyBy('id');
+            $correctedServiceOptions = collect($serviceOptionsByService->get($correctedServiceId, collect()))->keyBy('id');
+            $selectedServiceIsSpecificArea = $correctedServiceId !== 0
+                && $correctedServiceId === $specificAreaServiceId;
+
+            if ($correctedServiceOptions->isEmpty()) {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    'corrected_service_id' => 'The selected service has no scope options available right now.',
+                ])->withInput();
+            }
 
             $originalOptionIds = collect($this->bookingSelectedOptionIds(
                 (int) $booking->id,
                 $booking->service_option_id ?? null
             ))
                 ->map(fn ($id) => (int) $id)
-                ->filter(fn ($id) => $serviceOptions->has($id))
+                ->filter(fn ($id) => $currentServiceOptions->has($id))
                 ->values()
                 ->all();
 
-            $scopeChangeRequested = collect($reasonCodes)
-                ->contains(fn ($code) => in_array($this->normalizeStatusKey((string) $code), ['larger_area', 'additional_rooms'], true));
-
-            $correctedOptionIds = $isSpecificAreaBooking
+            $correctedOptionIds = $selectedServiceIsSpecificArea
                 ? collect($data['corrected_option_ids'] ?? [])
                     ->map(fn ($id) => (int) $id)
-                    ->filter(fn ($id) => $serviceOptions->has($id))
+                    ->filter(fn ($id) => $correctedServiceOptions->has($id))
                     ->unique()
                     ->values()
                     ->all()
                 : collect([(int) ($data['corrected_option_id'] ?? 0)])
-                    ->filter(fn ($id) => $serviceOptions->has($id))
+                    ->filter(fn ($id) => $correctedServiceOptions->has($id))
                     ->values()
                     ->all();
 
-            if (!$scopeChangeRequested) {
-                $correctedOptionIds = $originalOptionIds;
-            }
-
-            if (empty($correctedOptionIds) && $scopeChangeRequested) {
+            if (empty($correctedOptionIds)) {
                 DB::rollBack();
 
                 return back()->withErrors([
-                    $isSpecificAreaBooking ? 'corrected_option_ids' : 'corrected_option_id' => $isSpecificAreaBooking
+                    $selectedServiceIsSpecificArea ? 'corrected_option_ids' : 'corrected_option_id' => $selectedServiceIsSpecificArea
                         ? 'Please select the corrected sections for this booking.'
                         : 'Please select the corrected size or option for this booking.',
                 ])->withInput();
             }
 
-            if ($scopeChangeRequested && $this->optionIdsMatch($correctedOptionIds, $originalOptionIds)) {
-                DB::rollBack();
-
-                return back()->withErrors([
-                    $isSpecificAreaBooking ? 'corrected_option_ids' : 'corrected_option_id' => $isSpecificAreaBooking
-                        ? 'Choose the corrected sections so the booking matches the actual onsite scope.'
-                        : 'Choose the corrected size or option so the booking matches the actual onsite scope.',
-                ])->withInput();
-            }
-
-            $originalOptionTotal = round(collect($originalOptionIds)->sum(function ($id) use ($serviceOptions) {
-                return (float) ($serviceOptions->get((int) $id)->price_addition ?? 0);
+            $originalOptionTotal = round(collect($originalOptionIds)->sum(function ($id) use ($currentServiceOptions) {
+                return (float) ($currentServiceOptions->get((int) $id)->price_addition ?? 0);
             }), 2);
-            $correctedOptionTotal = round(collect($correctedOptionIds)->sum(function ($id) use ($serviceOptions) {
-                return (float) ($serviceOptions->get((int) $id)->price_addition ?? 0);
+            $correctedOptionTotal = round(collect($correctedOptionIds)->sum(function ($id) use ($correctedServiceOptions) {
+                return (float) ($correctedServiceOptions->get((int) $id)->price_addition ?? 0);
             }), 2);
 
             $originalPrice = round((float) ($booking->price ?? 0), 2);
-            $basePrice = round((float) ($booking->base_price ?? ($originalPrice - $originalOptionTotal)), 2);
-            if ($basePrice < 0) {
-                $basePrice = 0;
+            $currentServiceBasePrice = round((float) ($booking->base_price ?? ($originalPrice - $originalOptionTotal)), 2);
+            if ($currentServiceBasePrice < 0) {
+                $currentServiceBasePrice = 0;
+            }
+            $correctedServiceBasePrice = round((float) ($correctedService->base_price ?? 0), 2);
+            if ($correctedServiceBasePrice <= 0 && $correctedServiceId === $currentServiceId) {
+                $correctedServiceBasePrice = $currentServiceBasePrice;
             }
 
             $automaticReasonFee = $this->automaticReasonFee($reasonCodes, $originalPrice);
-            $proposedTotal = round($basePrice + $correctedOptionTotal + $automaticReasonFee, 2);
+            $proposedTotal = round($correctedServiceBasePrice + $correctedOptionTotal + $automaticReasonFee, 2);
             $additionalFee = round($proposedTotal - $originalPrice, 2);
 
             if ($proposedTotal < $originalPrice) {
                 DB::rollBack();
 
                 return back()->withErrors([
-                    $isSpecificAreaBooking ? 'corrected_option_ids' : 'corrected_option_id' => 'The corrected selection cannot reduce the original booking total.',
+                    $selectedServiceIsSpecificArea ? 'corrected_option_ids' : 'corrected_option_id' => 'The corrected selection cannot reduce the original booking total.',
                 ])->withInput();
             }
 
@@ -1634,7 +1758,7 @@ class ProviderBookingController extends Controller
                 DB::rollBack();
 
                 return back()->withErrors([
-                    $isSpecificAreaBooking ? 'corrected_option_ids' : 'corrected_option_id' => 'Price adjustments cannot increase by more than ' . (int) self::ADJUSTMENT_MAX_INCREASE_PERCENT . '%.',
+                    $selectedServiceIsSpecificArea ? 'corrected_option_ids' : 'corrected_option_id' => 'Price adjustments cannot increase by more than ' . (int) self::ADJUSTMENT_MAX_INCREASE_PERCENT . '%.',
                 ])->withInput();
             }
 
@@ -1664,19 +1788,27 @@ class ProviderBookingController extends Controller
                 }
             }
 
-            $originalOptionSummary = $this->optionSummaryFromIds($originalOptionIds, $serviceOptions)
+            $originalOptionSummary = $this->optionSummaryFromIds($originalOptionIds, $currentServiceOptions)
                 ?: trim((string) ($booking->option_name ?? ''))
                 ?: null;
-            $correctedOptionSummary = $this->optionSummaryFromIds($correctedOptionIds, $serviceOptions)
+            $correctedOptionSummary = $this->optionSummaryFromIds($correctedOptionIds, $correctedServiceOptions)
                 ?: $originalOptionSummary;
+            $originalScopeLabel = trim(
+                $booking->service_name
+                . ($originalOptionSummary ? ' / ' . $originalOptionSummary : '')
+            );
+            $correctedScopeLabel = trim(
+                trim((string) ($correctedService->name ?? $booking->service_name))
+                . ($correctedOptionSummary ? ' / ' . $correctedOptionSummary : '')
+            );
 
             $scopeParts = [];
-            if ($correctedOptionSummary) {
-                $scopeParts[] = 'Updated selection: ' . $correctedOptionSummary;
+            if ($correctedScopeLabel !== '') {
+                $scopeParts[] = 'Actual onsite booking: ' . $correctedScopeLabel;
             }
 
-            if ($originalOptionSummary && $correctedOptionSummary && $originalOptionSummary !== $correctedOptionSummary) {
-                $scopeParts[] = 'Originally booked: ' . $originalOptionSummary;
+            if ($originalScopeLabel !== '' && $originalScopeLabel !== $correctedScopeLabel) {
+                $scopeParts[] = 'Originally booked: ' . $originalScopeLabel;
             }
 
             if (!empty($reasonCodes)) {
@@ -1702,7 +1834,7 @@ class ProviderBookingController extends Controller
                 'original_service_name' => $booking->service_name,
                 'original_option_summary' => $originalOptionSummary,
                 'original_price' => $originalPrice,
-                'proposed_service_name' => $booking->service_name,
+                'proposed_service_name' => trim((string) ($correctedService->name ?? $booking->service_name)),
                 'proposed_service_option_id' => $correctedOptionIds[0] ?? null,
                 'proposed_option_ids_payload' => json_encode(array_values($correctedOptionIds)),
                 'proposed_scope_summary' => $proposedScopeSummary,
@@ -1759,8 +1891,8 @@ class ProviderBookingController extends Controller
                 (int) $booking->customer_id,
                 (string) $booking->reference_code,
                 'Adjustment request for ref ' . $booking->reference_code
-                    . '. Booked scope: ' . ($originalOptionSummary ?: $booking->service_name)
-                    . '. Actual onsite scope: ' . ($correctedOptionSummary ?: $booking->service_name)
+                    . '. Booked scope: ' . ($originalScopeLabel !== '' ? $originalScopeLabel : $booking->service_name)
+                    . '. Actual onsite scope: ' . ($correctedScopeLabel !== '' ? $correctedScopeLabel : ($correctedService->name ?? $booking->service_name))
                     . '. Original total: PHP ' . number_format($originalPrice, 2)
                     . '. Added amount: PHP ' . number_format($additionalFee, 2)
                     . '. New total: PHP ' . number_format($proposedTotal, 2)

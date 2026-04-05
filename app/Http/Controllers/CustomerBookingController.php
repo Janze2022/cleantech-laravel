@@ -1024,11 +1024,46 @@ class CustomerBookingController extends Controller
                     $proposedOptionIds = [(int) $adjustment->proposed_service_option_id];
                 }
 
+                $proposedServiceId = null;
+
+                if (
+                    !empty($proposedOptionIds)
+                    && Schema::hasTable('service_options')
+                    && Schema::hasColumns('service_options', ['id', 'service_id'])
+                ) {
+                    $proposedServiceIds = DB::table('service_options')
+                        ->whereIn('id', $proposedOptionIds)
+                        ->pluck('service_id')
+                        ->map(fn ($value) => (int) $value)
+                        ->filter(fn ($value) => $value > 0)
+                        ->unique()
+                        ->values();
+
+                    if ($proposedServiceIds->count() === 1) {
+                        $proposedServiceId = (int) $proposedServiceIds->first();
+                    }
+                }
+
+                if (
+                    !$proposedServiceId
+                    && Schema::hasTable('services')
+                    && Schema::hasColumns('services', ['id', 'name'])
+                    && trim((string) ($adjustment->proposed_service_name ?? '')) !== ''
+                ) {
+                    $proposedServiceId = DB::table('services')
+                        ->whereRaw('LOWER(name) = ?', [strtolower(trim((string) $adjustment->proposed_service_name))])
+                        ->value('id');
+                }
+
                 $bookingUpdate = [
                     'price' => $adjustment->proposed_total,
                     'adjustment_status' => 'adjustment_accepted',
                     'updated_at' => now(),
                 ];
+
+                if ($proposedServiceId && Schema::hasColumn('bookings', 'service_id')) {
+                    $bookingUpdate['service_id'] = (int) $proposedServiceId;
+                }
 
                 if (!empty($proposedOptionIds) && Schema::hasColumn('bookings', 'service_option_id')) {
                     $bookingUpdate['service_option_id'] = (int) $proposedOptionIds[0];
@@ -1039,8 +1074,7 @@ class CustomerBookingController extends Controller
                     ->update($bookingUpdate);
 
                 if (
-                    !empty($proposedOptionIds)
-                    && Schema::hasTable('booking_service_options')
+                    Schema::hasTable('booking_service_options')
                     && Schema::hasColumns('booking_service_options', ['booking_id', 'service_option_id'])
                 ) {
                     DB::table('booking_service_options')
@@ -1082,6 +1116,7 @@ class CustomerBookingController extends Controller
                         'reference_code' => $booking->reference_code,
                         'old_price' => (float) ($booking->price ?? 0),
                         'new_price' => (float) ($adjustment->proposed_total ?? 0),
+                        'applied_service_id' => $proposedServiceId ? (int) $proposedServiceId : null,
                         'applied_option_ids' => $proposedOptionIds,
                     ]
                 );

@@ -144,21 +144,58 @@
     $cancelledByLabel = $cancelledByRole !== '' ? ucfirst(str_replace('_', ' ', $cancelledByRole)) : 'System';
     $bookingAdjustmentStatus = trim((string) ($booking->adjustment_status ?? ''));
     $canReportMismatch = $stLower === 'in_progress' && (($adjustment->status_key ?? '') !== 'adjustment_accepted');
-    $serviceOptionsById = collect($serviceOptions ?? [])
+    $adjustmentServices = collect($adjustmentServices ?? [])->values();
+    $servicesById = $adjustmentServices->keyBy(fn ($service) => (int) ($service->id ?? 0));
+    $serviceOptionsByService = collect($serviceOptionsByService ?? collect())
+        ->map(fn ($options) => collect($options)->values());
+    $currentServiceId = (int) ($currentServiceId ?? ($booking->service_id ?? 0));
+    $requestedServiceId = (int) ($requestedServiceId ?? $currentServiceId);
+    if (!$servicesById->has($requestedServiceId)) {
+        $requestedServiceId = $currentServiceId;
+    }
+
+    $currentServiceOptions = collect($serviceOptionsByService->get($currentServiceId, collect()));
+    $currentServiceOptionsById = $currentServiceOptions
         ->keyBy(fn ($option) => (int) ($option->id ?? 0));
+
     $originalOptionIds = collect($currentOptionIds ?? [])
         ->map(fn ($value) => (int) $value)
-        ->filter(fn ($value) => $value > 0 && $serviceOptionsById->has($value))
+        ->filter(fn ($value) => $value > 0 && $currentServiceOptionsById->has($value))
         ->values()
         ->all();
+    $selectedServiceId = (int) old('corrected_service_id', $requestedServiceId);
+    if (!$servicesById->has($selectedServiceId)) {
+        $selectedServiceId = $currentServiceId;
+    }
+
+    $selectedService = $servicesById->get($selectedServiceId);
+    $selectedServiceOptions = collect($serviceOptionsByService->get($selectedServiceId, collect()));
+    $selectedServiceOptionsById = $selectedServiceOptions
+        ->keyBy(fn ($option) => (int) ($option->id ?? 0));
+
+    $originalOptionLabels = collect($originalOptionIds)
+        ->map(fn ($id) => trim((string) ($currentServiceOptionsById->get((int) $id)->label ?? '')))
+        ->filter()
+        ->values()
+        ->all();
+
     $defaultCorrectedOptionIds = collect($requestedOptionIds ?? [])
         ->map(fn ($value) => (int) $value)
-        ->filter(fn ($value) => $value > 0 && $serviceOptionsById->has($value))
+        ->filter(fn ($value) => $value > 0 && $selectedServiceOptionsById->has($value))
         ->values()
         ->all();
 
     if (empty($defaultCorrectedOptionIds)) {
-        $defaultCorrectedOptionIds = $originalOptionIds;
+        if ($selectedServiceId === $currentServiceId) {
+            $defaultCorrectedOptionIds = $originalOptionIds;
+        } else {
+            $defaultCorrectedOptionIds = $selectedServiceOptions
+                ->filter(fn ($option) => in_array(trim((string) ($option->label ?? '')), $originalOptionLabels, true))
+                ->map(fn ($option) => (int) ($option->id ?? 0))
+                ->filter(fn ($id) => $id > 0)
+                ->values()
+                ->all();
+        }
     }
 
     $selectedReasonCodes = collect(old('reason_codes', $adjustment->reason_codes ?? []))
@@ -166,42 +203,50 @@
         ->filter()
         ->values()
         ->all();
-    $selectedCorrectedOptionIds = $isSpecificAreaBooking
+    $selectedServiceIsSpecificArea = $selectedServiceId !== 0
+        && $selectedServiceId === (int) ($specificAreaServiceId ?? 0);
+    $selectedCorrectedOptionIds = $selectedServiceIsSpecificArea
         ? collect(old('corrected_option_ids', $defaultCorrectedOptionIds))
             ->map(fn ($value) => (int) $value)
-            ->filter(fn ($value) => $value > 0 && $serviceOptionsById->has($value))
+            ->filter(fn ($value) => $value > 0 && $selectedServiceOptionsById->has($value))
             ->unique()
             ->values()
             ->all()
         : collect([(int) old('corrected_option_id', $defaultCorrectedOptionIds[0] ?? 0)])
-            ->filter(fn ($value) => $value > 0 && $serviceOptionsById->has($value))
+            ->filter(fn ($value) => $value > 0 && $selectedServiceOptionsById->has($value))
             ->values()
             ->all();
 
-    $sumOptionPrices = function (array $optionIds) use ($serviceOptionsById) {
-        return round(collect($optionIds)->sum(fn ($id) => (float) ($serviceOptionsById->get((int) $id)->price_addition ?? 0)), 2);
+    $sumOptionPrices = function (array $optionIds, $optionsById) {
+        return round(collect($optionIds)->sum(fn ($id) => (float) ($optionsById->get((int) $id)->price_addition ?? 0)), 2);
     };
 
-    $formatOptionLabels = function (array $optionIds) use ($serviceOptionsById) {
+    $formatOptionLabels = function (array $optionIds, $optionsById) {
         return collect($optionIds)
-            ->map(fn ($id) => trim((string) ($serviceOptionsById->get((int) $id)->label ?? '')))
+            ->map(fn ($id) => trim((string) ($optionsById->get((int) $id)->label ?? '')))
             ->filter()
             ->implode(', ');
     };
 
-    $originalSelectionLabel = $originalOptionSummary ?: trim((string) ($optionName ?: $serviceName));
-    $selectedCorrectedLabel = $formatOptionLabels($selectedCorrectedOptionIds) ?: $originalSelectionLabel;
+    $originalServiceName = trim((string) ($servicesById->get($currentServiceId)->name ?? $serviceName));
+    $selectedServiceName = trim((string) ($selectedService->name ?? $originalServiceName));
+    $originalSelectionLabel = trim($originalServiceName . ($originalOptionSummary ? ' / ' . $originalOptionSummary : ''));
+    $selectedCorrectedLabel = trim($selectedServiceName . ($formatOptionLabels($selectedCorrectedOptionIds, $selectedServiceOptionsById) ? ' / ' . $formatOptionLabels($selectedCorrectedOptionIds, $selectedServiceOptionsById) : ''));
     $originalPrice = round((float) $amount, 2);
-    $originalOptionTotal = $sumOptionPrices($originalOptionIds);
-    $selectedCorrectedOptionTotal = $sumOptionPrices($selectedCorrectedOptionIds);
-    $serviceBasePrice = round($originalPrice - $originalOptionTotal, 2);
-    if ($serviceBasePrice < 0) {
-        $serviceBasePrice = 0.0;
+    $originalOptionTotal = $sumOptionPrices($originalOptionIds, $currentServiceOptionsById);
+    $selectedCorrectedOptionTotal = $sumOptionPrices($selectedCorrectedOptionIds, $selectedServiceOptionsById);
+    $originalServiceBasePrice = round((float) ($servicesById->get($currentServiceId)->base_price ?? ($originalPrice - $originalOptionTotal)), 2);
+    if ($originalServiceBasePrice < 0) {
+        $originalServiceBasePrice = 0.0;
+    }
+    $selectedServiceBasePrice = round((float) ($selectedService->base_price ?? $originalServiceBasePrice), 2);
+    if ($selectedServiceBasePrice <= 0 && $selectedServiceId === $currentServiceId) {
+        $selectedServiceBasePrice = $originalServiceBasePrice;
     }
     $automaticReasonFee = in_array('heavy_soiling', $selectedReasonCodes, true)
         ? round(max(300, $originalPrice * 0.10), 2)
         : 0.0;
-    $previewProposedTotal = round($serviceBasePrice + $selectedCorrectedOptionTotal + $automaticReasonFee, 2);
+    $previewProposedTotal = round($selectedServiceBasePrice + $selectedCorrectedOptionTotal + $automaticReasonFee, 2);
     $previewAdditionalFee = round($previewProposedTotal - $originalPrice, 2);
     $adjustmentMaxIncreasePercent = 35.0;
     $previewIncreasePercent = $originalPrice > 0
@@ -210,6 +255,24 @@
     $otherReasonValue = old('other_reason', $adjustment->other_reason ?? '');
     $providerNoteValue = old('provider_note', $adjustment->provider_note ?? '');
     $showOtherReason = in_array('other', $selectedReasonCodes, true);
+    $serviceCatalogPayload = $adjustmentServices->map(function ($service) use ($serviceOptionsByService, $specificAreaServiceId) {
+        $serviceId = (int) ($service->id ?? 0);
+
+        return [
+            'id' => $serviceId,
+            'name' => trim((string) ($service->name ?? '')),
+            'base_price' => (float) ($service->base_price ?? 0),
+            'mode' => $serviceId === (int) ($specificAreaServiceId ?? 0) ? 'multi' : 'single',
+            'options' => collect($serviceOptionsByService->get($serviceId, collect()))
+                ->map(fn ($option) => [
+                    'id' => (int) ($option->id ?? 0),
+                    'label' => trim((string) ($option->label ?? '')),
+                    'price' => (float) ($option->price_addition ?? 0),
+                ])
+                ->values()
+                ->all(),
+        ];
+    })->values();
 @endphp
 
 <style>
@@ -1042,8 +1105,8 @@
                             </div>
                             <div class="compare-box">
                                 <div class="k">Mismatch Flow</div>
-                                <div class="adjustment-copy">Use this only when the onsite size, sections, or cleaning condition does not match what the customer booked.</div>
-                                <div class="adjustment-copy">Only change the size or sections if the actual onsite scope is different. If the scope stayed the same but the condition is heavier, the system adds the automatic condition fee for you.</div>
+                                <div class="adjustment-copy">Use this only when the actual onsite service, size, components, or cleaning condition does not match what the customer booked.</div>
+                                <div class="adjustment-copy">Pick the real onsite service first, then choose the matching size or components for that service. If heavy soiling applies, the system adds that condition fee automatically.</div>
                             </div>
                         </div>
 
@@ -1075,10 +1138,60 @@
 
                             <div class="field-grid">
                                 <div class="field-block full">
-                                    <div class="field-label">Actual Onsite Size / Scope</div>
-                                    @if($isSpecificAreaBooking)
-                                        <div class="choice-grid">
-                                            @foreach($serviceOptions as $option)
+                                    <div class="field-label">Actual Onsite Service</div>
+                                    <select
+                                        class="field-input"
+                                        id="corrected_service_id"
+                                        name="corrected_service_id"
+                                        data-service-select
+                                    >
+                                        <option value="">Choose actual service onsite</option>
+                                        @foreach($adjustmentServices as $service)
+                                            @php($adjustmentServiceId = (int) ($service->id ?? 0))
+                                            <option
+                                                value="{{ $adjustmentServiceId }}"
+                                                data-service-id="{{ $adjustmentServiceId }}"
+                                                data-service-name="{{ $service->name }}"
+                                                data-service-base="{{ number_format((float) ($service->base_price ?? 0), 2, '.', '') }}"
+                                                @selected($selectedServiceId === $adjustmentServiceId)
+                                            >
+                                                {{ $service->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <div class="field-help">First choose the real service needed onsite.</div>
+                                    @error('corrected_service_id')
+                                        <div class="field-error">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div class="field-block full">
+                                    <div class="field-label">Actual Onsite Size / Components</div>
+                                    <div class="field-help" data-scope-help>Then choose the real size or components for that service so the system can calculate the updated amount.</div>
+                                    <div class="field-block" data-single-scope-wrap @if($selectedServiceIsSpecificArea) hidden @endif>
+                                        <select class="field-input" id="corrected_option_id" name="corrected_option_id" data-option-select>
+                                            <option value="">Choose corrected size or scope</option>
+                                            @foreach($selectedServiceOptions as $option)
+                                                @if($selectedServiceIsSpecificArea)
+                                                    @continue
+                                                @endif
+                                                @php($optionId = (int) ($option->id ?? 0))
+                                                <option
+                                                    value="{{ $optionId }}"
+                                                    data-option-id="{{ $optionId }}"
+                                                    data-option-label="{{ $option->label }}"
+                                                    data-option-price="{{ number_format((float) ($option->price_addition ?? 0), 2, '.', '') }}"
+                                                    @selected(($selectedCorrectedOptionIds[0] ?? 0) === $optionId)
+                                                >
+                                                    {{ $option->label }} (+ PHP {{ number_format((float) ($option->price_addition ?? 0), 2) }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div class="choice-grid" data-multi-scope-wrap @if(!$selectedServiceIsSpecificArea) hidden @endif>
+                                        @if($selectedServiceIsSpecificArea)
+                                            @foreach($selectedServiceOptions as $option)
                                                 @php($optionId = (int) ($option->id ?? 0))
                                                 <label class="choice-card option-choice @if(in_array($optionId, $selectedCorrectedOptionIds, true)) is-selected @endif" data-option-choice>
                                                     <input
@@ -1097,25 +1210,8 @@
                                                     </span>
                                                 </label>
                                             @endforeach
-                                        </div>
-                                    @else
-                                        <select class="field-input" id="corrected_option_id" name="corrected_option_id" data-option-select>
-                                            <option value="">Choose corrected size or scope</option>
-                                            @foreach($serviceOptions as $option)
-                                                @php($optionId = (int) ($option->id ?? 0))
-                                                <option
-                                                    value="{{ $optionId }}"
-                                                    data-option-id="{{ $optionId }}"
-                                                    data-option-label="{{ $option->label }}"
-                                                    data-option-price="{{ number_format((float) ($option->price_addition ?? 0), 2, '.', '') }}"
-                                                    @selected(($selectedCorrectedOptionIds[0] ?? 0) === $optionId)
-                                                >
-                                                    {{ $option->label }} (+ PHP {{ number_format((float) ($option->price_addition ?? 0), 2) }})
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    @endif
-                                    <div class="field-help" data-scope-help>Keep the booked size unless the actual onsite scope is larger or has extra sections.</div>
+                                        @endif
+                                    </div>
                                     @error('corrected_option_id')
                                         <div class="field-error">{{ $message }}</div>
                                     @enderror
@@ -1159,10 +1255,16 @@
                                     class="adjustment-preview"
                                     data-adjustment-preview
                                     data-original-price="{{ number_format($originalPrice, 2, '.', '') }}"
-                                    data-service-base-price="{{ number_format($serviceBasePrice, 2, '.', '') }}"
+                                    data-original-service-id="{{ $currentServiceId }}"
+                                    data-selected-service-id="{{ $selectedServiceId }}"
+                                    data-original-service-base-price="{{ number_format($originalServiceBasePrice, 2, '.', '') }}"
                                     data-original-option-total="{{ number_format($originalOptionTotal, 2, '.', '') }}"
                                     data-original-selection="{{ $originalSelectionLabel }}"
+                                    data-original-option-labels='@json(array_values($originalOptionLabels))'
                                     data-original-option-ids='@json(array_values($originalOptionIds))'
+                                    data-selected-option-ids='@json(array_values($selectedCorrectedOptionIds))'
+                                    data-service-catalog='@json($serviceCatalogPayload)'
+                                    data-specific-area-service-id="{{ (int) ($specificAreaServiceId ?? 0) }}"
                                     data-max-increase="{{ number_format($adjustmentMaxIncreasePercent, 2, '.', '') }}"
                                 >
                                     <div class="preview-grid">
@@ -1192,7 +1294,7 @@
                                         </div>
                                     </div>
                                     <div class="preview-note" data-preview-note>
-                                        The system will keep the original scope unless you mark a larger area or extra sections, then calculate the updated total automatically.
+                                        The system calculates the updated total from the selected service, the matching size or components, and any automatic condition fee.
                                     </div>
                                     <div class="field-error" data-adjustment-warning hidden></div>
                                 </div>
@@ -1278,76 +1380,180 @@
     const otherReasonWrap = form.querySelector('[data-other-reason-wrap]');
     const otherReasonField = form.querySelector('#other_reason');
     const scopeHelp = form.querySelector('[data-scope-help]');
+    const serviceSelect = form.querySelector('[data-service-select]');
+    const singleScopeWrap = form.querySelector('[data-single-scope-wrap]');
+    const multiScopeWrap = form.querySelector('[data-multi-scope-wrap]');
     const optionSelect = form.querySelector('[data-option-select]');
-    const optionCheckboxes = Array.from(form.querySelectorAll('[data-option-checkbox]'));
-    const optionChoiceCards = Array.from(form.querySelectorAll('[data-option-choice]'));
     const reasonCheckboxes = Array.from(form.querySelectorAll('[data-reason-code]'));
 
-    if (!preview || !selectionText || !autoFeeText || !additionalFeeText || !proposedTotalText || !previewNote || !warningEl || !submitBtn) {
+    if (!preview || !selectionText || !autoFeeText || !additionalFeeText || !proposedTotalText || !previewNote || !warningEl || !submitBtn || !serviceSelect || !singleScopeWrap || !multiScopeWrap || !optionSelect) {
         return;
     }
 
     const originalPrice = Number(preview.dataset.originalPrice || 0);
-    const serviceBasePrice = Number(preview.dataset.serviceBasePrice || 0);
-    const originalOptionTotal = Number(preview.dataset.originalOptionTotal || 0);
+    const originalServiceId = Number(preview.dataset.originalServiceId || 0);
+    const originalServiceBasePrice = Number(preview.dataset.originalServiceBasePrice || 0);
     const maxIncreasePercent = Number(preview.dataset.maxIncrease || 35);
     const originalSelection = preview.dataset.originalSelection || 'Original selection';
-    const originalOptionIds = JSON.parse(preview.dataset.originalOptionIds || '[]').map((value) => Number(value));
-    let scopeAutoMessage = '';
+    const originalOptionIds = JSON.parse(preview.dataset.originalOptionIds || '[]')
+        .map((value) => Number(value))
+        .filter((value) => value > 0);
+    const originalOptionLabels = JSON.parse(preview.dataset.originalOptionLabels || '[]')
+        .map((value) => String(value || '').trim())
+        .filter(Boolean);
+    const initialSelectedServiceId = Number(preview.dataset.selectedServiceId || originalServiceId || 0);
+    const initialSelectedOptionIds = JSON.parse(preview.dataset.selectedOptionIds || '[]')
+        .map((value) => Number(value))
+        .filter((value) => value > 0);
+    const serviceCatalog = new Map(
+        JSON.parse(preview.dataset.serviceCatalog || '[]')
+            .map((service) => {
+                const serviceId = Number(service?.id || 0);
+                const options = Array.isArray(service?.options)
+                    ? service.options.map((option) => ({
+                        id: Number(option?.id || 0),
+                        label: String(option?.label || '').trim(),
+                        price: Number(option?.price || 0),
+                    })).filter((option) => option.id > 0)
+                    : [];
+
+                return [serviceId, {
+                    id: serviceId,
+                    name: String(service?.name || '').trim(),
+                    basePrice: Number(service?.base_price || 0),
+                    mode: service?.mode === 'multi' ? 'multi' : 'single',
+                    options,
+                }];
+            })
+            .filter(([serviceId]) => serviceId > 0)
+    );
+
+    let optionCheckboxes = [];
+    let optionChoiceCards = [];
+    let activeServiceId = 0;
+    const selectedOptionIdsByService = new Map();
 
     const formatCurrency = (value) => `PHP ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const escapeHtml = (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 
     const selectedReasons = () => reasonCheckboxes
         .filter((checkbox) => checkbox.checked)
         .map((checkbox) => checkbox.dataset.reasonCode || checkbox.value);
 
-    const hasScopeReason = () => {
-        const reasons = selectedReasons();
-        return reasons.includes('larger_area') || reasons.includes('additional_rooms');
+    const getService = (serviceId) => serviceCatalog.get(Number(serviceId || 0)) || null;
+
+    const normalizeOptionIds = (service, ids) => {
+        if (!service) {
+            return [];
+        }
+
+        const validIds = new Set(service.options.map((option) => Number(option.id || 0)));
+        let normalized = [...new Set((ids || [])
+            .map((value) => Number(value))
+            .filter((value) => value > 0 && validIds.has(value)))];
+
+        if (service.mode !== 'multi') {
+            normalized = normalized.slice(0, 1);
+        }
+
+        return normalized;
+    };
+
+    const optionLabelSummary = (service, optionIds) => {
+        if (!service) {
+            return '';
+        }
+
+        const optionsById = new Map(service.options.map((option) => [Number(option.id || 0), option]));
+
+        return optionIds
+            .map((optionId) => optionsById.get(Number(optionId || 0))?.label || '')
+            .filter(Boolean)
+            .join(', ');
+    };
+
+    const defaultOptionIdsForService = (service) => {
+        if (!service) {
+            return [];
+        }
+
+        const saved = selectedOptionIdsByService.get(service.id);
+        if (saved) {
+            return normalizeOptionIds(service, saved);
+        }
+
+        if (service.id === initialSelectedServiceId && initialSelectedOptionIds.length) {
+            return normalizeOptionIds(service, initialSelectedOptionIds);
+        }
+
+        if (service.id === originalServiceId) {
+            return normalizeOptionIds(service, originalOptionIds);
+        }
+
+        const matchingIds = service.options
+            .filter((option) => originalOptionLabels.includes(option.label))
+            .map((option) => option.id);
+
+        return normalizeOptionIds(service, matchingIds);
+    };
+
+    const readSelectedOptionIds = (service = getService(activeServiceId)) => {
+        if (!service) {
+            return [];
+        }
+
+        if (service.mode === 'multi') {
+            return normalizeOptionIds(service, optionCheckboxes
+                .filter((checkbox) => checkbox.checked)
+                .map((checkbox) => Number(checkbox.dataset.optionId || checkbox.value || 0)));
+        }
+
+        return normalizeOptionIds(service, [Number(optionSelect.value || 0)]);
+    };
+
+    const persistSelectedOptionIds = (serviceId = activeServiceId) => {
+        const service = getService(serviceId);
+        if (!service) {
+            return;
+        }
+
+        selectedOptionIdsByService.set(serviceId, readSelectedOptionIds(service));
     };
 
     const selectedOptionState = () => {
-        if (!hasScopeReason()) {
+        const service = getService(activeServiceId);
+
+        if (!service) {
             return {
-                ids: originalOptionIds,
-                total: originalOptionTotal,
-                label: originalSelection,
-            };
-        }
-
-        if (optionSelect) {
-            const selected = optionSelect.options[optionSelect.selectedIndex];
-            const optionId = Number(selected?.dataset.optionId || selected?.value || 0);
-
-            if (!optionId) {
-                return {
-                    ids: [],
-                    total: 0,
-                    label: 'Choose corrected size or scope',
-                };
-            }
-
-            return {
-                ids: [optionId],
-                total: Number(selected?.dataset.optionPrice || 0),
-                label: selected?.dataset.optionLabel || selected?.textContent?.trim() || originalSelection,
-            };
-        }
-
-        const chosen = optionCheckboxes.filter((checkbox) => checkbox.checked);
-
-        if (!chosen.length) {
-            return {
+                serviceId: 0,
+                serviceName: '',
                 ids: [],
                 total: 0,
-                label: 'Choose corrected size or scope',
+                label: 'Choose actual service onsite',
+                scopeChanged: false,
             };
         }
 
+        const ids = readSelectedOptionIds(service);
+        const optionSummary = optionLabelSummary(service, ids);
+        const scopeLabel = [service.name, optionSummary].filter(Boolean).join(' / ');
+        const total = ids.reduce((sum, optionId) => {
+            const option = service.options.find((candidate) => candidate.id === optionId);
+            return sum + Number(option?.price || 0);
+        }, 0);
+
         return {
-            ids: chosen.map((checkbox) => Number(checkbox.dataset.optionId || checkbox.value || 0)).filter((value) => value > 0),
-            total: chosen.reduce((sum, checkbox) => sum + Number(checkbox.dataset.optionPrice || 0), 0),
-            label: chosen.map((checkbox) => checkbox.dataset.optionLabel || '').filter(Boolean).join(', ') || originalSelection,
+            serviceId: service.id,
+            serviceName: service.name,
+            ids,
+            total,
+            label: scopeLabel || service.name || originalSelection,
+            scopeChanged: service.id !== originalServiceId || !matchesOriginalSelection(ids),
         };
     };
 
@@ -1369,92 +1575,83 @@
         });
     };
 
-    const optionSelectChoices = () => {
-        if (!optionSelect) {
-            return [];
-        }
+    const renderOptionsForService = (serviceId) => {
+        const service = getService(serviceId);
 
-        return Array.from(optionSelect.options)
-            .map((option) => ({
-                id: Number(option.dataset.optionId || option.value || 0),
-                price: Number(option.dataset.optionPrice || 0),
-                label: option.dataset.optionLabel || option.textContent?.trim() || '',
-            }))
-            .filter((option) => option.id > 0)
-            .sort((left, right) => left.price - right.price || left.id - right.id);
-    };
+        optionCheckboxes = [];
+        optionChoiceCards = [];
 
-    const autoSelectCorrectedScope = () => {
-        scopeAutoMessage = '';
-
-        if (!hasScopeReason()) {
+        if (!service) {
+            optionSelect.innerHTML = '<option value="">Choose corrected size or scope</option>';
+            singleScopeWrap.hidden = false;
+            multiScopeWrap.hidden = true;
+            multiScopeWrap.innerHTML = '';
             return;
         }
 
-        if (optionSelect) {
-            const currentId = Number(optionSelect.value || 0);
+        const selectedIds = defaultOptionIdsForService(service);
+        selectedOptionIdsByService.set(service.id, selectedIds);
 
-            if (currentId > 0 && !matchesOriginalSelection([currentId])) {
-                return;
-            }
+        if (service.mode === 'multi') {
+            singleScopeWrap.hidden = true;
+            multiScopeWrap.hidden = false;
+            optionSelect.innerHTML = '<option value="">Choose corrected size or scope</option>';
+            multiScopeWrap.innerHTML = service.options.length
+                ? service.options.map((option) => {
+                    const checked = selectedIds.includes(option.id) ? ' checked' : '';
 
-            const choices = optionSelectChoices();
-            const nextLarger = choices.find((option) => option.price > originalOptionTotal && !originalOptionIds.includes(option.id));
-            const fallback = choices.find((option) => !matchesOriginalSelection([option.id]));
-            const target = nextLarger || fallback;
+                    return `
+                        <label class="choice-card option-choice${checked ? ' is-selected' : ''}" data-option-choice>
+                            <input
+                                type="checkbox"
+                                name="corrected_option_ids[]"
+                                value="${escapeHtml(option.id)}"
+                                data-option-checkbox
+                                data-option-id="${escapeHtml(option.id)}"
+                                data-option-label="${escapeHtml(option.label)}"
+                                data-option-price="${escapeHtml(option.price.toFixed(2))}"${checked}
+                            >
+                            <span class="option-choice-copy">
+                                <span class="option-choice-title">${escapeHtml(option.label)}</span>
+                                <span class="option-choice-price">+ ${escapeHtml(formatCurrency(option.price))}</span>
+                            </span>
+                        </label>
+                    `;
+                }).join('')
+                : '<div class="field-help">No components are configured for this service right now.</div>';
 
-            if (!target) {
-                return;
-            }
+            optionCheckboxes = Array.from(multiScopeWrap.querySelectorAll('[data-option-checkbox]'));
+            optionChoiceCards = Array.from(multiScopeWrap.querySelectorAll('[data-option-choice]'));
 
-            optionSelect.value = String(target.id);
-            scopeAutoMessage = nextLarger
-                ? `We picked the next larger scope for you: ${target.label}. Review it before sending.`
-                : `We picked the next valid scope for you: ${target.label}. Review it before sending.`;
+            optionCheckboxes.forEach((checkbox) => {
+                checkbox.addEventListener('change', () => {
+                    persistSelectedOptionIds(service.id);
+                    syncChoiceCards();
+                    syncPreview();
+                });
+            });
 
+            syncChoiceCards();
             return;
         }
 
-        const selectedIds = optionCheckboxes
-            .filter((checkbox) => checkbox.checked)
-            .map((checkbox) => Number(checkbox.dataset.optionId || checkbox.value || 0))
-            .filter((value) => value > 0);
-
-        if (selectedIds.length && !matchesOriginalSelection(selectedIds)) {
-            return;
-        }
-
-        const extraChoice = optionCheckboxes.find((checkbox) => {
-            const optionId = Number(checkbox.dataset.optionId || checkbox.value || 0);
-            return optionId > 0 && !checkbox.checked && !originalOptionIds.includes(optionId);
-        }) || optionCheckboxes.find((checkbox) => {
-            const optionId = Number(checkbox.dataset.optionId || checkbox.value || 0);
-            return optionId > 0 && !checkbox.checked;
-        });
-
-        if (!extraChoice) {
-            return;
-        }
-
-        extraChoice.checked = true;
-        syncChoiceCards();
-        scopeAutoMessage = `We added one more onsite section for you: ${extraChoice.dataset.optionLabel || 'Updated section'}. Review it before sending.`;
-    };
-
-    const syncScopeInputs = () => {
-        const scopeMismatch = hasScopeReason();
-
-        if (optionSelect) {
-            optionSelect.disabled = !scopeMismatch;
-        }
-
-        optionCheckboxes.forEach((checkbox) => {
-            checkbox.disabled = !scopeMismatch;
-        });
-
-        if (!scopeMismatch) {
-            scopeAutoMessage = '';
-        }
+        singleScopeWrap.hidden = false;
+        multiScopeWrap.hidden = true;
+        multiScopeWrap.innerHTML = '';
+        optionSelect.innerHTML = [
+            '<option value="">Choose corrected size or scope</option>',
+            ...service.options.map((option) => `
+                <option
+                    value="${escapeHtml(option.id)}"
+                    data-option-id="${escapeHtml(option.id)}"
+                    data-option-label="${escapeHtml(option.label)}"
+                    data-option-price="${escapeHtml(option.price.toFixed(2))}"
+                >
+                    ${escapeHtml(option.label)} (+ ${escapeHtml(formatCurrency(option.price))})
+                </option>
+            `),
+        ].join('');
+        optionSelect.value = selectedIds[0] ? String(selectedIds[0]) : '';
     };
 
     const syncOtherReason = () => {
@@ -1476,42 +1673,53 @@
     const syncPreview = () => {
         const reasons = selectedReasons();
         const optionState = selectedOptionState();
-        const scopeMismatch = reasons.includes('larger_area') || reasons.includes('additional_rooms');
         const autoConditionFee = reasons.includes('heavy_soiling')
             ? Math.max(300, originalPrice * 0.10)
             : 0;
+        const serviceBasePrice = optionState.serviceId === originalServiceId && originalServiceBasePrice > 0
+            ? originalServiceBasePrice
+            : Number(getService(optionState.serviceId)?.basePrice || 0);
         const proposedTotal = Number((serviceBasePrice + optionState.total + autoConditionFee).toFixed(2));
         const additionalFee = Number((proposedTotal - originalPrice).toFixed(2));
         const increasePercent = originalPrice > 0
             ? Number((((proposedTotal - originalPrice) / originalPrice) * 100).toFixed(2))
             : 0;
+        const selectionChanged = optionState.scopeChanged;
 
         if (scopeHelp) {
-            scopeHelp.textContent = scopeMismatch
-                ? (scopeAutoMessage || 'Pick the real onsite size or sections so the system can calculate the correct added amount.')
-                : 'The booked size stays locked unless you mark a larger area or extra sections.';
-            scopeHelp.classList.toggle('is-highlighted', scopeMismatch && scopeAutoMessage !== '');
+            if (!optionState.serviceId) {
+                scopeHelp.textContent = 'Choose the actual onsite service first, then select the matching size or components.';
+            } else if (!optionState.ids.length) {
+                scopeHelp.textContent = 'Choose the matching size or components for the selected service.';
+            } else if (selectionChanged) {
+                scopeHelp.textContent = 'The updated total is based on the selected service and components below.';
+            } else {
+                scopeHelp.textContent = 'If the scope stayed the same, keep the original service and components selected here.';
+            }
+
+            scopeHelp.classList.toggle('is-highlighted', selectionChanged);
         }
 
         selectionText.textContent = optionState.label || originalSelection;
         autoFeeText.textContent = formatCurrency(autoConditionFee);
         additionalFeeText.textContent = formatCurrency(additionalFee);
         proposedTotalText.textContent = formatCurrency(proposedTotal);
-        if (scopeMismatch && autoConditionFee > 0) {
-            previewNote.textContent = `The new total includes the corrected size plus the automatic condition fee. Increase: ${increasePercent.toFixed(2)}%.`;
-        } else if (scopeMismatch) {
-            previewNote.textContent = `The new total is based on the corrected onsite size or sections. Increase: ${increasePercent.toFixed(2)}%.`;
+
+        if (selectionChanged && autoConditionFee > 0) {
+            previewNote.textContent = `The new total uses the selected service and components plus the automatic condition fee. Increase: ${increasePercent.toFixed(2)}%.`;
+        } else if (selectionChanged) {
+            previewNote.textContent = `The new total uses the selected service and components. Increase: ${increasePercent.toFixed(2)}%.`;
         } else if (autoConditionFee > 0) {
             previewNote.textContent = `The original scope stays the same, and the system adds the automatic condition fee. Increase: ${increasePercent.toFixed(2)}%.`;
         } else {
-            previewNote.textContent = 'The original scope stays the same until you report a larger area or extra sections.';
+            previewNote.textContent = 'The original scope and total stay the same unless you choose a different service or components, or add heavy soiling.';
         }
 
         let warning = '';
-        if (scopeMismatch && !optionState.ids.length) {
-            warning = 'Choose the corrected size or sections before sending the mismatch request.';
-        } else if (scopeMismatch && matchesOriginalSelection(optionState.ids)) {
-            warning = 'Choose a different size or section set when reporting a larger area or additional rooms.';
+        if (!optionState.serviceId) {
+            warning = 'Choose the actual onsite service before sending the mismatch request.';
+        } else if (!optionState.ids.length) {
+            warning = 'Choose the matching size or components for the selected service.';
         } else if (proposedTotal < originalPrice) {
             warning = 'The corrected selection cannot reduce the original booking total.';
         } else if (increasePercent > maxIncreasePercent) {
@@ -1523,29 +1731,42 @@
         submitBtn.disabled = warning !== '';
     };
 
-    if (optionSelect) {
-        optionSelect.addEventListener('change', syncPreview);
-    }
-
-    optionCheckboxes.forEach((checkbox) => {
-        checkbox.addEventListener('change', () => {
-            syncChoiceCards();
-            syncPreview();
-        });
+    optionSelect.addEventListener('change', () => {
+        persistSelectedOptionIds(activeServiceId);
+        syncPreview();
     });
 
     reasonCheckboxes.forEach((checkbox) => {
         checkbox.addEventListener('change', () => {
-            syncScopeInputs();
-            autoSelectCorrectedScope();
             syncOtherReason();
             syncPreview();
         });
     });
 
-    syncChoiceCards();
-    syncScopeInputs();
-    autoSelectCorrectedScope();
+    serviceSelect.addEventListener('change', () => {
+        persistSelectedOptionIds(activeServiceId);
+        activeServiceId = Number(serviceSelect.value || 0);
+        renderOptionsForService(activeServiceId);
+        syncPreview();
+    });
+
+    activeServiceId = serviceCatalog.has(initialSelectedServiceId)
+        ? initialSelectedServiceId
+        : (serviceCatalog.has(originalServiceId) ? originalServiceId : Number(serviceSelect.value || 0));
+
+    if (activeServiceId > 0) {
+        serviceSelect.value = String(activeServiceId);
+    }
+
+    if (originalServiceId > 0) {
+        selectedOptionIdsByService.set(originalServiceId, normalizeOptionIds(getService(originalServiceId), originalOptionIds));
+    }
+
+    if (activeServiceId > 0 && initialSelectedOptionIds.length) {
+        selectedOptionIdsByService.set(activeServiceId, normalizeOptionIds(getService(activeServiceId), initialSelectedOptionIds));
+    }
+
+    renderOptionsForService(activeServiceId);
     syncOtherReason();
     syncPreview();
 
@@ -1559,6 +1780,9 @@
 
         const reasons = selectedReasons();
         const optionState = selectedOptionState();
+        const serviceBasePrice = optionState.serviceId === originalServiceId && originalServiceBasePrice > 0
+            ? originalServiceBasePrice
+            : Number(getService(optionState.serviceId)?.basePrice || 0);
         const autoConditionFee = reasons.includes('heavy_soiling')
             ? Math.max(300, originalPrice * 0.10)
             : 0;
