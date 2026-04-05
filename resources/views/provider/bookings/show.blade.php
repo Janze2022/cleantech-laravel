@@ -416,6 +416,12 @@
     background: rgba(255,255,255,.03);
 }
 .btnx:hover{ filter: brightness(1.05); }
+.btnx:disabled{
+    opacity: .56;
+    cursor: not-allowed;
+    filter: none;
+    box-shadow: none;
+}
 
 .notice{
     margin-bottom: 12px;
@@ -632,6 +638,10 @@
     color: var(--muted);
     font-size: .82rem;
     line-height: 1.5;
+}
+.field-help.is-highlighted{
+    color: #7dd3fc;
+    font-weight: 800;
 }
 
 .option-choice{
@@ -1114,7 +1124,7 @@
 
                                 <div class="field-block full">
                                     <label class="field-label" for="evidence">Photo or File Evidence</label>
-                                    <input class="field-file" id="evidence" name="evidence" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf">
+                                    <input class="field-file" id="evidence" name="evidence" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" required>
                                     <div class="field-help">Required for every mismatch request.</div>
                                     @error('evidence')
                                         <div class="field-error">{{ $message }}</div>
@@ -1262,6 +1272,7 @@
     const maxIncreasePercent = Number(preview.dataset.maxIncrease || 35);
     const originalSelection = preview.dataset.originalSelection || 'Original selection';
     const originalOptionIds = JSON.parse(preview.dataset.originalOptionIds || '[]').map((value) => Number(value));
+    let scopeAutoMessage = '';
 
     const formatCurrency = (value) => `PHP ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -1337,6 +1348,78 @@
         });
     };
 
+    const optionSelectChoices = () => {
+        if (!optionSelect) {
+            return [];
+        }
+
+        return Array.from(optionSelect.options)
+            .map((option) => ({
+                id: Number(option.dataset.optionId || option.value || 0),
+                price: Number(option.dataset.optionPrice || 0),
+                label: option.dataset.optionLabel || option.textContent?.trim() || '',
+            }))
+            .filter((option) => option.id > 0)
+            .sort((left, right) => left.price - right.price || left.id - right.id);
+    };
+
+    const autoSelectCorrectedScope = () => {
+        scopeAutoMessage = '';
+
+        if (!hasScopeReason()) {
+            return;
+        }
+
+        if (optionSelect) {
+            const currentId = Number(optionSelect.value || 0);
+
+            if (currentId > 0 && !matchesOriginalSelection([currentId])) {
+                return;
+            }
+
+            const choices = optionSelectChoices();
+            const nextLarger = choices.find((option) => option.price > originalOptionTotal && !originalOptionIds.includes(option.id));
+            const fallback = choices.find((option) => !matchesOriginalSelection([option.id]));
+            const target = nextLarger || fallback;
+
+            if (!target) {
+                return;
+            }
+
+            optionSelect.value = String(target.id);
+            scopeAutoMessage = nextLarger
+                ? `We picked the next larger scope for you: ${target.label}. Review it before sending.`
+                : `We picked the next valid scope for you: ${target.label}. Review it before sending.`;
+
+            return;
+        }
+
+        const selectedIds = optionCheckboxes
+            .filter((checkbox) => checkbox.checked)
+            .map((checkbox) => Number(checkbox.dataset.optionId || checkbox.value || 0))
+            .filter((value) => value > 0);
+
+        if (selectedIds.length && !matchesOriginalSelection(selectedIds)) {
+            return;
+        }
+
+        const extraChoice = optionCheckboxes.find((checkbox) => {
+            const optionId = Number(checkbox.dataset.optionId || checkbox.value || 0);
+            return optionId > 0 && !checkbox.checked && !originalOptionIds.includes(optionId);
+        }) || optionCheckboxes.find((checkbox) => {
+            const optionId = Number(checkbox.dataset.optionId || checkbox.value || 0);
+            return optionId > 0 && !checkbox.checked;
+        });
+
+        if (!extraChoice) {
+            return;
+        }
+
+        extraChoice.checked = true;
+        syncChoiceCards();
+        scopeAutoMessage = `We added one more onsite section for you: ${extraChoice.dataset.optionLabel || 'Updated section'}. Review it before sending.`;
+    };
+
     const syncScopeInputs = () => {
         const scopeMismatch = hasScopeReason();
 
@@ -1347,6 +1430,10 @@
         optionCheckboxes.forEach((checkbox) => {
             checkbox.disabled = !scopeMismatch;
         });
+
+        if (!scopeMismatch) {
+            scopeAutoMessage = '';
+        }
     };
 
     const syncOtherReason = () => {
@@ -1380,8 +1467,9 @@
 
         if (scopeHelp) {
             scopeHelp.textContent = scopeMismatch
-                ? 'Pick the real onsite size or sections so the system can calculate the correct added amount.'
+                ? (scopeAutoMessage || 'Pick the real onsite size or sections so the system can calculate the correct added amount.')
                 : 'The booked size stays locked unless you mark a larger area or extra sections.';
+            scopeHelp.classList.toggle('is-highlighted', scopeMismatch && scopeAutoMessage !== '');
         }
 
         selectionText.textContent = optionState.label || originalSelection;
@@ -1428,6 +1516,7 @@
     reasonCheckboxes.forEach((checkbox) => {
         checkbox.addEventListener('change', () => {
             syncScopeInputs();
+            autoSelectCorrectedScope();
             syncOtherReason();
             syncPreview();
         });
@@ -1435,12 +1524,15 @@
 
     syncChoiceCards();
     syncScopeInputs();
+    autoSelectCorrectedScope();
     syncOtherReason();
     syncPreview();
 
     form.addEventListener('submit', (event) => {
         if (submitBtn.disabled) {
             event.preventDefault();
+            warningEl.hidden = false;
+            warningEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
 
