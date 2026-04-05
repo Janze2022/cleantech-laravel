@@ -420,6 +420,43 @@
     font-size:.82rem;
     color:rgba(248,250,252,.9);
 }
+.booking-note-stack{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+.booking-note-line{
+    color:rgba(248,250,252,.92);
+    font-size:.82rem;
+    font-weight:700;
+    line-height:1.5;
+    word-break:break-word;
+}
+.booking-note-line strong{
+    color:var(--text);
+}
+.booking-note-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+}
+.booking-note-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 10px;
+    border-radius:999px;
+    border:1px solid rgba(59,130,246,.2);
+    background:rgba(59,130,246,.08);
+    color:#dbeafe;
+    font-size:.75rem;
+    font-weight:900;
+}
+.booking-note-chip.muted{
+    border-color:rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    color:var(--muted);
+}
 
 .history-summary{
     display:flex;
@@ -1135,17 +1172,65 @@ select.status-select option{
                             @if($adjustment || !empty($b->cancellation_reason))
                                 <div class="meta-box full-span" style="margin-top:12px;">
                                     <div class="meta-label">Booking Notes</div>
-                                    @if($adjustment)
-                                        <div class="meta-value small">Adjustment: {{ $b->adjustment_status_label ?: 'Adjustment' }}</div>
-                                        <div class="meta-value small">Original PHP {{ $adjustment->original_price_display ?? '0.00' }} -> Updated PHP {{ $adjustment->proposed_total_display ?? ($adjustment->original_price_display ?? '0.00') }}</div>
-                                        @if(!empty($adjustment->reason_labels))
-                                            <div class="meta-value small">Reasons: {{ implode(', ', $adjustment->reason_labels) }}</div>
+                                    <div class="booking-note-stack">
+                                        @if($adjustment)
+                                            @php($latestAdjustmentLog = collect($adjustment->logs ?? [])->first())
+                                            <div class="booking-note-row">
+                                                <span class="booking-note-chip">{{ $b->adjustment_status_label ?: 'Adjustment' }}</span>
+                                                @if(!empty($adjustment->submitted_at_label))
+                                                    <span class="booking-note-chip muted">Submitted {{ $adjustment->submitted_at_label }}</span>
+                                                @endif
+                                                @if(!empty($adjustment->resolved_at_label))
+                                                    <span class="booking-note-chip muted">Resolved {{ $adjustment->resolved_at_label }}</span>
+                                                @endif
+                                            </div>
+                                            <div class="booking-note-line">
+                                                <strong>Original:</strong>
+                                                {{ $adjustment->original_service_name ?: 'Booking' }}
+                                                @if(!empty($adjustment->original_option_summary))
+                                                    / {{ $adjustment->original_option_summary }}
+                                                @endif
+                                                / PHP {{ $adjustment->original_price_display ?? '0.00' }}
+                                            </div>
+                                            <div class="booking-note-line">
+                                                <strong>Updated:</strong>
+                                                {{ $adjustment->proposed_service_name ?: ($adjustment->original_service_name ?: 'Booking') }}
+                                                @if(!empty($adjustment->proposed_scope_summary))
+                                                    / {{ $adjustment->proposed_scope_summary }}
+                                                @endif
+                                                / PHP {{ $adjustment->proposed_total_display ?? ($adjustment->original_price_display ?? '0.00') }}
+                                            </div>
+                                            @if(!empty($adjustment->reason_labels))
+                                                <div class="booking-note-line"><strong>Reasons:</strong> {{ implode(', ', $adjustment->reason_labels) }}</div>
+                                            @endif
+                                            @if(!empty($adjustment->provider_note))
+                                                <div class="booking-note-line"><strong>Provider note:</strong> {{ \Illuminate\Support\Str::limit($adjustment->provider_note, 140) }}</div>
+                                            @endif
+                                            @if(!empty($adjustment->customer_response_note))
+                                                <div class="booking-note-line"><strong>Customer note:</strong> {{ \Illuminate\Support\Str::limit($adjustment->customer_response_note, 140) }}</div>
+                                            @endif
+                                            @if(!empty($latestAdjustmentLog['action']) || !empty($latestAdjustmentLog['detail']))
+                                                <div class="booking-note-line">
+                                                    <strong>Latest activity:</strong>
+                                                    {{ $latestAdjustmentLog['action'] ?? 'Update' }}
+                                                    @if(!empty($latestAdjustmentLog['detail']))
+                                                        / {{ \Illuminate\Support\Str::limit($latestAdjustmentLog['detail'], 140) }}
+                                                    @endif
+                                                </div>
+                                            @endif
+                                            @if(!empty($adjustment->evidence_url))
+                                                <div class="booking-note-line">
+                                                    <a class="adjustment-link" href="{{ $adjustment->evidence_url }}" target="_blank" rel="noopener">
+                                                        {{ $adjustment->evidence_name ?: 'Open evidence' }}
+                                                    </a>
+                                                </div>
+                                            @endif
                                         @endif
-                                    @endif
-                                    @if(!empty($b->cancellation_reason))
-                                        @php($cancelledByLabel = !empty($b->cancelled_by_role) ? ucwords(str_replace('_', ' ', $b->cancelled_by_role)) : 'System')
-                                        <div class="meta-value small">Cancelled by {{ $cancelledByLabel }}: {{ $b->cancellation_reason }}</div>
-                                    @endif
+                                        @if(!empty($b->cancellation_reason))
+                                            @php($cancelledByLabel = !empty($b->cancelled_by_role) ? ucwords(str_replace('_', ' ', $b->cancelled_by_role)) : 'System')
+                                            <div class="booking-note-line"><strong>Cancelled by {{ $cancelledByLabel }}:</strong> {{ $b->cancellation_reason }}</div>
+                                        @endif
+                                    </div>
                                 </div>
                             @endif
 
@@ -1384,17 +1469,65 @@ select.status-select option{
                             @if($adjustment || !empty($b->cancellation_reason))
                                 <div class="meta-box full-span" style="margin-top:12px;">
                                     <div class="meta-label">Booking Notes</div>
-                                    @if($adjustment)
-                                        <div class="meta-value small">Adjustment: {{ $b->adjustment_status_label ?: 'Adjustment' }}</div>
-                                        <div class="meta-value small">Original PHP {{ $adjustment->original_price_display ?? '0.00' }} -> Updated PHP {{ $adjustment->proposed_total_display ?? ($adjustment->original_price_display ?? '0.00') }}</div>
-                                        @if(!empty($adjustment->reason_labels))
-                                            <div class="meta-value small">Reasons: {{ implode(', ', $adjustment->reason_labels) }}</div>
+                                    <div class="booking-note-stack">
+                                        @if($adjustment)
+                                            @php($latestAdjustmentLog = collect($adjustment->logs ?? [])->first())
+                                            <div class="booking-note-row">
+                                                <span class="booking-note-chip">{{ $b->adjustment_status_label ?: 'Adjustment' }}</span>
+                                                @if(!empty($adjustment->submitted_at_label))
+                                                    <span class="booking-note-chip muted">Submitted {{ $adjustment->submitted_at_label }}</span>
+                                                @endif
+                                                @if(!empty($adjustment->resolved_at_label))
+                                                    <span class="booking-note-chip muted">Resolved {{ $adjustment->resolved_at_label }}</span>
+                                                @endif
+                                            </div>
+                                            <div class="booking-note-line">
+                                                <strong>Original:</strong>
+                                                {{ $adjustment->original_service_name ?: 'Booking' }}
+                                                @if(!empty($adjustment->original_option_summary))
+                                                    / {{ $adjustment->original_option_summary }}
+                                                @endif
+                                                / PHP {{ $adjustment->original_price_display ?? '0.00' }}
+                                            </div>
+                                            <div class="booking-note-line">
+                                                <strong>Updated:</strong>
+                                                {{ $adjustment->proposed_service_name ?: ($adjustment->original_service_name ?: 'Booking') }}
+                                                @if(!empty($adjustment->proposed_scope_summary))
+                                                    / {{ $adjustment->proposed_scope_summary }}
+                                                @endif
+                                                / PHP {{ $adjustment->proposed_total_display ?? ($adjustment->original_price_display ?? '0.00') }}
+                                            </div>
+                                            @if(!empty($adjustment->reason_labels))
+                                                <div class="booking-note-line"><strong>Reasons:</strong> {{ implode(', ', $adjustment->reason_labels) }}</div>
+                                            @endif
+                                            @if(!empty($adjustment->provider_note))
+                                                <div class="booking-note-line"><strong>Provider note:</strong> {{ \Illuminate\Support\Str::limit($adjustment->provider_note, 140) }}</div>
+                                            @endif
+                                            @if(!empty($adjustment->customer_response_note))
+                                                <div class="booking-note-line"><strong>Customer note:</strong> {{ \Illuminate\Support\Str::limit($adjustment->customer_response_note, 140) }}</div>
+                                            @endif
+                                            @if(!empty($latestAdjustmentLog['action']) || !empty($latestAdjustmentLog['detail']))
+                                                <div class="booking-note-line">
+                                                    <strong>Latest activity:</strong>
+                                                    {{ $latestAdjustmentLog['action'] ?? 'Update' }}
+                                                    @if(!empty($latestAdjustmentLog['detail']))
+                                                        / {{ \Illuminate\Support\Str::limit($latestAdjustmentLog['detail'], 140) }}
+                                                    @endif
+                                                </div>
+                                            @endif
+                                            @if(!empty($adjustment->evidence_url))
+                                                <div class="booking-note-line">
+                                                    <a class="adjustment-link" href="{{ $adjustment->evidence_url }}" target="_blank" rel="noopener">
+                                                        {{ $adjustment->evidence_name ?: 'Open evidence' }}
+                                                    </a>
+                                                </div>
+                                            @endif
                                         @endif
-                                    @endif
-                                    @if(!empty($b->cancellation_reason))
-                                        @php($cancelledByLabel = !empty($b->cancelled_by_role) ? ucwords(str_replace('_', ' ', $b->cancelled_by_role)) : 'System')
-                                        <div class="meta-value small">Cancelled by {{ $cancelledByLabel }}: {{ $b->cancellation_reason }}</div>
-                                    @endif
+                                        @if(!empty($b->cancellation_reason))
+                                            @php($cancelledByLabel = !empty($b->cancelled_by_role) ? ucwords(str_replace('_', ' ', $b->cancelled_by_role)) : 'System')
+                                            <div class="booking-note-line"><strong>Cancelled by {{ $cancelledByLabel }}:</strong> {{ $b->cancellation_reason }}</div>
+                                        @endif
+                                    </div>
                                 </div>
                             @endif
 
@@ -1505,12 +1638,12 @@ select.status-select option{
             </div>
 
             <div class="detail-box full" id="mAdjustmentWrap" style="display:none;">
-                <div class="detail-label">Adjustment Status</div>
+                <div class="detail-label">Adjustment Details</div>
                 <div class="detail-value" id="mAdjustment"></div>
             </div>
 
             <div class="detail-box full" id="mAdjustmentLogsWrap" style="display:none;">
-                <div class="detail-label">Adjustment Activity</div>
+                <div class="detail-label">Adjustment Timeline</div>
                 <div class="detail-value" id="mAdjustmentLogs"></div>
             </div>
 
