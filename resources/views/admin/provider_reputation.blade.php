@@ -42,14 +42,16 @@
 .provider-reputation-page{display:flex;flex-direction:column;gap:1rem;color:var(--prep-text)}
 .prep-card{background:linear-gradient(180deg, rgba(7,18,37,.97), rgba(2,6,23,.99));border:1px solid var(--prep-border);border-radius:24px;box-shadow:0 18px 36px rgba(0,0,0,.26)}
 .prep-hero,.toolbar-card,.panel-card,.table-card{padding:1rem 1.1rem}
-.prep-head,.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.prep-head,.panel-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
 .prep-head > div:first-child,.panel-head > div:first-child{flex:1 1 320px;min-width:0}
+.chip-row{display:flex;align-items:center;justify-content:flex-end;gap:.6rem;flex-wrap:wrap;align-self:center}
 .prep-title,.panel-title{margin:0;font-weight:900}
 .prep-title{font-size:1.36rem}
 .panel-title{font-size:1rem}
 .prep-subtitle,.panel-sub{margin:.35rem 0 0;color:var(--prep-muted);font-size:.9rem;line-height:1.55}
 .prep-chip,.rating-badge,.risk-badge,.score-pill,.view-btn,.btn-apply,.btn-clear,.meta-pill{display:inline-flex;align-items:center;justify-content:center}
-.prep-chip{gap:.45rem;min-height:38px;padding:.5rem .82rem;border-radius:999px;border:1px solid rgba(56,189,248,.22);background:rgba(56,189,248,.1);color:#dff7ff;font-size:.84rem;font-weight:900}
+.prep-chip{gap:.45rem;min-height:42px;padding:.5rem .9rem;border-radius:999px;border:1px solid rgba(56,189,248,.22);background:rgba(56,189,248,.1);color:#dff7ff;font-size:.84rem;font-weight:900;line-height:1;white-space:nowrap}
+.prep-chip i{display:inline-flex;align-items:center;justify-content:center;inline-size:1rem;block-size:1rem;line-height:1;flex:0 0 auto}
 .summary-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.8rem;margin-top:1rem}
 .summary-box,.mini-card,.history-card{padding:.95rem 1rem;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
 .summary-label{color:var(--prep-muted);font-size:.74rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
@@ -75,7 +77,8 @@
 .detail-label{color:var(--prep-muted);font-size:.7rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
 .detail-value{margin-top:.3rem;color:#f8fafc;font-size:.88rem;font-weight:800;line-height:1.45}
 .rating-badge{gap:.35rem;padding:.32rem .6rem;border-radius:999px;border:1px solid rgba(251,191,36,.2);background:rgba(251,191,36,.1);color:#fde68a;font-size:.76rem;font-weight:900;white-space:nowrap}
-.meta-pill{gap:.35rem;min-height:40px;padding:.32rem .62rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900;color:#e2e8f0;line-height:1}
+.review-pill-row{display:flex;align-items:stretch;gap:.6rem;flex-wrap:wrap}
+.meta-pill{gap:.38rem;min-height:42px;padding:0 .78rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900;color:#e2e8f0;line-height:1}
 .risk-badge{gap:.35rem;padding:.34rem .68rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900}
 .risk-badge.low{border-color:rgba(34,197,94,.22);background:rgba(34,197,94,.1);color:#bbf7d0}
 .risk-badge.medium{border-color:rgba(245,158,11,.22);background:rgba(245,158,11,.1);color:#fde68a}
@@ -101,8 +104,8 @@
 .history-file a{color:#7dd3fc;font-weight:800;text-decoration:none;word-break:break-word}
 .review-strip{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.75rem;align-items:center;margin-top:.95rem;padding-top:.8rem;border-top:1px solid rgba(255,255,255,.06)}
 .review-strip .provider-sub{margin-top:0}
-.review-state{display:inline-flex;align-items:center;min-height:40px;gap:.38rem;padding:.36rem .68rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900;line-height:1}
-.review-state i,.meta-pill i{display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.review-state{display:inline-flex;align-items:center;min-height:42px;gap:.38rem;padding:0 .78rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900;line-height:1}
+.review-state i,.meta-pill i{display:inline-flex;align-items:center;justify-content:center;inline-size:1rem;block-size:1rem;line-height:1;flex:0 0 auto}
 .review-state.alert{border-color:rgba(239,68,68,.22);background:rgba(239,68,68,.1);color:#fecaca}
 .review-state.note{border-color:rgba(56,189,248,.2);background:rgba(56,189,248,.1);color:#dff7ff}
 .empty-note{padding:1.1rem;border-radius:18px;border:1px dashed rgba(255,255,255,.1);color:var(--prep-muted);text-align:center;font-weight:800}
@@ -116,7 +119,9 @@
             <div>
                 <h1 class="prep-title">Provider Reputation</h1>
             </div>
-            <div class="prep-chip"><i class="fa-solid fa-user-shield"></i> Customer review and provider performance</div>
+            <div class="chip-row">
+                <div class="prep-chip"><i class="fa-solid fa-user-shield"></i> Customer review and provider performance</div>
+            </div>
         </div>
 
         <div class="summary-grid">
@@ -169,7 +174,6 @@
             <div class="panel-head">
                 <div>
                     <h2 class="panel-title">Trusted Providers</h2>
-                    <p class="panel-sub">Higher customer ratings, stronger completion results, and fewer reliability issues.</p>
                 </div>
             </div>
             @if($topProviders->isEmpty())
@@ -193,7 +197,6 @@
             <div class="panel-head">
                 <div>
                     <h2 class="panel-title">Needs Attention</h2>
-                    <p class="panel-sub">Low customer ratings, cancellation patterns, or weaker success rates that may need admin review.</p>
                 </div>
             </div>
             @if($attentionProviders->isEmpty())
@@ -219,7 +222,7 @@
             <div>
                 <h2 class="panel-title">Recent Provider Reviews</h2>
             </div>
-            <div class="d-flex gap-2 flex-wrap">
+            <div class="chip-row">
                 <div class="prep-chip"><i class="fa-solid fa-triangle-exclamation"></i> {{ $recentReviews->where('rating', '<=', 2)->count() }} low ratings</div>
                 <div class="prep-chip"><i class="fa-solid fa-clock"></i> {{ $recentReviews->count() }} recent</div>
             </div>
@@ -297,7 +300,7 @@
                         @endif
 
                         <div class="review-strip">
-                            <div class="d-flex gap-2 flex-wrap align-items-center">
+                            <div class="review-pill-row">
                                 <span class="review-state {{ (int) $item->rating <= 2 ? 'alert' : 'note' }}">
                                     <i class="fa-solid {{ (int) $item->rating <= 2 ? 'fa-triangle-exclamation' : 'fa-comment-dots' }}"></i>
                                     {{ (int) $item->rating <= 2 ? 'Low customer rating' : 'Customer feedback' }}
@@ -319,7 +322,9 @@
             <div>
                 <h2 class="panel-title">Provider Reputation Summary</h2>
             </div>
-            <div class="prep-chip"><i class="fa-solid fa-users"></i> {{ $providers->count() }} providers</div>
+            <div class="chip-row">
+                <div class="prep-chip"><i class="fa-solid fa-users"></i> {{ $providers->count() }} providers</div>
+            </div>
         </div>
 
         @if($providers->isEmpty())

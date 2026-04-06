@@ -188,7 +188,6 @@
             <div class="panel-head">
                 <div>
                     <h2 class="panel-title">Top Customers</h2>
-                    <p class="panel-sub">High ratings, better booking completion, and cleaner customer history.</p>
                 </div>
             </div>
             @if($topCustomers->isEmpty())
@@ -212,7 +211,6 @@
             <div class="panel-head">
                 <div>
                     <h2 class="panel-title">Problematic Customers</h2>
-                    <p class="panel-sub">Low ratings, repeat mismatches, repeated cancellations, or provider complaint flags.</p>
                 </div>
             </div>
             @if($problematicCustomers->isEmpty())
