@@ -85,6 +85,10 @@
 .mini-top,.history-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.8rem;flex-wrap:wrap}
 .mini-name,.history-title,.customer-name{font-size:.95rem;font-weight:900;line-height:1.35}
 .mini-meta,.customer-sub,.history-meta{margin-top:.28rem;color:var(--rep-muted);font-size:.82rem;line-height:1.5}
+.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.72rem;margin-top:.85rem}
+.detail-card{padding:.78rem .82rem;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(2,6,23,.38)}
+.detail-label{color:var(--rep-muted);font-size:.7rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.detail-value{margin-top:.3rem;color:#f8fafc;font-size:.88rem;font-weight:800;line-height:1.45}
 .rating-badge{gap:.35rem;padding:.32rem .6rem;border-radius:999px;border:1px solid rgba(251,191,36,.2);background:rgba(251,191,36,.1);color:#fde68a;font-size:.76rem;font-weight:900;white-space:nowrap}
 .risk-badge{gap:.35rem;padding:.34rem .68rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900}
 .risk-badge.low{border-color:rgba(34,197,94,.22);background:rgba(34,197,94,.1);color:#bbf7d0}
@@ -121,8 +125,8 @@
 .review-btn.primary{border:1px solid rgba(34,197,94,.18);background:linear-gradient(135deg,#15803d,#22c55e);color:#fff}
 .review-btn.secondary{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#fff}
 .empty-note{padding:1.1rem;border-radius:18px;border:1px dashed rgba(255,255,255,.1);color:var(--rep-muted);text-align:center;font-weight:800}
-@media (max-width:1200px){.summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.toolbar-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:991px){.summary-grid,.insight-grid,.toolbar-grid{grid-template-columns:1fr}}
+@media (max-width:1200px){.summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.toolbar-grid,.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:991px){.summary-grid,.insight-grid,.toolbar-grid,.detail-grid{grid-template-columns:1fr}}
 </style>
 
 <div class="reputation-page">
@@ -130,7 +134,6 @@
         <div class="rep-head">
             <div>
                 <h1 class="rep-title">Customer Reputation</h1>
-                <p class="rep-subtitle">Track customer behavior, booking accuracy, cancellation trends, and provider-submitted customer ratings in one place.</p>
             </div>
             <div class="rep-chip"><i class="fa-solid fa-shield-halved"></i> Centralized customer risk view</div>
         </div>
@@ -234,7 +237,6 @@
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Suspicious Ratings Review</h2>
-                <p class="panel-sub">Recent low-score or flagged customer ratings that may need admin review.</p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <div class="rep-chip"><i class="fa-solid fa-clock"></i> {{ $summary->suspicious_pending }} pending</div>
@@ -248,6 +250,12 @@
             <div class="history-list">
                 @foreach($suspiciousRatings as $item)
                     @php
+                        $customerName = trim((string) ($item->customer_name ?? '')) ?: 'Customer';
+                        $providerName = trim((string) ($item->provider_name ?? '')) ?: 'Provider';
+                        $customerEmail = trim((string) ($item->customer_email ?? ''));
+                        $serviceName = trim((string) ($item->service_name ?? '')) ?: 'Service';
+                        $optionName = trim((string) ($item->option_name ?? ''));
+                        $referenceCode = trim((string) ($item->reference_code ?? '')) ?: 'No reference';
                         $attachment = !empty($item->attachment_path)
                             ? route('customer.ratings.attachment', ['filename' => basename($item->attachment_path)])
                             : null;
@@ -255,21 +263,35 @@
                     <div class="history-card">
                         <div class="history-top">
                             <div>
-                                <div class="history-title">{{ $item->customer_name }} / {{ $item->provider_name ?: 'Provider' }}</div>
-                                <div class="history-meta">
-                                    {{ $item->service_name ?: 'Service' }}
-                                    @if(!empty($item->option_name))
-                                        / {{ $item->option_name }}
+                                <div class="history-title">Customer: {{ $customerName }}</div>
+                                <div class="history-meta">Provider: {{ $providerName }}</div>
+                            </div>
+                            <div class="rating-badge"><i class="fa-solid fa-star"></i> {{ (int) $item->rating }}/5</div>
+                        </div>
+
+                        <div class="detail-grid">
+                            <div class="detail-card">
+                                <div class="detail-label">Customer Contact</div>
+                                <div class="detail-value">{{ $customerEmail ?: 'No email on file' }}</div>
+                            </div>
+                            <div class="detail-card">
+                                <div class="detail-label">Service Performed</div>
+                                <div class="detail-value">
+                                    {{ $serviceName }}
+                                    @if($optionName !== '')
+                                        / {{ $optionName }}
                                     @endif
-                                    @if(!empty($item->reference_code))
-                                        / {{ $item->reference_code }}
-                                    @endif
+                                </div>
+                            </div>
+                            <div class="detail-card">
+                                <div class="detail-label">Booking</div>
+                                <div class="detail-value">
+                                    {{ $referenceCode }}
                                     @if(!empty($item->booking_date))
                                         / {{ Carbon::parse($item->booking_date)->format('M d, Y') }}
                                     @endif
                                 </div>
                             </div>
-                            <div class="rating-badge"><i class="fa-solid fa-star"></i> {{ (int) $item->rating }}/5</div>
                         </div>
 
                         @if(collect($item->suspicion_flags)->isNotEmpty())
@@ -339,7 +361,6 @@
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Customer Reputation Summary</h2>
-                <p class="panel-sub">Searchable customer table with ratings, booking history, mismatch counts, complaint flags, and risk levels.</p>
             </div>
             <div class="rep-chip"><i class="fa-solid fa-users"></i> {{ $customers->count() }} customers</div>
         </div>
@@ -411,6 +432,10 @@
                         <div class="history-list">
                             @foreach($customerHistory as $item)
                                 @php
+                                    $providerName = trim((string) ($item->provider_name ?? '')) ?: 'Provider';
+                                    $serviceName = trim((string) ($item->service_name ?? '')) ?: 'Service';
+                                    $optionName = trim((string) ($item->option_name ?? ''));
+                                    $referenceCode = trim((string) ($item->reference_code ?? '')) ?: 'No reference';
                                     $attachment = !empty($item->attachment_path)
                                         ? route('customer.ratings.attachment', ['filename' => basename($item->attachment_path)])
                                         : null;
@@ -418,10 +443,35 @@
                                 <div class="history-card">
                                     <div class="history-top">
                                         <div>
-                                            <div class="history-title">{{ $item->provider_name ?: 'Provider' }} / {{ $item->service_name ?: 'Service' }}@if(!empty($item->option_name)) / {{ $item->option_name }}@endif</div>
-                                            <div class="history-meta">{{ $item->reference_code ?: 'No reference' }}@if(!empty($item->booking_date)) / {{ Carbon::parse($item->booking_date)->format('M d, Y') }}@endif / Submitted {{ Carbon::parse($item->created_at)->format('M d, Y h:i A') }}</div>
+                                            <div class="history-title">Provider: {{ $providerName }}</div>
+                                            <div class="history-meta">Customer: {{ $customer->name }}</div>
                                         </div>
                                         <div class="rating-badge"><i class="fa-solid fa-star"></i> {{ (int) $item->rating }}/5</div>
+                                    </div>
+
+                                    <div class="detail-grid">
+                                        <div class="detail-card">
+                                            <div class="detail-label">Service</div>
+                                            <div class="detail-value">
+                                                {{ $serviceName }}
+                                                @if($optionName !== '')
+                                                    / {{ $optionName }}
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="detail-card">
+                                            <div class="detail-label">Booking</div>
+                                            <div class="detail-value">
+                                                {{ $referenceCode }}
+                                                @if(!empty($item->booking_date))
+                                                    / {{ Carbon::parse($item->booking_date)->format('M d, Y') }}
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="detail-card">
+                                            <div class="detail-label">Submitted</div>
+                                            <div class="detail-value">{{ Carbon::parse($item->created_at)->format('M d, Y h:i A') }}</div>
+                                        </div>
                                     </div>
 
                                     <div class="history-flags">
