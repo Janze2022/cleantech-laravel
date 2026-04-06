@@ -402,6 +402,7 @@ body{
     grid-template-columns:repeat(2, minmax(0,1fr));
     gap:16px;
     width:100%;
+    align-items:start;
 }
 
 .panel{
@@ -677,13 +678,13 @@ body{
 
 .compact-table th,
 .compact-table td{
-    padding:.72rem .72rem;
-    font-size:.84rem;
+    padding:.62rem .68rem;
+    font-size:.83rem;
 }
 
 .compact-table th:first-child,
 .compact-table td:first-child{
-    min-width:180px;
+    min-width:150px;
 }
 
 .compact-table td.text-end,

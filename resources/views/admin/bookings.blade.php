@@ -1556,33 +1556,11 @@ select.status-select option{
                                 <button type="button" class="btnx" onclick='openBookingCard(@json($details))'>View</button>
                                 <button type="button" class="btnx primary" onclick='openEditModal(@json($details))'>Edit</button>
 
-                                <form method="POST" action="{{ route('admin.bookings.status', $b->id) }}" class="status-wrap" data-cancelled="0">
-                                    @csrf
-                                    <select class="status-select js-status-select" name="status" @disabled($isLocked)>
-                                        @foreach(['confirmed','in_progress','paid','completed','cancelled'] as $st)
-                                            <option value="{{ $st }}" @selected($status === $st)>{{ str_replace('_', ' ', $st) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <textarea class="status-reason js-status-reason"
-                                              name="cancellation_reason"
-                                              rows="3"
-                                              placeholder="Reason if cancelling"
-                                              @disabled($isLocked)>{{ old('cancellation_reason', $status === 'cancelled' ? ($b->cancellation_reason ?? '') : '') }}</textarea>
-                                    <div class="status-help js-status-help">Required when status is cancelled.</div>
-                                    <button class="btnx" type="submit" @disabled($isLocked)>
-                                        {{ $isLocked ? 'Locked' : 'Save' }}
-                                    </button>
-                                </form>
-
                                 <form method="POST" action="{{ route('admin.bookings.destroy', $b->id) }}" onsubmit="return confirm('Delete this booking permanently?');">
                                     @csrf
                                     @method('DELETE')
                                     <button class="btnx danger" type="submit">Delete</button>
                                 </form>
-
-                                @if($isLocked)
-                                    <div class="lock-note">Cancelled booking is locked and cannot be reactivated.</div>
-                                @endif
                             </div>
                         </div>
                         @endforeach
