@@ -68,7 +68,7 @@
 .btn-clear{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#fff}
 .insight-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
 .stack{display:flex;flex-direction:column;gap:.75rem}
-.panel-head + .stack,.panel-head + .empty-note{margin-top:.9rem}
+.panel-head + .stack,.panel-head + .history-list,.panel-head + .table-wrap,.panel-head + .empty-note{margin-top:.9rem}
 .mini-top,.history-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.8rem;flex-wrap:wrap}
 .history-top > div:first-child{flex:1 1 280px;min-width:0}
 .mini-name,.history-title,.provider-name{font-size:.95rem;font-weight:900;line-height:1.35}
@@ -108,6 +108,7 @@
 .review-strip .provider-sub{margin-top:0}
 .review-state{display:inline-flex;align-items:center;height:42px;gap:.38rem;padding:0 .9rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900;line-height:1;box-sizing:border-box;white-space:nowrap}
 .review-state i,.meta-pill i{display:inline-flex;align-items:center;justify-content:center;inline-size:1rem;block-size:1rem;line-height:1;flex:0 0 auto}
+.review-state .pill-label,.meta-pill .pill-label{display:inline-flex;align-items:center;line-height:1}
 .review-state.alert{border-color:rgba(239,68,68,.22);background:rgba(239,68,68,.1);color:#fecaca}
 .review-state.note{border-color:rgba(56,189,248,.2);background:rgba(56,189,248,.1);color:#dff7ff}
 .empty-note{padding:1.1rem;border-radius:18px;border:1px dashed rgba(255,255,255,.1);color:var(--prep-muted);text-align:center;font-weight:800}
@@ -304,10 +305,10 @@
                         <div class="review-strip">
                             <div class="review-pill-row">
                                 <span class="review-state {{ (int) $item->rating <= 2 ? 'alert' : 'note' }}">
-                                    <i class="fa-solid {{ (int) $item->rating <= 2 ? 'fa-triangle-exclamation' : 'fa-comment-dots' }}"></i>
-                                    {{ (int) $item->rating <= 2 ? 'Low customer rating' : 'Customer feedback' }}
+                                    <i class="fa-solid fa-comment-dots"></i>
+                                    <span class="pill-label">{{ (int) $item->rating <= 2 ? 'Low customer rating' : 'Customer feedback' }}</span>
                                 </span>
-                                <span class="meta-pill"><i class="fa-solid fa-badge-check"></i> Status: {{ $providerStatus }}</span>
+                                <span class="meta-pill"><i class="fa-solid fa-badge-check"></i><span class="pill-label">Status: {{ $providerStatus }}</span></span>
                             </div>
                             @if(!empty($item->reviewed_at))
                                 <span class="provider-sub">Submitted {{ Carbon::parse($item->reviewed_at)->format('M d, Y h:i A') }}</span>
