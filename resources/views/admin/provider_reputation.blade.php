@@ -75,7 +75,7 @@
 .detail-label{color:var(--prep-muted);font-size:.7rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
 .detail-value{margin-top:.3rem;color:#f8fafc;font-size:.88rem;font-weight:800;line-height:1.45}
 .rating-badge{gap:.35rem;padding:.32rem .6rem;border-radius:999px;border:1px solid rgba(251,191,36,.2);background:rgba(251,191,36,.1);color:#fde68a;font-size:.76rem;font-weight:900;white-space:nowrap}
-.meta-pill{gap:.35rem;padding:.32rem .62rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900;color:#e2e8f0}
+.meta-pill{gap:.35rem;min-height:40px;padding:.32rem .62rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900;color:#e2e8f0;line-height:1}
 .risk-badge{gap:.35rem;padding:.34rem .68rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900}
 .risk-badge.low{border-color:rgba(34,197,94,.22);background:rgba(34,197,94,.1);color:#bbf7d0}
 .risk-badge.medium{border-color:rgba(245,158,11,.22);background:rgba(245,158,11,.1);color:#fde68a}
@@ -101,7 +101,8 @@
 .history-file a{color:#7dd3fc;font-weight:800;text-decoration:none;word-break:break-word}
 .review-strip{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.75rem;align-items:center;margin-top:.95rem;padding-top:.8rem;border-top:1px solid rgba(255,255,255,.06)}
 .review-strip .provider-sub{margin-top:0}
-.review-state{display:inline-flex;align-items:center;gap:.38rem;padding:.36rem .68rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900}
+.review-state{display:inline-flex;align-items:center;min-height:40px;gap:.38rem;padding:.36rem .68rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900;line-height:1}
+.review-state i,.meta-pill i{display:inline-flex;align-items:center;justify-content:center;line-height:1}
 .review-state.alert{border-color:rgba(239,68,68,.22);background:rgba(239,68,68,.1);color:#fecaca}
 .review-state.note{border-color:rgba(56,189,248,.2);background:rgba(56,189,248,.1);color:#dff7ff}
 .empty-note{padding:1.1rem;border-radius:18px;border:1px dashed rgba(255,255,255,.1);color:var(--prep-muted);text-align:center;font-weight:800}
