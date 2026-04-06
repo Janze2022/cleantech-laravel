@@ -82,6 +82,7 @@
 .btn-clear{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#fff}
 .insight-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
 .stack{display:flex;flex-direction:column;gap:.75rem}
+.panel-head + .stack,.panel-head + .empty-note{margin-top:.9rem}
 .mini-top,.history-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.8rem;flex-wrap:wrap}
 .mini-name,.history-title,.customer-name{font-size:.95rem;font-weight:900;line-height:1.35}
 .mini-meta,.customer-sub,.history-meta{margin-top:.28rem;color:var(--rep-muted);font-size:.82rem;line-height:1.5}

@@ -68,6 +68,7 @@
 .btn-clear{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#fff}
 .insight-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
 .stack{display:flex;flex-direction:column;gap:.75rem}
+.panel-head + .stack,.panel-head + .empty-note{margin-top:.9rem}
 .mini-top,.history-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.8rem;flex-wrap:wrap}
 .history-top > div:first-child{flex:1 1 280px;min-width:0}
 .mini-name,.history-title,.provider-name{font-size:.95rem;font-weight:900;line-height:1.35}
@@ -77,8 +78,9 @@
 .detail-label{color:var(--prep-muted);font-size:.7rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
 .detail-value{margin-top:.3rem;color:#f8fafc;font-size:.88rem;font-weight:800;line-height:1.45}
 .rating-badge{gap:.35rem;padding:.32rem .6rem;border-radius:999px;border:1px solid rgba(251,191,36,.2);background:rgba(251,191,36,.1);color:#fde68a;font-size:.76rem;font-weight:900;white-space:nowrap}
-.review-pill-row{display:flex;align-items:stretch;gap:.6rem;flex-wrap:wrap}
-.meta-pill{gap:.38rem;min-height:42px;padding:0 .78rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900;color:#e2e8f0;line-height:1}
+.review-pill-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.review-pill-row > *{flex:0 0 auto}
+.meta-pill{gap:.38rem;height:42px;padding:0 .9rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900;color:#e2e8f0;line-height:1;box-sizing:border-box;white-space:nowrap}
 .risk-badge{gap:.35rem;padding:.34rem .68rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900}
 .risk-badge.low{border-color:rgba(34,197,94,.22);background:rgba(34,197,94,.1);color:#bbf7d0}
 .risk-badge.medium{border-color:rgba(245,158,11,.22);background:rgba(245,158,11,.1);color:#fde68a}
@@ -104,7 +106,7 @@
 .history-file a{color:#7dd3fc;font-weight:800;text-decoration:none;word-break:break-word}
 .review-strip{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.75rem;align-items:center;margin-top:.95rem;padding-top:.8rem;border-top:1px solid rgba(255,255,255,.06)}
 .review-strip .provider-sub{margin-top:0}
-.review-state{display:inline-flex;align-items:center;min-height:42px;gap:.38rem;padding:0 .78rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900;line-height:1}
+.review-state{display:inline-flex;align-items:center;height:42px;gap:.38rem;padding:0 .9rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900;line-height:1;box-sizing:border-box;white-space:nowrap}
 .review-state i,.meta-pill i{display:inline-flex;align-items:center;justify-content:center;inline-size:1rem;block-size:1rem;line-height:1;flex:0 0 auto}
 .review-state.alert{border-color:rgba(239,68,68,.22);background:rgba(239,68,68,.1);color:#fecaca}
 .review-state.note{border-color:rgba(56,189,248,.2);background:rgba(56,189,248,.1);color:#dff7ff}
