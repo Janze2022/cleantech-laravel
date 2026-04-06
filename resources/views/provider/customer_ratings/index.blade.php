@@ -24,7 +24,6 @@
     $sort = (string) ($sort ?? request('sort', 'customer_asc'));
     $focusBooking = (int) request('booking', 0);
     $focusedBookingId = $focusBooking ?: (int) old('booking_id', 0);
-    $focusedEditRatingId = (int) old('edit_rating_id', 0);
     $sortOptions = [
         'customer_asc' => 'Customer name (A to Z)',
         'customer_desc' => 'Customer name (Z to A)',
@@ -102,7 +101,7 @@
 .hero-subtitle,.section-copy,.toolbar-copy,.edit-window,.field-help,.form-intro{margin:.35rem 0 0;color:var(--cr-muted);font-size:.92rem;line-height:1.55}
 .hero-chip,.section-pill,.status-badge,.meta-pill,.flag-chip{display:inline-flex;align-items:center;gap:.42rem;border-radius:999px;font-weight:900}
 .hero-chip{min-height:38px;padding:.5rem .82rem;border:1px solid rgba(56,189,248,.2);background:rgba(56,189,248,.1);color:#e0f2fe;font-size:.84rem}
-.summary-grid{display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:.8rem;margin-top:1rem}
+.summary-grid{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:.8rem;margin-top:1rem}
 .summary-card{padding:1rem}
 .summary-label,.detail-label,.form-label{color:var(--cr-muted);font-size:.76rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
 .summary-value{margin-top:.5rem;font-size:1.55rem;font-weight:900;line-height:1}
@@ -206,11 +205,6 @@
                 <div class="summary-label">Saved Reviews</div>
                 <div class="summary-value accent">{{ $summary->submitted_ratings }}</div>
                 <div class="summary-note">Already stored in history</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">Can Still Edit</div>
-                <div class="summary-value success">{{ $summary->editable_ratings }}</div>
-                <div class="summary-note">Inside the 24-hour edit window</div>
             </div>
         </div>
     </div>
@@ -403,14 +397,15 @@
                 @foreach($submittedRatings as $rating)
                     @php
                         $ratingAttachment = $attachmentUrl($rating);
-                        $editableUntil = !empty($rating->editable_until) ? Carbon::parse($rating->editable_until) : null;
+                        $savedAt = !empty($rating->rating_updated_at)
+                            ? Carbon::parse($rating->rating_updated_at)
+                            : (!empty($rating->rating_created_at) ? Carbon::parse($rating->rating_created_at) : null);
                         $selectedGoodFlags = collect($positiveFlags)
                             ->filter(fn ($label, $field) => !empty($rating->{$field}));
                         $selectedIssueFlags = collect($issueFlags)
                             ->filter(fn ($label, $field) => !empty($rating->{$field}));
-                        $isFocusedRating = $focusedEditRatingId === (int) $rating->rating_id;
-                        $isOldEditForm = $focusedEditRatingId === (int) $rating->rating_id;
-                        $editRatingValue = $isOldEditForm ? (int) old('rating', (int) $rating->rating) : (int) $rating->rating;
+                        $isFocusedRating = $focusBooking === (int) $rating->booking_id;
+                        $editRatingValue = (int) $rating->rating;
                     @endphp
                     <div class="rating-card {{ $isFocusedRating ? 'focused' : '' }}">
                         <div class="booking-top">
@@ -481,85 +476,13 @@
                         @endif
 
                         <div class="edit-window">
-                            @if($rating->can_edit && $editableUntil)
-                                You can still edit this review until {{ $editableUntil->format('M d, Y h:i A') }}.
-                            @elseif($editableUntil)
-                                The edit window closed on {{ $editableUntil->format('M d, Y h:i A') }}.
+                            @if($savedAt)
+                                Review saved on {{ $savedAt->format('M d, Y h:i A') }}.
+                                @if((int) $rating->edit_count > 0)
+                                    Updated {{ (int) $rating->edit_count }} time{{ (int) $rating->edit_count === 1 ? '' : 's' }} before reviews became view-only.
+                                @endif
                             @endif
                         </div>
-
-                        @if($rating->can_edit)
-                            <form class="form-shell rating-form" method="POST" action="{{ route('provider.customer-ratings.update', $rating->rating_id) }}" enctype="multipart/form-data">
-                                @csrf
-                                @method('PUT')
-                                <input type="hidden" name="edit_rating_id" value="{{ $rating->rating_id }}">
-                                <input type="hidden" name="booking_id" value="{{ $rating->booking_id }}">
-                                <input type="hidden" name="rating" value="{{ $editRatingValue }}" class="rating-input">
-
-                                <div class="form-intro">Update the score, refresh your note, or replace the proof file if you need to correct anything.</div>
-
-                                <div class="form-grid">
-                                    <div class="form-block full">
-                                        <label class="form-label">Update customer rating</label>
-                                        <div class="stars-row">
-                                            <div class="stars">
-                                                @for($star = 1; $star <= 5; $star++)
-                                                    <button type="button" class="star-btn {{ $editRatingValue >= $star ? 'on' : '' }}" data-star="{{ $star }}" aria-label="Rate {{ $star }}">
-                                                        <svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.75l2.91 5.89 6.5.95-4.7 4.58 1.11 6.47L12 17.59 6.18 20.64l1.11-6.47-4.7-4.58 6.5-.95L12 2.75z"/></svg>
-                                                    </button>
-                                                @endfor
-                                            </div>
-                                            <div class="rating-selected">{{ $ratingWord($editRatingValue) }}</div>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-block">
-                                        <label class="form-label">What went well</label>
-                                        <div class="choice-grid">
-                                            @foreach($positiveFlags as $field => $label)
-                                                @php
-                                                    $checked = $isOldEditForm ? old($field) : !empty($rating->{$field});
-                                                @endphp
-                                                <label class="check-pill">
-                                                    <input type="checkbox" name="{{ $field }}" value="1" {{ $checked ? 'checked' : '' }}>
-                                                    <span>{{ $label }}</span>
-                                                </label>
-                                            @endforeach
-                                        </div>
-                                    </div>
-
-                                    <div class="form-block">
-                                        <label class="form-label">Issues to note</label>
-                                        <div class="choice-grid">
-                                            @foreach($issueFlags as $field => $label)
-                                                @php
-                                                    $checked = $isOldEditForm ? old($field) : !empty($rating->{$field});
-                                                @endphp
-                                                <label class="check-pill">
-                                                    <input type="checkbox" name="{{ $field }}" value="1" {{ $checked ? 'checked' : '' }}>
-                                                    <span>{{ $label }}</span>
-                                                </label>
-                                            @endforeach
-                                        </div>
-                                    </div>
-
-                                    <div class="form-block full">
-                                        <label class="form-label" for="edit-comment-{{ $rating->rating_id }}">Short note</label>
-                                        <textarea class="text-area" id="edit-comment-{{ $rating->rating_id }}" name="comment" placeholder="Update your note for this customer.">{{ $isOldEditForm ? old('comment', $rating->comment) : $rating->comment }}</textarea>
-                                    </div>
-
-                                    <div class="form-block full">
-                                        <label class="form-label" for="edit-attachment-{{ $rating->rating_id }}">Replace proof file</label>
-                                        <input class="file-input" id="edit-attachment-{{ $rating->rating_id }}" type="file" name="attachment" accept=".jpg,.jpeg,.png,.webp,.pdf">
-                                        <div class="field-help">Leave this empty if the current attachment is still fine.</div>
-                                    </div>
-                                </div>
-
-                                <div class="form-actions">
-                                    <button class="btn-rate primary" type="submit">Update Review</button>
-                                </div>
-                            </form>
-                        @endif
                     </div>
                 @endforeach
             </div>

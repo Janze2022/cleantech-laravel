@@ -380,7 +380,7 @@ body{
 /* LAYOUT */
 .layout{
     display:grid;
-    grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);
+    grid-template-columns:minmax(0,1.35fr) minmax(320px,.95fr);
     gap:16px;
     width:100%;
     align-items:start;
@@ -390,6 +390,18 @@ body{
     display:grid;
     gap:16px;
     min-width:0;
+}
+
+.layout > .stack:last-child > .panel:nth-child(5),
+.layout > .stack:last-child > .panel:nth-child(6){
+    display:none;
+}
+
+.report-data-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:16px;
+    width:100%;
 }
 
 .panel{
@@ -632,6 +644,10 @@ body{
     border-collapse:collapse;
 }
 
+.table-darkx.compact-table{
+    min-width:560px;
+}
+
 .table-darkx th,
 .table-darkx td{
     padding:.8rem .8rem;
@@ -657,6 +673,22 @@ body{
 .table-darkx td.text-end,
 .table-darkx th.text-end{
     text-align:right;
+}
+
+.compact-table th,
+.compact-table td{
+    padding:.72rem .72rem;
+    font-size:.84rem;
+}
+
+.compact-table th:first-child,
+.compact-table td:first-child{
+    min-width:180px;
+}
+
+.compact-table td.text-end,
+.compact-table th.text-end{
+    white-space:nowrap;
 }
 
 /* STATUS PILL */
@@ -694,7 +726,8 @@ body{
         grid-template-columns:repeat(2, minmax(0,1fr));
     }
 
-    .layout{
+    .layout,
+    .report-data-grid{
         grid-template-columns:1fr;
     }
 }
@@ -751,6 +784,10 @@ body{
 
     .customer-signal-grid{
         grid-template-columns:1fr;
+    }
+
+    .table-darkx.compact-table{
+        min-width:100%;
     }
 
     .chart-box{
@@ -1225,6 +1262,82 @@ body{
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-data-grid">
+            <div class="panel">
+                <div class="panel-head">
+                    <h4>Provider Performance</h4>
+                    <span class="badgex">Printable list</span>
+                </div>
+                <div class="panel-body no-pad">
+                    <div class="table-wrap">
+                        <table class="table-darkx compact-table">
+                            <thead>
+                                <tr>
+                                    <th>Provider</th>
+                                    <th>Total</th>
+                                    <th>Success</th>
+                                    <th>Cancelled</th>
+                                    <th>Rate</th>
+                                    <th class="text-end">Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @forelse($providerPerformance as $p)
+                                <tr>
+                                    <td>{{ $p->provider_name }}</td>
+                                    <td>{{ (int) $p->total_bookings }}</td>
+                                    <td>{{ (int) $p->success_count }}</td>
+                                    <td>{{ (int) $p->cancelled_count }}</td>
+                                    <td>{{ number_format((float) $p->completion_rate, 1) }}%</td>
+                                    <td class="text-end">PHP {{ number_format((float) $p->revenue, 2) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" style="color:var(--muted);">No provider performance data found.</td>
+                                </tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <h4>Service Classification Details</h4>
+                    <span class="badgex">CleanTech report</span>
+                </div>
+                <div class="panel-body no-pad">
+                    <div class="table-wrap">
+                        <table class="table-darkx compact-table">
+                            <thead>
+                                <tr>
+                                    <th>Service</th>
+                                    <th>Total Bookings</th>
+                                    <th>Cancelled</th>
+                                    <th class="text-end">Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @forelse($serviceClassification as $s)
+                                <tr>
+                                    <td>{{ $s->service_name }}</td>
+                                    <td>{{ (int) $s->total_bookings }}</td>
+                                    <td>{{ (int) $s->cancelled_count }}</td>
+                                    <td class="text-end">PHP {{ number_format((float) $s->revenue, 2) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" style="color:var(--muted);">No service classification data found.</td>
+                                </tr>
+                            @endforelse
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

@@ -90,14 +90,7 @@ class ProviderCustomerRatingController extends Controller
             ->orderByDesc('b.id')
             ->get()
             ->map(function ($row) {
-                $editableUntil = !empty($row->editable_until)
-                    ? Carbon::parse($row->editable_until)
-                    : null;
-
-                $row->can_edit = $row->rating_id
-                    && $editableUntil
-                    && now()->lt($editableUntil);
-
+                $row->can_edit = false;
                 return $row;
             });
 
@@ -293,74 +286,11 @@ class ProviderCustomerRatingController extends Controller
 
     public function update(Request $request, int $id)
     {
-        $providerId = $this->providerId();
+        $this->providerId();
 
-        $request->validate([
-            'rating' => 'required|integer|min:1|max:5',
-            'booking_details_accurate' => 'nullable|boolean',
-            'respectful' => 'nullable|boolean',
-            'easy_to_communicate' => 'nullable|boolean',
-            'paid_reliably' => 'nullable|boolean',
-            'unexpected_extra_work' => 'nullable|boolean',
-            'flag_understated_area' => 'nullable|boolean',
-            'flag_hidden_sections' => 'nullable|boolean',
-            'flag_misleading_request' => 'nullable|boolean',
-            'flag_difficult_behavior' => 'nullable|boolean',
-            'flag_payment_issue' => 'nullable|boolean',
-            'flag_last_minute_changes' => 'nullable|boolean',
-            'comment' => 'nullable|string|max:1200',
-            'attachment' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
+        return back()->withErrors([
+            'customer_rating' => 'Submitted customer ratings are view-only once saved.',
         ]);
-
-        $rating = DB::table('customer_ratings as cr')
-            ->join('bookings as b', 'b.id', '=', 'cr.booking_id')
-            ->where('cr.id', $id)
-            ->where('cr.provider_id', $providerId)
-            ->where('b.provider_id', $providerId)
-            ->select('cr.*', 'b.reference_code')
-            ->first();
-
-        if (!$rating) {
-            return back()->withErrors([
-                'customer_rating' => 'Customer rating not found.',
-            ]);
-        }
-
-        if (!$rating->editable_until || now()->gte(Carbon::parse($rating->editable_until))) {
-            return back()->withErrors([
-                'customer_rating' => 'The customer rating edit window has already expired.',
-            ]);
-        }
-
-        [$attachmentPath, $attachmentName, $attachmentMime] = $this->storeAttachment(
-            $request,
-            $providerId,
-            $rating->booking_id,
-            $rating->attachment_path
-        );
-
-        $payload = $this->ratingPayload($request, $rating, $providerId, [
-            'attachment_path' => $attachmentPath ?? $rating->attachment_path,
-            'attachment_name' => $attachmentName ?? $rating->attachment_name,
-            'attachment_mime' => $attachmentMime ?? $rating->attachment_mime,
-            'edit_count' => (int) ($rating->edit_count ?? 0) + 1,
-            'updated_at' => now(),
-        ]);
-
-        DB::table('customer_ratings')
-            ->where('id', $rating->id)
-            ->update($payload);
-
-        $this->logRatingActivity(
-            $rating->id,
-            $rating->booking_id,
-            $rating->customer_id,
-            $providerId,
-            'updated',
-            $payload
-        );
-
-        return back()->with('success', 'Customer rating updated.');
     }
 
     public function attachment($filename)

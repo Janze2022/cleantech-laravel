@@ -1164,9 +1164,6 @@ class ProviderBookingController extends Controller
                     if (!$booking->has_customer_rating) {
                         $booking->customer_rating_label = 'Rate Customer';
                         $booking->customer_rating_class = 'btn-rate';
-                    } elseif ($booking->can_edit_customer_rating) {
-                        $booking->customer_rating_label = 'Edit Rating';
-                        $booking->customer_rating_class = 'btn-rate edit';
                     } else {
                         $booking->customer_rating_label = 'View Rating';
                         $booking->customer_rating_class = 'btn-rate view';

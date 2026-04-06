@@ -505,11 +505,16 @@
     display:flex;
     flex-wrap:wrap;
     gap:8px;
-    align-items:stretch;
+    align-items:flex-start;
 }
 .booking-actions > .btnx,
 .booking-actions > form{
     margin:0;
+    align-self:flex-start;
+}
+.booking-actions > .btnx{
+    flex:0 0 auto;
+    min-height:40px;
 }
 
 .selectx,

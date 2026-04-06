@@ -84,6 +84,33 @@ class ProviderCustomerRatingsIndexTest extends TestCase
         ]);
     }
 
+    public function test_submitted_ratings_are_view_only_in_history_and_ratings_pages(): void
+    {
+        $ratedCustomer = $this->createCustomer(31, 'Viewed Only', 'view@example.com');
+
+        $this->createBooking(3001, $ratedCustomer, 'CT-VIEW-ONLY', 'completed', 5);
+
+        $historyResponse = $this->withSession([
+            'provider_id' => 5,
+            'role' => 'provider',
+            'name' => 'Kumi',
+        ])->get(route('provider.bookings.history'));
+
+        $historyResponse->assertOk();
+        $historyResponse->assertSeeText('View Rating');
+        $historyResponse->assertDontSeeText('Edit Rating');
+
+        $ratingsResponse = $this->withSession([
+            'provider_id' => 5,
+            'role' => 'provider',
+            'name' => 'Kumi',
+        ])->get(route('provider.customer-ratings', ['booking' => 3001]));
+
+        $ratingsResponse->assertOk();
+        $ratingsResponse->assertSeeText('Review saved on');
+        $ratingsResponse->assertDontSeeText('Update Review');
+    }
+
     private function resetSchema(): void
     {
         foreach ([
