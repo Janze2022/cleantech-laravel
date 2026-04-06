@@ -53,6 +53,7 @@ use App\Http\Controllers\Admin\AdminBookingController;
 use App\Http\Controllers\Admin\AdminReportController;
 use App\Http\Controllers\Admin\AdminEarningsController;
 use App\Http\Controllers\Admin\AdminCustomerReputationController;
+use App\Http\Controllers\Admin\AdminProviderReputationController;
 use App\Http\Controllers\Admin\ProfileController;
 
 /*
@@ -152,6 +153,9 @@ Route::prefix('admin')
 
         Route::post('/customer-reputation/ratings/{id}/review', [AdminCustomerReputationController::class, 'reviewRating'])
             ->name('customer-reputation.review-rating');
+
+        Route::get('/provider-reputation', [AdminProviderReputationController::class, 'index'])
+            ->name('provider-reputation');
 
         Route::get('/customers/{id}', [AdminCustomerController::class, 'show'])
             ->name('customers.show');
