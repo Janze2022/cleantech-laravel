@@ -43,6 +43,7 @@
 .prep-card{background:linear-gradient(180deg, rgba(7,18,37,.97), rgba(2,6,23,.99));border:1px solid var(--prep-border);border-radius:24px;box-shadow:0 18px 36px rgba(0,0,0,.26)}
 .prep-hero,.toolbar-card,.panel-card,.table-card{padding:1rem 1.1rem}
 .prep-head,.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.prep-head > div:first-child,.panel-head > div:first-child{flex:1 1 320px;min-width:0}
 .prep-title,.panel-title{margin:0;font-weight:900}
 .prep-title{font-size:1.36rem}
 .panel-title{font-size:1rem}
@@ -66,10 +67,11 @@
 .insight-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
 .stack{display:flex;flex-direction:column;gap:.75rem}
 .mini-top,.history-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.8rem;flex-wrap:wrap}
+.history-top > div:first-child{flex:1 1 280px;min-width:0}
 .mini-name,.history-title,.provider-name{font-size:.95rem;font-weight:900;line-height:1.35}
 .mini-meta,.provider-sub,.history-meta{margin-top:.28rem;color:var(--prep-muted);font-size:.82rem;line-height:1.5}
-.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.72rem;margin-top:.85rem}
-.detail-card{padding:.78rem .82rem;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(2,6,23,.38)}
+.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.72rem;margin-top:.85rem;align-items:stretch}
+.detail-card{display:flex;flex-direction:column;justify-content:flex-start;min-height:92px;padding:.78rem .82rem;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(2,6,23,.38)}
 .detail-label{color:var(--prep-muted);font-size:.7rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
 .detail-value{margin-top:.3rem;color:#f8fafc;font-size:.88rem;font-weight:800;line-height:1.45}
 .rating-badge{gap:.35rem;padding:.32rem .6rem;border-radius:999px;border:1px solid rgba(251,191,36,.2);background:rgba(251,191,36,.1);color:#fde68a;font-size:.76rem;font-weight:900;white-space:nowrap}
@@ -88,17 +90,23 @@
 .score-pill{min-width:62px;min-height:34px;padding:0 .72rem;border-radius:999px;border:1px solid rgba(56,189,248,.18);background:rgba(56,189,248,.08);color:#dff7ff;font-size:.8rem;font-weight:900}
 .view-btn{min-height:40px;padding:.6rem .9rem;border-radius:12px;border:1px solid rgba(56,189,248,.18);background:rgba(56,189,248,.08);color:#fff;font-size:.82rem;font-weight:900}
 .history-list{display:flex;flex-direction:column;gap:.85rem}
-.history-comment{margin-top:.85rem;padding:.85rem .95rem;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);color:#e2e8f0;line-height:1.6}
-.history-attachment{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.85rem}
+.history-card{overflow:hidden}
+.history-body{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(220px,.85fr);gap:.85rem;margin-top:.85rem;align-items:stretch}
+.history-body > :only-child{grid-column:1 / -1}
+.history-comment{margin-top:0;min-height:88px;padding:.85rem .95rem;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);color:#e2e8f0;line-height:1.6}
+.history-attachment{display:flex;flex-wrap:wrap;gap:.65rem;margin-top:0;padding:.85rem .95rem;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);align-items:flex-start}
+.history-attachment.has-preview{display:grid;grid-template-columns:90px minmax(0,1fr)}
 .history-attachment img{width:90px;height:90px;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.08)}
-.history-attachment a{color:#7dd3fc;font-weight:800;text-decoration:none}
-.review-strip{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin-top:.9rem}
+.history-file{display:flex;flex-direction:column;gap:.4rem;min-width:0}
+.history-file a{color:#7dd3fc;font-weight:800;text-decoration:none;word-break:break-word}
+.review-strip{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.75rem;align-items:center;margin-top:.95rem;padding-top:.8rem;border-top:1px solid rgba(255,255,255,.06)}
+.review-strip .provider-sub{margin-top:0}
 .review-state{display:inline-flex;align-items:center;gap:.38rem;padding:.36rem .68rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:.76rem;font-weight:900}
 .review-state.alert{border-color:rgba(239,68,68,.22);background:rgba(239,68,68,.1);color:#fecaca}
 .review-state.note{border-color:rgba(56,189,248,.2);background:rgba(56,189,248,.1);color:#dff7ff}
 .empty-note{padding:1.1rem;border-radius:18px;border:1px dashed rgba(255,255,255,.1);color:var(--prep-muted);text-align:center;font-weight:800}
-@media (max-width:1200px){.summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.toolbar-grid,.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:991px){.summary-grid,.insight-grid,.toolbar-grid,.detail-grid{grid-template-columns:1fr}}
+@media (max-width:1200px){.summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.toolbar-grid,.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.history-body{grid-template-columns:1fr}}
+@media (max-width:991px){.summary-grid,.insight-grid,.toolbar-grid,.detail-grid{grid-template-columns:1fr}.history-attachment.has-preview{grid-template-columns:1fr}}
 </style>
 
 <div class="provider-reputation-page">
@@ -106,7 +114,6 @@
         <div class="prep-head">
             <div>
                 <h1 class="prep-title">Provider Reputation</h1>
-                <p class="prep-subtitle">Track provider performance, customer ratings, and booking reliability in one admin view.</p>
             </div>
             <div class="prep-chip"><i class="fa-solid fa-user-shield"></i> Customer review and provider performance</div>
         </div>
@@ -210,7 +217,6 @@
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Recent Provider Reviews</h2>
-                <p class="panel-sub">Latest customer feedback tied to the provider who handled the booking.</p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <div class="prep-chip"><i class="fa-solid fa-triangle-exclamation"></i> {{ $recentReviews->where('rating', '<=', 2)->count() }} low ratings</div>
@@ -269,25 +275,34 @@
                             </div>
                         </div>
 
-                        @if(!empty($item->comment))
-                            <div class="history-comment">{{ $item->comment }}</div>
-                        @endif
-
-                        @if($attachment)
-                            <div class="history-attachment">
-                                @if(str_starts_with((string) $item->attachment_mime, 'image/'))
-                                    <img src="{{ $attachment }}" alt="Provider review attachment">
+                        @if(!empty($item->comment) || $attachment)
+                            <div class="history-body">
+                                @if(!empty($item->comment))
+                                    <div class="history-comment">{{ $item->comment }}</div>
                                 @endif
-                                <a href="{{ $attachment }}" target="_blank" rel="noopener">{{ $item->attachment_name ?: 'Open attachment' }}</a>
+
+                                @if($attachment)
+                                    <div class="history-attachment {{ str_starts_with((string) $item->attachment_mime, 'image/') ? 'has-preview' : '' }}">
+                                        @if(str_starts_with((string) $item->attachment_mime, 'image/'))
+                                            <img src="{{ $attachment }}" alt="Provider review attachment">
+                                        @endif
+                                        <div class="history-file">
+                                            <div class="detail-label">Attachment</div>
+                                            <a href="{{ $attachment }}" target="_blank" rel="noopener">{{ $item->attachment_name ?: 'Open attachment' }}</a>
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         @endif
 
                         <div class="review-strip">
-                            <span class="review-state {{ (int) $item->rating <= 2 ? 'alert' : 'note' }}">
-                                <i class="fa-solid {{ (int) $item->rating <= 2 ? 'fa-triangle-exclamation' : 'fa-comment-dots' }}"></i>
-                                {{ (int) $item->rating <= 2 ? 'Low customer rating' : 'Customer feedback' }}
-                            </span>
-                            <span class="meta-pill"><i class="fa-solid fa-badge-check"></i> Status: {{ $providerStatus }}</span>
+                            <div class="d-flex gap-2 flex-wrap align-items-center">
+                                <span class="review-state {{ (int) $item->rating <= 2 ? 'alert' : 'note' }}">
+                                    <i class="fa-solid {{ (int) $item->rating <= 2 ? 'fa-triangle-exclamation' : 'fa-comment-dots' }}"></i>
+                                    {{ (int) $item->rating <= 2 ? 'Low customer rating' : 'Customer feedback' }}
+                                </span>
+                                <span class="meta-pill"><i class="fa-solid fa-badge-check"></i> Status: {{ $providerStatus }}</span>
+                            </div>
                             @if(!empty($item->reviewed_at))
                                 <span class="provider-sub">Submitted {{ Carbon::parse($item->reviewed_at)->format('M d, Y h:i A') }}</span>
                             @endif
@@ -302,7 +317,6 @@
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Provider Reputation Summary</h2>
-                <p class="panel-sub">Searchable provider table with customer ratings, booking reliability, and risk scoring.</p>
             </div>
             <div class="prep-chip"><i class="fa-solid fa-users"></i> {{ $providers->count() }} providers</div>
         </div>
@@ -423,16 +437,23 @@
                                         </div>
                                     </div>
 
-                                    @if(!empty($item->comment))
-                                        <div class="history-comment">{{ $item->comment }}</div>
-                                    @endif
-
-                                    @if($attachment)
-                                        <div class="history-attachment">
-                                            @if(str_starts_with((string) $item->attachment_mime, 'image/'))
-                                                <img src="{{ $attachment }}" alt="Provider review attachment">
+                                    @if(!empty($item->comment) || $attachment)
+                                        <div class="history-body">
+                                            @if(!empty($item->comment))
+                                                <div class="history-comment">{{ $item->comment }}</div>
                                             @endif
-                                            <a href="{{ $attachment }}" target="_blank" rel="noopener">{{ $item->attachment_name ?: 'Open attachment' }}</a>
+
+                                            @if($attachment)
+                                                <div class="history-attachment {{ str_starts_with((string) $item->attachment_mime, 'image/') ? 'has-preview' : '' }}">
+                                                    @if(str_starts_with((string) $item->attachment_mime, 'image/'))
+                                                        <img src="{{ $attachment }}" alt="Provider review attachment">
+                                                    @endif
+                                                    <div class="history-file">
+                                                        <div class="detail-label">Attachment</div>
+                                                        <a href="{{ $attachment }}" target="_blank" rel="noopener">{{ $item->attachment_name ?: 'Open attachment' }}</a>
+                                                    </div>
+                                                </div>
+                                            @endif
                                         </div>
                                     @endif
                                 </div>
